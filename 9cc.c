@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -20,6 +21,7 @@ struct Token {
     Token *next;    // 次の入力トークン
     int val;        // kindがTK_NUMの場合、その数値
     char *str;      // トークン文字列
+    int len;        // トークンの長さ
 };
 
 // 現在着目しているトークン
@@ -54,9 +56,9 @@ void error(char *fmt, ...) {
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
-bool consume(char op) {
-    //  input your answer
-    if (token->kind != TK_RESERVED || token->str[0] != op) {
+bool consume(char *op) {
+    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
+        memcmp(token->str, op, token->len)) {
         return false;
     }
     token = token->next;
@@ -65,8 +67,9 @@ bool consume(char op) {
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
-void expect(char op) {
-    if (token->kind != TK_RESERVED || token->str[0] != op) {
+void expect(char *op) {
+    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
+        memcmp(token->str, op, token->len)) {
         error_at(token->str, "'%c'ではありません", op);
     }
     token = token->next;
@@ -87,10 +90,11 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // 新しいトークンを作成してcurに繋げる
-Token *new_token(TokenKind kind, Token *cur, char *str) {
+Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     Token *tok = calloc(1, sizeof(Token));
     tok->kind = kind;
     tok->str = str;
+    tok->len = len;
     cur->next = tok;
     return tok;
 }
@@ -100,6 +104,8 @@ Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
+    char resv[][3] = {"<=", ">=", "==", "!=", "+", "-",
+                      "*",  "/",  "(",  ")",  "<", ">"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -107,14 +113,22 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        if (strchr("+-*/()", *p)) {
-            cur = new_token(TK_RESERVED, cur, p);
-            p++;
+        bool is_tokenized = false;
+        for (int i = 0; resv[i][0] != '\0'; i++) {
+            int len = strlen(resv[i]);
+            if (!memcmp(resv[i], p, len)) {
+                cur = new_token(TK_RESERVED, cur, p, len);
+                p += len;
+                is_tokenized = true;
+                break;
+            }
+        }
+        if (is_tokenized) {
             continue;
         }
 
         if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p);
+            cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
             continue;
         }
@@ -122,17 +136,21 @@ Token *tokenize(char *p) {
         error_at(p, "トークナイズできません");
     }
 
-    new_token(TK_EOF, cur, p);
+    new_token(TK_EOF, cur, p, 0);
     return head.next;
 }
 
 // 抽象構文木のノードの種類
 typedef enum {
-    ND_ADD, // +
-    ND_SUB, // -
-    ND_MUL, // *
-    ND_DIV, // /
-    ND_NUM, // 整数
+    ND_EQUAL,         // ==
+    ND_NOT_EQUAL,     // !=
+    ND_LESS_THAN,     // <
+    ND_LESS_OR_EQUAL, // <=
+    ND_ADD,           // +
+    ND_SUB,           // -
+    ND_MUL,           // *
+    ND_DIV,           // /
+    ND_NUM,           // 整数
 } NodeKind;
 
 typedef struct Node Node;
@@ -164,9 +182,9 @@ Node *expr();
 
 Node *primary() {
     // 次のトークンが"("なら、"(" expr ")" のはず
-    if (consume('(')) {
+    if (consume("(")) {
         Node *node = expr();
-        expect(')');
+        expect(")");
         return node;
     }
     // そうでなければ数値のはず
@@ -174,19 +192,19 @@ Node *primary() {
 }
 
 Node *unary() {
-    if (consume('-')) {
+    if (consume("-")) {
         return new_node(ND_SUB, new_node_num(0), primary());
     }
-    consume('+');
+    consume("+");
     return primary();
 }
 
 Node *mul() {
     Node *node = unary();
     for (;;) {
-        if (consume('*')) {
+        if (consume("*")) {
             node = new_node(ND_MUL, node, unary());
-        } else if (consume('/')) {
+        } else if (consume("/")) {
             node = new_node(ND_DIV, node, unary());
         } else {
             return node;
@@ -194,18 +212,50 @@ Node *mul() {
     }
 }
 
-Node *expr() {
+Node *add() {
     Node *node = mul();
     for (;;) {
-        if (consume('+')) {
+        if (consume("+")) {
             node = new_node(ND_ADD, node, mul());
-        } else if (consume('-')) {
+        } else if (consume("-")) {
             node = new_node(ND_SUB, node, mul());
         } else {
             return node;
         }
     }
 }
+
+Node *relational() {
+    Node *node = add();
+    for (;;) {
+        if (consume("<")) {
+            node = new_node(ND_LESS_THAN, node, add());
+        } else if (consume(">")) {
+            node = new_node(ND_LESS_THAN, add(), node);
+        } else if (consume("<=")) {
+            node = new_node(ND_LESS_OR_EQUAL, node, add());
+        } else if (consume(">=")) {
+            node = new_node(ND_LESS_OR_EQUAL, add(), node);
+        } else {
+            return node;
+        }
+    }
+}
+
+Node *equality() {
+    Node *node = relational();
+    for (;;) {
+        if (consume("==")) {
+            node = new_node(ND_EQUAL, node, relational());
+        } else if (consume("!=")) {
+            node = new_node(ND_NOT_EQUAL, node, relational());
+        } else {
+            return node;
+        }
+    }
+}
+
+Node *expr() { return equality(); }
 
 void gen(Node *node) {
     if (node->kind == ND_NUM) {
@@ -220,6 +270,26 @@ void gen(Node *node) {
     printf("  pop rax\n");
 
     switch (node->kind) {
+    case ND_EQUAL:
+        printf("  cmp rax, rdi\n");
+        printf("  sete al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_NOT_EQUAL:
+        printf("  cmp rax, rdi\n");
+        printf("  setne al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LESS_THAN:
+        printf("  cmp rax, rdi\n");
+        printf("  setl al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LESS_OR_EQUAL:
+        printf("  cmp rax, rdi\n");
+        printf("  setle al\n");
+        printf("  movzb rax, al\n");
+        break;
     case ND_ADD:
         printf("  add rax, rdi\n");
         break;
