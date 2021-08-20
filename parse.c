@@ -8,7 +8,6 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     return node;
 }
 
-
 Node *new_node_num(int val) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
@@ -57,6 +56,15 @@ bool consume(char *op) {
     return true;
 }
 
+Token *consume_ident() {
+    if (token->kind != TK_IDENT) {
+        return NULL;
+    }
+    Token *this = token;
+    token = token->next;
+    return this;
+}
+
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
@@ -96,8 +104,8 @@ Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
-    char resv[][3] = {"<=", ">=", "==", "!=", "+", "-",
-                      "*",  "/",  "(",  ")",  "<", ">"};
+    char resv[][3] = {"<=", ">=", "==", "!=", "=", ";", "+",
+                      "-",  "*",  "/",  "(",  ")", "<", ">"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -119,8 +127,14 @@ Token *tokenize(char *p) {
             continue;
         }
 
+        if ('a' <= *p && *p <= 'z') {
+            cur = new_token(TK_IDENT, cur, p, 1);
+            p++;
+            continue;
+        }
+
         if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p, 0);
+            cur = new_token(TK_NUM, cur, p, 1);
             cur->val = strtol(p, &p, 10);
             continue;
         }
@@ -128,9 +142,11 @@ Token *tokenize(char *p) {
         error_at(p, "トークナイズできません");
     }
 
-    new_token(TK_EOF, cur, p, 0);
+    new_token(TK_EOF, cur, p, 1);
     return head.next;
 }
+
+Node *code[100];
 
 Node *expr();
 
@@ -141,6 +157,15 @@ Node *primary() {
         expect(")");
         return node;
     }
+
+    Token *tok = consume_ident();
+    if (tok) {
+        Node *node = calloc(1, sizeof(Node));
+        node->kind = ND_LVAR;
+        node->offset = (tok->str[0] - 'a' + 1) * 8;
+        return node;
+    }
+
     // そうでなければ数値のはず
     return new_node_num(expect_number());
 }
@@ -209,4 +234,28 @@ Node *equality() {
     }
 }
 
-Node *expr() { return equality(); }
+Node *assign() {
+    Node *node = equality();
+    if (consume("=")) {
+        node = new_node(ND_ASSIGN, node, assign());
+        fprintf(stderr, "assign : %d\n", node->offset);
+    }
+    return node;
+}
+
+Node *expr() { return assign(); }
+
+Node *stmt() {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
+void program() {
+    int i = 0;
+    while (!at_eof()) {
+        code[i] = stmt();
+        i++;
+    }
+    code[i] = NULL;
+}

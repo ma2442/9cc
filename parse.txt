@@ -1,0 +1,13 @@
+program = stmt*
+stmt    = expr ";"
+expr    = assign
+assign  = equality ("=" assign)?
+equality    = relational (("=="|"!=") relational)*
+relational  = add (("<"|">"|"<="|">=") add)*
+add = mul (("+"|"=") mul)*
+mul = unary (("*"|"/") unary)* // <- "%" は?
+unary   = ("+"|"-")? primary
+primary = ident | num | "(" expr ")"
+ident = "a" | "b" | ... | "z"
+num = ten ten*
+ten = "0" | "1" | ... | "9"
