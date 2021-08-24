@@ -65,6 +65,16 @@ Token *consume_ident() {
     return this;
 }
 
+// 変数を名前で検索する。 見つからなかった場合はNULLを返す。
+LVar *find_lvar(Token *tok) {
+    for (LVar *var = locals; var != NULL; var = var->next) {
+        if (var->len == tok->len && !memcmp(var->name, tok->str, tok->len)) {
+            return var;
+        }
+    }
+    return NULL;
+}
+
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
@@ -99,6 +109,28 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     return tok;
 }
 
+// 文字列の先頭から変数名として読める部分の長さを取得
+// [a-zA-Z_][a-zA-Z_0-9]*
+int read_ident(char *p) {
+    int i = 0;
+    while (p[i] != '\0') {
+        if ('a' <= p[i] && p[i] <= 'z' || 'A' <= p[i] && p[i] <= 'Z' ||
+            p[i] == '_') {
+            i++;
+            continue;
+        }
+        if (0 < i) {
+            if ('0' <= p[i] && p[i] <= '9') {
+                i++;
+                continue;
+            }
+        }
+        break;
+    }
+    int len = i;
+    return len;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
@@ -127,15 +159,16 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        if ('a' <= *p && *p <= 'z') {
-            cur = new_token(TK_IDENT, cur, p, 1);
-            p++;
-            continue;
-        }
-
         if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 1);
             cur->val = strtol(p, &p, 10);
+            continue;
+        }
+
+        int ident_len = read_ident(p);
+        if (ident_len > 0) {
+            cur = new_token(TK_IDENT, cur, p, ident_len);
+            p += ident_len;
             continue;
         }
 
@@ -162,7 +195,19 @@ Node *primary() {
     if (tok) {
         Node *node = calloc(1, sizeof(Node));
         node->kind = ND_LVAR;
-        node->offset = (tok->str[0] - 'a' + 1) * 8;
+
+        LVar *lvar = find_lvar(tok);
+        if (lvar) {
+            node->offset = lvar->offset;
+        } else {
+            lvar = calloc(1, sizeof(LVar));
+            lvar->next = locals;
+            lvar->name = tok->str;
+            lvar->len = tok->len;
+            lvar->offset = (locals ? locals->offset : 0) + 8;
+            node->offset = lvar->offset;
+            locals = lvar;
+        }
         return node;
     }
 
@@ -238,7 +283,6 @@ Node *assign() {
     Node *node = equality();
     if (consume("=")) {
         node = new_node(ND_ASSIGN, node, assign());
-        fprintf(stderr, "assign : %d\n", node->offset);
     }
     return node;
 }

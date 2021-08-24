@@ -52,5 +52,6 @@ assert 2 'a=b=2;'
 assert 4 'a=b=(+3+5)/-2*-(1);'
 assert 1 'z =c =9 == 2* 4 + (1 != (+3+5)/-2*-(1) >= 5 > 1);' 
 assert 5 'a=1+2;d=(1==1)*(a+2);'
+assert 9 'ident_tESt01=1+4; _name__=8/2; val=ident_tESt01 - _name__; val+8;'
 # assert 1 '(a+1)=2;'
 echo OK
