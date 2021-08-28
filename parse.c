@@ -48,8 +48,10 @@ void error(char *fmt, ...) {
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op) {
-    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
-        memcmp(token->str, op, token->len)) {
+    if (token->kind != TK_RESERVED && token->kind != TK_RETURN) {
+        return false;
+    }
+    if (strlen(op) != token->len || memcmp(token->str, op, token->len)) {
         return false;
     }
     token = token->next;
@@ -165,8 +167,16 @@ Token *tokenize(char *p) {
             continue;
         }
 
+        //先頭から変数として読める部分の長さを取得
         int ident_len = read_ident(p);
-        if (ident_len > 0) {
+        // return 判定
+        if (ident_len == 6 && !strncmp(p, "return", 6)) {
+            cur = new_token(TK_RETURN, cur, p, ident_len);
+            p += ident_len;
+            continue;
+        }
+        // 変数名 判定
+        else if (ident_len > 0) {
             cur = new_token(TK_IDENT, cur, p, ident_len);
             p += ident_len;
             continue;
@@ -290,7 +300,12 @@ Node *assign() {
 Node *expr() { return assign(); }
 
 Node *stmt() {
-    Node *node = expr();
+    Node *node;
+    if (consume("return")) {
+        node = new_node(ND_RETURN, expr(), NULL);
+    } else {
+        node = expr();
+    }
     expect(";");
     return node;
 }

@@ -1,5 +1,5 @@
 program = stmt*
-stmt    = expr ";"
+stmt    = expr ";" | "return" expr ";"
 expr    = assign
 assign  = equality ("=" assign)?
 equality    = relational (("=="|"!=") relational)*
@@ -8,6 +8,9 @@ add = mul (("+"|"=") mul)*
 mul = unary (("*"|"/") unary)* // <- "%" は?
 unary   = ("+"|"-")? primary
 primary = ident | num | "(" expr ")"
-ident = "a" | "b" | ... | "z"
+ident = ("_" | ALPHA | alpha) ("_" | ALPHA | alpha | ten)*
+
+ALPHA = "A" | "B" | ... | "Z"
+alpha = "a" | "b" | ... | "z"
 num = ten ten*
 ten = "0" | "1" | ... | "9"
