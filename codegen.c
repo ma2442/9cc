@@ -55,8 +55,8 @@ void gen(Node *node) {
         gen(node->lhs);
         if (node->inc) {
             gen(node->inc);
-            printf("  jmp .Lbegin%d\n", node->label_num);
         }
+        printf("  jmp .Lbegin%d\n", node->label_num);
         printf(".Lend%d:\n", node->label_num);
         return;
     case ND_NUM:

@@ -69,7 +69,9 @@ assert 2 'loop=0; while(loop) return 1; return 2;'
 assert 0 'loop=100; while(loop) loop = loop - 1; return loop;'
 #assert 1 'while() return 1; return 2;'
 assert 35 'a=-10; for(i=1; i < 10; i=i+1) a = a + i; return a;'
-assert 1 'for(;;) return 1; return 2;'
+assert 5 'for(i=0;;) if(i<5)i=i+1; else return i;'
+assert 6 'i=0; for(;i<6;) i=i+1; return i;'
+assert 7 'i=0; for(;;i=i+1) if(i>=7) return i;'
 assert 23 'a=3; l=3; if(a==2) 1; else while(l=l-1) for(i=0; i<5; i= i + 1)  a = a+2; return a;'
 
 echo OK
