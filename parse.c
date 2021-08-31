@@ -21,6 +21,9 @@ Token *token;
 // 入力プログラム
 char *user_input;
 
+// ラベル通し番号
+int label_cnt = 0;
+
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
     va_list ap;
@@ -48,7 +51,12 @@ void error(char *fmt, ...) {
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op) {
-    if (token->kind != TK_RESERVED && token->kind != TK_RETURN) {
+    switch (token->kind) {
+    case TK_RESERVED:
+    case TK_RETURN:
+    case TK_CTRL:
+        break;
+    default:
         return false;
     }
     if (strlen(op) != token->len || memcmp(token->str, op, token->len)) {
@@ -170,13 +178,30 @@ Token *tokenize(char *p) {
         //先頭から変数として読める部分の長さを取得
         int ident_len = read_ident(p);
         // return 判定
-        if (ident_len == 6 && !strncmp(p, "return", 6)) {
-            cur = new_token(TK_RETURN, cur, p, ident_len);
+        if (ident_len == 6 && !strncmp(p, "return", ident_len)) {
+            cur = new_token(TK_CTRL, cur, p, ident_len);
             p += ident_len;
             continue;
         }
+
+        // 制御構文if else while for等 判定
+        char keyword[][8] = {"if", "else", "while", "for", ""};
+        is_tokenized = false;
+        for (int i = 0; keyword[i][0] != '\0'; i++) {
+            if (ident_len == strlen(keyword[i]) &&
+                !strncmp(p, keyword[i], ident_len)) {
+                cur = new_token(TK_CTRL, cur, p, ident_len);
+                p += ident_len;
+                is_tokenized = true;
+                break;
+            }
+        }
+        if (is_tokenized) {
+            continue;
+        }
+
         // 変数名 判定
-        else if (ident_len > 0) {
+        if (ident_len > 0) {
             cur = new_token(TK_IDENT, cur, p, ident_len);
             p += ident_len;
             continue;
@@ -303,10 +328,53 @@ Node *stmt() {
     Node *node;
     if (consume("return")) {
         node = new_node(ND_RETURN, expr(), NULL);
+        expect(";");
+    } else if (consume("if")) {
+        expect("(");
+        Node *judge = expr();
+        expect(")");
+        node = new_node(ND_IF_ELSE, stmt(), NULL);
+        node->judge = judge;
+        if (consume("else")) {
+            node->rhs = stmt();
+        }
+        node->label_num = label_cnt;
+        label_cnt++;
+    } else if (consume("while")) {
+        expect("(");
+        Node *judge = expr();
+        expect(")");
+        node = new_node(ND_WHILE, stmt(), NULL);
+        node->judge = judge;
+        node->label_num = label_cnt;
+        label_cnt++;
+    } else if (consume("for")) {
+        expect("(");
+        Node *init = NULL;
+        if (!consume(";")) {
+            init = expr();
+            expect(";");
+        }
+        Node *judge = NULL;
+        if (!consume(";")) {
+            judge = expr();
+            expect(";");
+        }
+        Node *inc = NULL;
+        if (!consume(")")) {
+            inc = expr();
+            expect(")");
+        }
+        node = new_node(ND_FOR, stmt(), NULL);
+        node->init = init;
+        node->judge = judge;
+        node->inc = inc;
+        node->label_num = label_cnt;
+        label_cnt++;
     } else {
         node = expr();
+        expect(";");
     }
-    expect(";");
     return node;
 }
 

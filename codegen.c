@@ -18,6 +18,47 @@ void gen(Node *node) {
         printf("  pop rbp\n");
         printf("  ret\n");
         return;
+    case ND_IF_ELSE:
+        gen(node->judge);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .Lelse%d\n", node->label_num);
+        gen(node->lhs);
+        printf("  jmp .Lend%d\n", node->label_num);
+        printf(".Lelse%d:\n", node->label_num);
+        if (node->rhs) {
+            gen(node->rhs);
+        }
+        printf(".Lend%d:\n", node->label_num);
+        return;
+    case ND_WHILE:
+        printf(".Lbegin%d:\n", node->label_num);
+        gen(node->judge);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .Lend%d\n", node->label_num);
+        gen(node->lhs);
+        printf("  jmp .Lbegin%d\n", node->label_num);
+        printf(".Lend%d:\n", node->label_num);
+        return;
+    case ND_FOR:
+        if (node->init) {
+            gen(node->init);
+        }
+        printf(".Lbegin%d:\n", node->label_num);
+        if (node->judge) {
+            gen(node->judge);
+            printf("  pop rax\n");
+            printf("  cmp rax, 0\n");
+            printf("  je .Lend%d\n", node->label_num);
+        }
+        gen(node->lhs);
+        if (node->inc) {
+            gen(node->inc);
+            printf("  jmp .Lbegin%d\n", node->label_num);
+        }
+        printf(".Lend%d:\n", node->label_num);
+        return;
     case ND_NUM:
         printf("  push %d\n", node->val);
         return;
