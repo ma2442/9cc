@@ -74,4 +74,15 @@ assert 6 'i=0; for(;i<6;) i=i+1; return i;'
 assert 7 'i=0; for(;;i=i+1) if(i>=7) return i;'
 assert 23 'a=3; l=3; if(a==2) 1; else while(l=l-1) for(i=0; i<5; i= i + 1)  a = a+2; return a;'
 
+# block test
+assert 1 '{return 1; return 2;}'
+assert 1 '{} return 1;'
+assert 0 'i=0; if(i==1){i = i + 1; i = i * 3;} return i;'
+assert 6 'i=1; if(i==1){i = i + 1; i = i * 3;} return i;'
+assert 2 'i=0; if(i==0){i=1; i=i+1;} else if (i==3) {i=4; i=i+1;} else {i=7; i=i+1;} return i;'
+assert 5 'i=3; if(i==0){i=1; i=i+1;} else if (i==3) {i=4; i=i+1;} else {i=7; i=i+1;} return i;'
+assert 8 'i=6; if(i==0){i=1; i=i+1;} else if (i==3) {i=4; i=i+1;} else {i=7; i=i+1;} return i;'
+assert 45 'i=0; res=0; while(i<3){ for(k=0; k<5; k = k+1){res= res+1; res= res+2;} res_while = res_while+1; i=i+1;} return res;'
+assert 2 'i=0; if(i==1){return 1;} if(i==2){} return 2;'
+
 echo OK

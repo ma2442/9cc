@@ -46,6 +46,7 @@ typedef enum {
     ND_IF_ELSE,       // if (judge) lhs else rhs
     ND_WHILE,         // while (judge) lhs
     ND_FOR,           // for (init; judge; inc) lhs
+    ND_BLOCK,         // block { }
 } NodeKind;
 
 typedef struct Node Node;
@@ -61,6 +62,7 @@ struct Node {
     Node *init;    // forの初期化式(_____; ; )
     Node *judge;   // if,while,for等の条件式
     Node *inc;     // forの後処理式( ; ;____)
+    Node **block;  // block {} 内のstatements
 };
 
 typedef struct LVar LVar;

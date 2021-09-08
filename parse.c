@@ -146,8 +146,8 @@ Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
-    char resv[][3] = {"<=", ">=", "==", "!=", "=", ";", "+",
-                      "-",  "*",  "/",  "(",  ")", "<", ">"};
+    char resv[][3] = {"{", "}", "<=", ">=", "==", "!=", "=", ";",
+                      "+", "-", "*",  "/",  "(",  ")",  "<", ">"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -326,7 +326,18 @@ Node *expr() { return assign(); }
 
 Node *stmt() {
     Node *node;
-    if (consume("return")) {
+
+    // block {} である場合
+    if (consume("{")) {
+        node = new_node(ND_BLOCK, NULL, NULL);
+        node->block = calloc(128, sizeof(Node *));
+        for (int i = 0; i <= 128; i++) {
+            if (consume("}")) {
+                break;
+            }
+            node->block[i] = stmt();
+        }
+    } else if (consume("return")) {
         node = new_node(ND_RETURN, expr(), NULL);
         expect(";");
     } else if (consume("if")) {

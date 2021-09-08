@@ -76,6 +76,13 @@ void gen(Node *node) {
         printf("  mov [rax], rdi\n");
         printf("  push rdi\n");
         return;
+    case ND_BLOCK:
+        for (int i = 0; i <= 128; i++) {
+            if (!node->block[i]) {
+                return;
+            }
+            gen(node->block[i]);
+        }
     }
 
     gen(node->lhs);
