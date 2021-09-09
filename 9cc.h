@@ -41,6 +41,10 @@ typedef enum {
     ND_DIV,           // /
     ND_ASSIGN,        // =
     ND_LVAR,          // local valiable
+    ND_FUNC_CALL,     // 関数呼び出し
+    ND_ACTUAL_ARG,    // 関数の実引数
+    ND_FUNC_DEFINE,   // 関数定義
+    ND_FORMAL_ARG,    // 関数の仮引数
     ND_NUM,           // 整数
     ND_RETURN,        // return
     ND_IF_ELSE,       // if (judge) lhs else rhs
@@ -53,16 +57,19 @@ typedef struct Node Node;
 
 // 抽象構文木のノードの型
 struct Node {
-    NodeKind kind; // ノードの型
-    Node *lhs;     // 左辺, またはif,while,for等の内部statement
-    Node *rhs;     // 右辺, またはelseの内部statement
-    int val;       // kindがND_NUMの場合のみ使う
-    int offset;    // kindがND_LVARの場合のみ使う
-    int label_num; // if,while,for等のラベル通し番号
-    Node *init;    // forの初期化式(_____; ; )
-    Node *judge;   // if,while,for等の条件式
-    Node *inc;     // forの後処理式( ; ;____)
-    Node **block;  // block {} 内のstatements
+    NodeKind kind;     // ノードの型
+    Node *lhs;         // 左辺, またはif,while,for等の内部statement
+    Node *rhs;         // 右辺, またはelseの内部statement
+    int val;           // kindがND_NUMの場合のみ使う
+    int offset;        // kindがND_LVARの場合のみ使う
+    int label_num;     // if,while,for等のラベル通し番号
+    char *func_name;   // kindがND_FUNC_CALLの場合に使う
+    int func_name_len; // kindがND_FUNC_CALLの場合に使う
+    int arg_idx;  // kindがND_ACTUAL_ARGの場合の引数番号(0始まり)
+    Node *init;   // forの初期化式(_____; ; )
+    Node *judge;  // if,while,for等の条件式
+    Node *inc;    // forの後処理式( ; ;____)
+    Node **block; // block {} 内のstatements
 };
 
 typedef struct LVar LVar;

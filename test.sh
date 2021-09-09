@@ -5,7 +5,7 @@ assert() {
     input="$2"
 
     ./9cc "$input" > tmp.s
-    cc -o tmp tmp.s
+    cc -o tmp tmp.s testfuncs.o
     ./tmp
     actual="$?"
 
@@ -85,4 +85,9 @@ assert 8 'i=6; if(i==0){i=1; i=i+1;} else if (i==3) {i=4; i=i+1;} else {i=7; i=i
 assert 45 'i=0; res=0; while(i<3){ for(k=0; k<5; k = k+1){res= res+1; res= res+2;} res_while = res_while+1; i=i+1;} return res;'
 assert 2 'i=0; if(i==1){return 1;} if(i==2){} return 2;'
 
+assert 1 'foo(); return 1;'
+assert 2 'bar(1, 2); return 2;'
+assert 3 'bar6(1,2,3,4,5,6); return 3;'
+
+assert 3 'return bar(1, 3);'
 echo OK

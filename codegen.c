@@ -10,6 +10,10 @@ void gen_lval(Node *node) {
 }
 
 void gen(Node *node) {
+    if (!node) {
+        return;
+    }
+    char func_name[64];
     switch (node->kind) {
     case ND_RETURN:
         gen(node->lhs);
@@ -26,9 +30,7 @@ void gen(Node *node) {
         gen(node->lhs);
         printf("  jmp .Lend%d\n", node->label_num);
         printf(".Lelse%d:\n", node->label_num);
-        if (node->rhs) {
-            gen(node->rhs);
-        }
+        gen(node->rhs);
         printf(".Lend%d:\n", node->label_num);
         return;
     case ND_WHILE:
@@ -42,9 +44,7 @@ void gen(Node *node) {
         printf(".Lend%d:\n", node->label_num);
         return;
     case ND_FOR:
-        if (node->init) {
-            gen(node->init);
-        }
+        gen(node->init);
         printf(".Lbegin%d:\n", node->label_num);
         if (node->judge) {
             gen(node->judge);
@@ -53,9 +53,7 @@ void gen(Node *node) {
             printf("  je .Lend%d\n", node->label_num);
         }
         gen(node->lhs);
-        if (node->inc) {
-            gen(node->inc);
-        }
+        gen(node->inc);
         printf("  jmp .Lbegin%d\n", node->label_num);
         printf(".Lend%d:\n", node->label_num);
         return;
@@ -67,6 +65,30 @@ void gen(Node *node) {
         printf("  pop rax\n");
         printf("  mov rax, [rax]\n");
         printf("  push rax\n");
+        return;
+    case ND_FUNC_CALL:
+        gen(node->lhs); //実引数計算
+        // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
+        // printf("  mov rax, rsp\n");
+        // printf("  mov rdi, 0x10\n");
+        // printf("  cqo\n");
+        // printf("  idiv rdi\n");
+        // printf("  sub rsp, rdx\n");
+        // rspを16バイト境界に揃える。
+        printf("  xor rsp, 0x0f\n");
+
+        // 関数呼び出し
+        strncpy(func_name, node->func_name, node->func_name_len);
+        func_name[node->func_name_len] = '\0';
+        printf("  call %s\n", func_name);
+        return;
+    case ND_ACTUAL_ARG:
+        gen(node->lhs); // previous arg
+        gen(node->rhs); // value of this arg
+        char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+        if (arg_storage[node->arg_idx][0] != '\0') {
+            printf("  pop %s\n", arg_storage[node->arg_idx]);
+        }
         return;
     case ND_ASSIGN:
         gen_lval(node->lhs);

@@ -1,4 +1,5 @@
-program = stmt*
+program = func*
+func = ident "(" (ident ("," ident)* )? ")" "{" stmt* "}"
 stmt    = expr ";" 
     | "{" stmt* "}"
     | "return" expr ";" 
@@ -13,7 +14,10 @@ relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"=") mul)*
 mul = unary (("*"|"/") unary)* // <- "%" は?
 unary   = ("+"|"-")? primary
-primary = ident | num | "(" expr ")"
+primary = ident 
+    | ident "(" (expr ("," expr)* )? ")" 
+    | num 
+    | "(" expr ")"
 ident = ("_" | ALPHA | alpha) ("_" | ALPHA | alpha | ten)*
 
 ALPHA = "A" | "B" | ... | "Z"
