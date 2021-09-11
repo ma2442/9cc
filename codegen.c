@@ -14,6 +14,7 @@ void gen(Node *node) {
         return;
     }
     char func_name[64];
+    char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     switch (node->kind) {
     case ND_RETURN:
         gen(node->lhs);
@@ -67,28 +68,67 @@ void gen(Node *node) {
         printf("  push rax\n");
         return;
     case ND_FUNC_CALL:
-        gen(node->lhs); //実引数計算
+        gen(node->next_arg); //実引数計算
         // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
-        // printf("  mov rax, rsp\n");
-        // printf("  mov rdi, 0x10\n");
-        // printf("  cqo\n");
-        // printf("  idiv rdi\n");
-        // printf("  sub rsp, rdx\n");
-        // rspを16バイト境界に揃える。
-        printf("  xor rsp, 0x0f\n");
+        // 0x0fを半端な数に書き換えても正常動作するので、
+        // できているかよくわからない。なくても動く。
+        printf("  mov rbx, rsp\n");
+        printf("  and rbx, 0x0f\n");
+        printf("  sub rsp, rbx\n");
+        printf("  push rbx\n");
+        printf("  sub rsp, 8\n");
 
         // 関数呼び出し
         strncpy(func_name, node->func_name, node->func_name_len);
         func_name[node->func_name_len] = '\0';
         printf("  call %s\n", func_name);
+
+        // rspを16バイト境界揃えから元に戻す
+        // できているかよくわからない。なくても動く。
+        printf("  add rsp, 8\n");
+        printf("  pop rbx\n");
+        printf("  add rsp, rbx\n");
+
+        // 返り値をスタックに保存
+        printf("  push rax\n");
         return;
-    case ND_ACTUAL_ARG:
-        gen(node->lhs); // previous arg
+    case ND_FUNC_CALL_ARG:
         gen(node->rhs); // value of this arg
-        char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
         if (arg_storage[node->arg_idx][0] != '\0') {
             printf("  pop %s\n", arg_storage[node->arg_idx]);
         }
+        gen(node->next_arg); // next arg
+        return;
+    case ND_FUNC_DEFINE:
+        // 関数名ラベル
+        strncpy(func_name, node->func_name, node->func_name_len);
+        func_name[node->func_name_len] = '\0';
+        printf("%s:\n", func_name);
+        // プロローグ
+        // 変数26個分の領域を確保する
+        printf("  push rbp\n");
+        printf("  mov rbp, rsp\n");
+        printf("  sub rsp, 208\n");
+        // 仮引数
+        gen(node->next_arg);
+        // 関数本文  "{" stmt* "}"
+        gen(node->rhs);
+        // エピローグ
+        // 最後の式の結果がRAXに残っているのでそれが返り値になる
+        printf("  mov rsp, rbp\n");
+        printf("  pop rbp\n");
+        printf("  ret\n");
+        return;
+    case ND_FUNC_DEFINE_ARG:
+        gen_lval(node->lhs);
+        if (arg_storage[node->arg_idx][0] != '\0') {
+            printf("  push %s\n", arg_storage[node->arg_idx]);
+        }
+        printf("  pop rdi\n");
+        printf("  pop rax\n");
+        printf("  mov [rax], rdi\n");
+        printf("  push rdi\n");
+        gen(node->next_arg);
         return;
     case ND_ASSIGN:
         gen_lval(node->lhs);

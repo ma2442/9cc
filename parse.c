@@ -119,6 +119,24 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     return tok;
 }
 
+// 変数名として識別
+Node *new_node_lvar(Token *tok) {
+    Node *node = new_node(ND_LVAR, NULL, NULL);
+    LVar *lvar = find_lvar(tok);
+    if (lvar) {
+        node->offset = lvar->offset;
+    } else {
+        lvar = calloc(1, sizeof(LVar));
+        lvar->next = locals;
+        lvar->name = tok->str;
+        lvar->len = tok->len;
+        lvar->offset = (locals ? locals->offset : 0) + 8;
+        node->offset = lvar->offset;
+        locals = lvar;
+    }
+    return node;
+}
+
 // 文字列の先頭から変数名として読める部分の長さを取得
 // [a-zA-Z_][a-zA-Z_0-9]*
 int read_ident(char *p) {
@@ -215,6 +233,7 @@ Token *tokenize(char *p) {
 }
 
 Node *code[100];
+Node *statement[100];
 
 Node *expr();
 
@@ -228,51 +247,34 @@ Node *primary() {
 
     // 変数名,関数名の識別
     Token *tok = consume_ident();
-    if (tok) {
-        Node *node = calloc(1, sizeof(Node));
-
-        // 関数名として識別
-        if (consume("(")) {
-
-            // 実引数処理
-            if (!consume(")")) {
-                node->kind = ND_ACTUAL_ARG;
-                node->rhs = expr(); // 第一実引数の値
-                node->arg_idx = 0;
-                while (consume(",")) {
-                    node = new_node(ND_ACTUAL_ARG, node, expr());
-                    node->arg_idx = node->lhs->arg_idx + 1;
-                }
-                expect(")");
-            }
-
-            // 関数呼び出し本体
-            node = new_node(ND_FUNC_CALL, node, NULL);
-            node->func_name = tok->str;
-            node->func_name_len = tok->len;
-            return node;
-        }
-
-        // 変数名として識別
-        node->kind = ND_LVAR;
-
-        LVar *lvar = find_lvar(tok);
-        if (lvar) {
-            node->offset = lvar->offset;
-        } else {
-            lvar = calloc(1, sizeof(LVar));
-            lvar->next = locals;
-            lvar->name = tok->str;
-            lvar->len = tok->len;
-            lvar->offset = (locals ? locals->offset : 0) + 8;
-            node->offset = lvar->offset;
-            locals = lvar;
-        }
-        return node;
+    if (!tok) {
+        // 識別子がなければ数値のはず
+        return new_node_num(expect_number());
     }
 
-    // そうでなければ数値のはず
-    return new_node_num(expect_number());
+    if (!consume("(")) {
+        // 変数名として識別
+        return new_node_lvar(tok);
+    }
+
+    // 関数名として識別
+    Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
+    node->func_name = tok->str;
+    node->func_name_len = tok->len;
+
+    // 実引数処理
+    if (!consume(")")) {
+        node->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
+        node->next_arg->arg_idx = 0;
+        Node *arg = node->next_arg;
+        while (consume(",")) {
+            arg->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
+            arg->next_arg->arg_idx = arg->arg_idx + 1;
+            arg = arg->next_arg;
+        }
+        expect(")");
+    }
+    return node;
 }
 
 Node *unary() {
@@ -349,19 +351,26 @@ Node *assign() {
 
 Node *expr() { return assign(); }
 
-Node *stmt() {
-    Node *node;
-
-    // block {} である場合
-    if (consume("{")) {
-        node = new_node(ND_BLOCK, NULL, NULL);
-        node->block = calloc(128, sizeof(Node *));
-        for (int i = 0; i <= 128; i++) {
-            if (consume("}")) {
-                break;
-            }
-            node->block[i] = stmt();
+// block {} である場合
+Node *block() {
+    if (!consume("{")) {
+        return NULL;
+    }
+    Node *node = new_node(ND_BLOCK, NULL, NULL);
+    node->block = calloc(128, sizeof(Node *));
+    for (int i = 0; i <= 128; i++) {
+        if (consume("}")) {
+            break;
         }
+        node->block[i] = stmt();
+    }
+    return node;
+}
+
+Node *stmt() {
+    Node *node = block();
+    if (node) {
+        // block {} の場合
     } else if (consume("return")) {
         node = new_node(ND_RETURN, expr(), NULL);
         expect(";");
@@ -414,63 +423,49 @@ Node *stmt() {
     return node;
 }
 
-// 編集中
+// 関数定義ノード
 Node *func() {
     Token *tok = consume_ident();
-    if (tok) {
-        Node *node = calloc(1, sizeof(Node));
+    if (!tok) {
+        return NULL; // エラー
+    }
 
-        // 関数名として識別
-        if (consume("(")) {
+    //ローカル変数初期化
+    locals = calloc(1, sizeof(LVar));
 
-            // 実引数処理
-            if (!consume(")")) {
-                // node->kind = ND_FORMAL_ARG;
-                node->kind = ND_LVAR;
-                LVar *lvar = find_lvar(tok);
-                if (lvar) {
-                    node->offset = lvar->offset;
-                } else {
-                    lvar = calloc(1, sizeof(LVar));
-                    lvar->next = locals;
-                    lvar->name = tok->str;
-                    lvar->len = tok->len;
-                    lvar->offset = (locals ? locals->offset : 0) + 8;
-                    node->offset = lvar->offset;
-                    locals = lvar;
-                }
-                node->arg_idx = 0;
-                while (consume(",")) {
-                    node = new_node(ND_FORMAL_ARG, node, expr());
-                    node->arg_idx = node->lhs->arg_idx + 1;
-                }
-                expect(")");
-            }
+    Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
+    node->func_name = tok->str;
+    node->func_name_len = tok->len;
 
-            // 関数呼び出し本体
-            node = new_node(ND_FUNC_CALL, node, NULL);
-            node->func_name = tok->str;
-            node->func_name_len = tok->len;
-            return node;
+    if (!consume("(")) {
+        return NULL; // エラー
+    }
+
+    // 仮引数処理
+    if (!consume(")")) {
+        tok = consume_ident();
+        node->next_arg = new_node(ND_FUNC_DEFINE_ARG, new_node_lvar(tok), NULL);
+        node->next_arg->arg_idx = 0;
+        Node *arg = node->next_arg;
+        while (consume(",")) {
+            tok = consume_ident();
+            arg->next_arg =
+                new_node(ND_FUNC_DEFINE_ARG, new_node_lvar(tok), NULL);
+            arg->next_arg->arg_idx = arg->arg_idx + 1;
+            arg = arg->next_arg;
         }
-
-        // 変数名として識別
-        return node;
+        expect(")");
     }
 
-    Node *node = calloc(1, sizeof(Node));
-    for (;;) {
-    }
-    new_node(ND_FUNC_DEFINE, stmt(), NULL);
-    int i = 0;
+    // 関数本文 "{" stmt* "}"
+    node->rhs = block();
     return node;
 }
 
 void program() {
     int i = 0;
     while (!at_eof()) {
-        // code[i] = func();
-        code[i] = stmt();
+        code[i] = func();
         i++;
     }
     code[i] = NULL;
