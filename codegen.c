@@ -67,6 +67,15 @@ void gen(Node *node) {
             printf("  mov rax, [rax]\n");
             printf("  push rax\n");
             return;
+        case ND_ADDR:
+            gen_lval(node->lhs);
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  mov rax, [rax]\n");
+            printf("  push rax\n");
+            return;
         case ND_FUNC_CALL:
             gen(node->next_arg);  //実引数計算
             // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。

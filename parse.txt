@@ -13,7 +13,7 @@ equality    = relational (("=="|"!=") relational)*
 relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"=") mul)*
 mul = unary (("*"|"/") unary)* // <- "%" は?
-unary   = ("+"|"-")? primary
+unary   = ("+"|"-")? primary | ("*"|"&") unary
 primary = ident 
     | ident "(" (expr ("," expr)* )? ")" 
     | num 

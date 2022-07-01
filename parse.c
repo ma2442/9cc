@@ -167,7 +167,7 @@ Token *tokenize(char *p) {
     head.next = NULL;
     Token *cur = &head;
     char resv[][3] = {",", "{", "}", "<=", ">=", "==", "!=", "=", ";",
-                      "+", "-", "*", "/",  "(",  ")",  "<",  ">"};
+                      "+", "-", "*", "/",  "(",  ")",  "<",  ">", "&"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -280,6 +280,12 @@ Node *primary() {
 }
 
 Node *unary() {
+    if (consume("&")) {
+        return new_node(ND_ADDR, unary(), NULL);
+    }
+    if (consume("*")) {
+        return new_node(ND_DEREF, unary(), NULL);
+    }
     if (consume("-")) {
         return new_node(ND_SUB, new_node_num(0), primary());
     }

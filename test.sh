@@ -101,4 +101,7 @@ assert 6 'acc(x){ if(x==1) { return 1; } else { return x + acc(x-1); }} main() {
 assert 1 'fib(x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } main() { return fib(1); }'
 assert 8 'fib(x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } main() { return fib(6); }'
 
+#単項&、*
+assert 3 'main(){x = 3; y = &x; return *y;}'
+assert 4 'main(){x = 4; y = 5; z = &y + 8; return *z;}'
 echo OK
