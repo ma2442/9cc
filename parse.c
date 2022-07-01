@@ -31,10 +31,11 @@ void error_at(char *loc, char *fmt, ...) {
 
     int pos = loc - user_input;
     fprintf(stderr, "%s\n", user_input);
-    fprintf(stderr, "%*s", pos, " "); // pos個の空白を出力
+    fprintf(stderr, "%*s", pos, " ");  // pos個の空白を出力
     fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    va_end(ap);
     exit(1);
 }
 
@@ -45,6 +46,7 @@ void error(char *fmt, ...) {
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    va_end(ap);
     exit(1);
 }
 
@@ -52,12 +54,12 @@ void error(char *fmt, ...) {
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op) {
     switch (token->kind) {
-    case TK_RESERVED:
-    case TK_RETURN:
-    case TK_CTRL:
-        break;
-    default:
-        return false;
+        case TK_RESERVED:
+        case TK_RETURN:
+        case TK_CTRL:
+            break;
+        default:
+            return false;
     }
     if (strlen(op) != token->len || memcmp(token->str, op, token->len)) {
         return false;
@@ -427,7 +429,7 @@ Node *stmt() {
 Node *func() {
     Token *tok = consume_ident();
     if (!tok) {
-        return NULL; // エラー
+        return NULL;  // エラー
     }
 
     //ローカル変数初期化
@@ -438,7 +440,7 @@ Node *func() {
     node->func_name_len = tok->len;
 
     if (!consume("(")) {
-        return NULL; // エラー
+        return NULL;  // エラー
     }
 
     // 仮引数処理
