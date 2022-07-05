@@ -1,12 +1,15 @@
 program = func*
-func = ident "(" (ident ("," ident)* )? ")" "{" stmt* "}"
-stmt    = expr ";" 
+func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
+stmt    =
+    declaration ";"
+    | expr ";" 
     | "{" stmt* "}"
     | "return" expr ";" 
     | "if" "(" expr ")" stmt ("else" stmt )? 
     | "while" "(" expr ")" stmt
     | "for" "(" expr? ";" expr? ";" expr? ")" stmt
     | ...
+declaration = "int" ident
 expr    = assign
 assign  = equality ("=" assign)?
 equality    = relational (("=="|"!=") relational)*

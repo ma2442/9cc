@@ -40,6 +40,7 @@ typedef enum {
     ND_MUL,              // *
     ND_DIV,              // /
     ND_ASSIGN,           // =
+    ND_DEFLOCAL,         // local valiable definition
     ND_LVAR,             // local valiable
     ND_ADDR,             // pointer &
     ND_DEREF,            // pointer *

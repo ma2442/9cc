@@ -121,21 +121,34 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     return tok;
 }
 
+// 変数定義
+Node *new_node_deflocal(Token *tok) {
+    Node *node = new_node(ND_DEFLOCAL, NULL, NULL);
+    LVar *lvar = find_lvar(tok);
+    if (lvar) {
+        // エラー 定義済み
+        error_at(tok->str, "定義済みの変数です。");
+    }
+    lvar = calloc(1, sizeof(LVar));
+    lvar->next = locals;
+    lvar->name = tok->str;
+    lvar->len = tok->len;
+    lvar->offset = (locals ? locals->offset : 0) + 8;
+    node->offset = lvar->offset;
+    locals = lvar;
+    return node;
+}
+
 // 変数名として識別
 Node *new_node_lvar(Token *tok) {
     Node *node = new_node(ND_LVAR, NULL, NULL);
     LVar *lvar = find_lvar(tok);
-    if (lvar) {
-        node->offset = lvar->offset;
-    } else {
-        lvar = calloc(1, sizeof(LVar));
-        lvar->next = locals;
-        lvar->name = tok->str;
-        lvar->len = tok->len;
-        lvar->offset = (locals ? locals->offset : 0) + 8;
-        node->offset = lvar->offset;
-        locals = lvar;
+    if (!lvar) {
+        // エラー 未定義
+        error_at(tok->str, "未定義の変数です。");
+        return NULL;
     }
+    node->offset = lvar->offset;
     return node;
 }
 
@@ -166,8 +179,8 @@ Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
-    char resv[][3] = {",", "{", "}", "<=", ">=", "==", "!=", "=", ";",
-                      "+", "-", "*", "/",  "(",  ")",  "<",  ">", "&"};
+    char resv[][10] = {",", "{", "}", "<=", ">=", "==", "!=", "=", ";",  "+",
+                       "-", "*", "/", "(",  ")",  "<",  ">",  "&", "int"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -357,6 +370,11 @@ Node *assign() {
     return node;
 }
 
+Node *declaration() {
+    Token *tok = consume_ident();
+    return new_node_deflocal(tok);
+}
+
 Node *expr() { return assign(); }
 
 // block {} である場合
@@ -424,6 +442,9 @@ Node *stmt() {
         node->inc = inc;
         node->label_num = label_cnt;
         label_cnt++;
+    } else if (consume("int")) {
+        node = declaration();
+        expect(";");
     } else {
         node = expr();
         expect(";");
@@ -433,6 +454,7 @@ Node *stmt() {
 
 // 関数定義ノード
 Node *func() {
+    expect("int");
     Token *tok = consume_ident();
     if (!tok) {
         return NULL;  // エラー
@@ -451,17 +473,17 @@ Node *func() {
 
     // 仮引数処理
     if (!consume(")")) {
-        tok = consume_ident();
-        node->next_arg = new_node(ND_FUNC_DEFINE_ARG, new_node_lvar(tok), NULL);
-        node->next_arg->arg_idx = 0;
-        Node *arg = node->next_arg;
-        while (consume(",")) {
+        node->arg_idx = -1;
+        Node *arg = node;
+        do {
+            expect("int");
             tok = consume_ident();
-            arg->next_arg =
-                new_node(ND_FUNC_DEFINE_ARG, new_node_lvar(tok), NULL);
+            Node *ln = new_node_deflocal(tok);
+            ln->kind = ND_LVAR;
+            arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
             arg = arg->next_arg;
-        }
+        } while (consume(","));
         expect(")");
     }
 

@@ -67,6 +67,8 @@ void gen(Node *node) {
             printf("  mov rax, [rax]\n");
             printf("  push rax\n");
             return;
+        case ND_DEFLOCAL:
+            return;
         case ND_ADDR:
             gen_lval(node->lhs);
             return;
