@@ -1,10 +1,36 @@
 #include "9cc.h"
 
+// ポインタが参照する型のサイズを返す
+int size_deref(Node *node) {
+    if (node->type == NULL || node->type->ty != PTR) {
+        return -1;
+    }
+    return sizes[node->type->ptr_to->ty];
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
     node->lhs = lhs;
     node->rhs = rhs;
+    // 型情報付与
+    if (node->kind == ND_DEREF) {
+        if (node->lhs->type && node->lhs->type->ptr_to) {
+            node->type = node->lhs->type->ptr_to;
+        }
+    } else if (node->kind == ND_ADDR) {
+        if (node->lhs->type) {
+            node->type = calloc(1, sizeof(Type));
+            node->type->ty = PTR;
+            node->type->ptr_to = node->lhs->type;
+        }
+    } else if (node->kind == ND_ADD || node->kind == ND_SUB) {
+        if (size_deref(node->lhs) != -1) {
+            node->type = node->lhs->type;
+        } else if (size_deref(node->rhs) != -1) {
+            node->type = node->rhs->type;
+        }
+    }
     return node;
 }
 

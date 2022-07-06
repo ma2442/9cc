@@ -116,6 +116,7 @@ LVar *locals;
 
 #endif  // HEADER_H
 extern void init_sizes();
+extern int size_deref(Node *node);
 extern Node *new_node();
 extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 extern Node *new_node_num(int val);

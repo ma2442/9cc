@@ -24,16 +24,11 @@ int alloc4_2D(int ***p, int x1, int x2, int x3, int x4) {
     *p = calloc(4, sizeof(int *));
     for (int i = 0; i < 4; i++) {
         (*p)[i] = calloc(4, sizeof(int));
-        printf("p[%d]: ", i);
+        // printf("p[%d]: ", i);
         for (int j = 0; j < 4; j++) {
-            (*p)[i][j] = xs[i] + j;
-            printf("%d ", (*p)[i][j]);
+            (*p)[i][j] = xs[i] + j * 2;
+            // printf("%d ", (*p)[i][j]);
         }
-        printf("\n");
+        // printf("\n");
     }
-    int **q;
-    q = *p + 2;
-    printf("q=*p+2, **q : %d\n", **q);
-    *q = *q + 1;
-    printf("q=*(*p+2)+1, **q : %d\n", **q);
 }

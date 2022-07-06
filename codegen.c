@@ -170,16 +170,12 @@ void gen(Node *node) {
 
     // ポインタの加減算
     if (node->kind == ND_ADD || node->kind == ND_SUB) {
-        Type *types[] = {node->lhs->type, node->rhs->type};
-        Type *opp_types[] = {node->rhs->type, node->lhs->type};
-        char oprd[][5] = {"rdi", "rax"};
-
-        for (int i = 0; i < 2; i++) {
-            if (types[i] != NULL && types[i]->ty == PTR &&
-                (opp_types[i] == NULL || opp_types[i]->ty != PTR)) {
-                printf("  imul %s, %d\n", oprd[i], sizes[types[i]->ptr_to->ty]);
-                break;
-            }
+        int szd_l = size_deref(node->lhs);
+        int szd_r = size_deref(node->rhs);
+        if (szd_l > szd_r && szd_r == -1) {
+            printf("  imul rdi, %d\n", szd_l);
+        } else if (szd_l < szd_r && szd_l == -1) {
+            printf("  imul rax, %d\n", szd_r);
         }
     }
 

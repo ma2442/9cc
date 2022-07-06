@@ -103,20 +103,19 @@ assert 1 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else 
 assert 8 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } int main() { return fib(6); }'
 
 #単項&、*
-assert 3 'int main(){int x; int y; x = 3; y = &x; return *y;}'
-assert 4 'int main(){int x; int y; int z; x = 4; y = 5; z = &y + 8; return *z;}'
+assert 3 'int main(){int x; int *y; x = 3; y = &x; return *y;}'
+assert 4 'int main(){int x; int y; int *z; x = 4; y = 5; z = &y + 2; return *z;}'
 
 # int* 定義
 assert 3 'int main(){int x; int *y; y = &x; *y = 3; return x;}'
 assert 99 'int swap(int *x, int *y){int tmp; tmp = *x; *x = *y; *y = tmp; return 1;} int main(){int x; int y; x=1; y=100; swap(&x, &y); return x-y;}'
 
-assert 1 'int main() {int *p; alloc4(&p, 1, 10, 100, 1000); int *q; q = p; return *q;}'
-assert 10 'int main() {int *p; alloc4(&p, 1, 10, 100, 1000); int *q; q = p; *q = *q + 1; return *q;}'
-assert 100 'int main() {int *p; alloc4(&p, 1, 10, 100, 1000); int *q; q = p + 2; return *q;}'
-assert 1000 'int main() {int *p; alloc4(&p, 1, 10, 100, 1000); int *q; q = 3 + p; return *q;}'
-assert 0 'int main() {int **p; alloc4_2D(&p, 0, 10, 100, 1000); int **q; q = p; return **q;}'
-assert 100 'int main() {int **p; alloc4_2D(&p, 0, 10, 100, 1000); int **q; q = p + 2; return **q;}'
-assert 101 'int main() {int **p; alloc4_2D(&p, 0, 10, 100, 1000); int **q; q = p + 2; *q = *q - 1; return **q;}'
-assert 101 'int main() {int **p; alloc4_2D(&p, 0, 10, 100, 1000); int **q; q = p + 2; *q = *q + 1; return **q;}'
+assert 10 'int main() {int *p; alloc4(&p, 10, 20, 30, 40); int *q; q = p; return *q;}'
+assert 30 'int main() {int *p; alloc4(&p, 10, 20, 30, 40); int *q; q = p + 2; return *q;}'
+assert 40 'int main() {int *p; alloc4(&p, 10, 20, 30, 40); int *q; q = 3 + p; return *q;}'
+assert 30 'int main() {int *p; alloc4(&p, 10, 20, 30, 40); int *q; q = 3 + p - 1; return *q;}'
+assert 10 'int main() {int **p; alloc4_2D(&p, 10, 20, 30, 40); int **q; q = p; return **q;}'
+assert 30 'int main() {int **p; alloc4_2D(&p, 10, 20, 30, 40); int **q; q = p + 2; return **q;}'
+assert 32 'int main() {int **p; alloc4_2D(&p, 10, 20, 30, 40); int **q; q = 4 + p - 2; *q = *q + 1; return **q;}'
 
 echo OK
