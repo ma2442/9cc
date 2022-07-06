@@ -9,7 +9,7 @@ stmt    =
     | "while" "(" expr ")" stmt
     | "for" "(" expr? ";" expr? ";" expr? ")" stmt
     | ...
-declaration = "int" ident
+declaration = "int" "*"* ident
 expr    = assign
 assign  = equality ("=" assign)?
 equality    = relational (("=="|"!=") relational)*

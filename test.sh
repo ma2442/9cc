@@ -106,4 +106,7 @@ assert 8 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else 
 assert 3 'int main(){int x; int y; x = 3; y = &x; return *y;}'
 assert 4 'int main(){int x; int y; int z; x = 4; y = 5; z = &y + 8; return *z;}'
 
+# int* 定義
+assert 3 'int main(){int x; int *y; y = &x; *y = 3; return x;}'
+assert 99 'int swap(int *x, int *y){int tmp; tmp = *x; *x = *y; *y = tmp; return 1;} int main(){int x; int y; x=1; y=100; swap(&x, &y); return x-y;}'
 echo OK

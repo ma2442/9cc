@@ -142,7 +142,11 @@ void gen(Node *node) {
             gen(node->next_arg);
             return;
         case ND_ASSIGN:
-            gen_lval(node->lhs);
+            if (node->lhs->kind == ND_DEREF) {
+                gen(node->lhs->lhs);
+            } else {
+                gen_lval(node->lhs);
+            }
             gen(node->rhs);
             printf("  pop rdi\n");
             printf("  pop rax\n");

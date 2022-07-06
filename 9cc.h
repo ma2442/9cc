@@ -56,9 +56,17 @@ typedef enum {
     ND_BLOCK,            // block { }
 } NodeKind;
 
+typedef struct Type Type;
+
+// 型
+struct Type {
+    enum { INT, PTR } ty;
+    struct Type *ptr_to;
+};
+
 typedef struct Node Node;
 
-// 抽象構文木のノードの型
+// 抽象構文木のノード
 struct Node {
     NodeKind kind;      // ノードの型
     Node *lhs;          // 左辺, またはif,while,for等の内部statement
@@ -78,28 +86,31 @@ struct Node {
 
 typedef struct LVar LVar;
 
-// ローカル変数の型
+// ローカル変数
 struct LVar {
     LVar *next;  // 次の変数かNULL
     char *name;  // 変数の名前
     int len;     // 名前の長さ
     int offset;  // RBPからのオフセット
+    Type *type;  // 型
 };
 
 typedef struct Func Func;
 
-// 関数名とローカル変数
+// 関数名と引数情報
 struct Func {
     Func *next;
     char *name;
-    int len;
-    LVar *locals;
+    int len;  // 名前の長さ
+    LVar *args;
+    Type *type;
 };
 
 // 関数
 Func *funcs;
 // ローカル変数
 LVar *locals;
+
 #endif  // HEADER_H
 
 extern Node *new_node();

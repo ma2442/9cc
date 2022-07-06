@@ -122,7 +122,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
 }
 
 // 変数定義
-Node *new_node_deflocal(Token *tok) {
+Node *new_node_deflocal(Token *tok, Type *typ) {
     Node *node = new_node(ND_DEFLOCAL, NULL, NULL);
     LVar *lvar = find_lvar(tok);
     if (lvar) {
@@ -134,6 +134,7 @@ Node *new_node_deflocal(Token *tok) {
     lvar->name = tok->str;
     lvar->len = tok->len;
     lvar->offset = (locals ? locals->offset : 0) + 8;
+    lvar->type = typ;
     node->offset = lvar->offset;
     locals = lvar;
     return node;
@@ -363,16 +364,34 @@ Node *equality() {
 }
 
 Node *assign() {
-    Node *node = equality();
+    Node *node;
+    if (consume("*")) {
+        node = new_node(ND_DEREF, unary(), NULL);
+    } else {
+        node = equality();
+    }
     if (consume("=")) {
         node = new_node(ND_ASSIGN, node, assign());
     }
     return node;
 }
 
+Type *type() {
+    Type *typ = calloc(1, sizeof(Type));
+    typ->ty = INT;
+    while (consume("*")) {
+        Type *ptr = calloc(1, sizeof(Type));
+        ptr->ty = PTR;
+        ptr->ptr_to = typ;
+        typ = ptr;
+    }
+    return typ;
+}
+
 Node *declaration() {
+    Type *typ = type();
     Token *tok = consume_ident();
-    return new_node_deflocal(tok);
+    return new_node_deflocal(tok, typ);
 }
 
 Node *expr() { return assign(); }
@@ -455,8 +474,12 @@ Node *stmt() {
 // 関数定義ノード
 Node *func() {
     expect("int");
+    Func *fn = calloc(1, sizeof(Func));
+    fn->next = funcs;
+    fn->type = type();
     Token *tok = consume_ident();
     if (!tok) {
+        free(fn);
         return NULL;  // エラー
     }
 
@@ -464,10 +487,13 @@ Node *func() {
     locals = calloc(1, sizeof(LVar));
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
+    fn->name = tok->str;
+    fn->len = tok->len;
     node->func_name = tok->str;
     node->func_name_len = tok->len;
 
     if (!consume("(")) {
+        free(fn);
         return NULL;  // エラー
     }
 
@@ -476,9 +502,8 @@ Node *func() {
         node->arg_idx = -1;
         Node *arg = node;
         do {
-            expect("int");
-            tok = consume_ident();
-            Node *ln = new_node_deflocal(tok);
+            consume("int");
+            Node *ln = declaration();
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -486,7 +511,9 @@ Node *func() {
         } while (consume(","));
         expect(")");
     }
-
+    // 関数情報（仮引数含む）更新
+    fn->args = locals;
+    funcs = fn;
     // 関数本文 "{" stmt* "}"
     node->rhs = block();
     return node;
@@ -494,6 +521,7 @@ Node *func() {
 
 void program() {
     int i = 0;
+    funcs = calloc(1, sizeof(Func));
     while (!at_eof()) {
         code[i] = func();
         i++;
