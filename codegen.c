@@ -168,6 +168,21 @@ void gen(Node *node) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
 
+    // ポインタの加減算
+    if (node->kind == ND_ADD || node->kind == ND_SUB) {
+        Type *types[] = {node->lhs->type, node->rhs->type};
+        Type *opp_types[] = {node->rhs->type, node->lhs->type};
+        char oprd[][5] = {"rdi", "rax"};
+
+        for (int i = 0; i < 2; i++) {
+            if (types[i] != NULL && types[i]->ty == PTR &&
+                (opp_types[i] == NULL || opp_types[i]->ty != PTR)) {
+                printf("  imul %s, %d\n", oprd[i], sizes[types[i]->ptr_to->ty]);
+                break;
+            }
+        }
+    }
+
     switch (node->kind) {
         case ND_EQUAL:
             printf("  cmp rax, rdi\n");

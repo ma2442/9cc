@@ -57,10 +57,10 @@ typedef enum {
 } NodeKind;
 
 typedef struct Type Type;
-
+typedef enum { INT, PTR, LEN_TYPE_KIND } TypeKind;
 // 型
 struct Type {
-    enum { INT, PTR } ty;
+    TypeKind ty;
     struct Type *ptr_to;
 };
 
@@ -68,11 +68,12 @@ typedef struct Node Node;
 
 // 抽象構文木のノード
 struct Node {
-    NodeKind kind;      // ノードの型
+    NodeKind kind;      // ノードの種類
     Node *lhs;          // 左辺, またはif,while,for等の内部statement
     Node *rhs;          // 右辺, またはelseの内部statement
     int val;            // kindがND_NUMの場合のみ使う
     int offset;         // kindがND_LVARの場合のみ使う
+    Type *type;         // int, int*などの型情報
     int label_num;      // if,while,for等のラベル通し番号
     Node *next_arg;     // kindがND_FUNC_* の場合に使う
     char *func_name;    // kindがND_FUNC_* の場合に使う
@@ -106,13 +107,15 @@ struct Func {
     Type *type;
 };
 
+int sizes[LEN_TYPE_KIND];
+
 // 関数
 Func *funcs;
 // ローカル変数
 LVar *locals;
 
 #endif  // HEADER_H
-
+extern void init_sizes();
 extern Node *new_node();
 extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 extern Node *new_node_num(int val);

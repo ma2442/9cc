@@ -136,6 +136,7 @@ Node *new_node_deflocal(Token *tok, Type *typ) {
     lvar->offset = (locals ? locals->offset : 0) + 8;
     lvar->type = typ;
     node->offset = lvar->offset;
+    node->type = lvar->type;
     locals = lvar;
     return node;
 }
@@ -150,6 +151,7 @@ Node *new_node_lvar(Token *tok) {
         return NULL;
     }
     node->offset = lvar->offset;
+    node->type = lvar->type;
     return node;
 }
 
@@ -364,12 +366,7 @@ Node *equality() {
 }
 
 Node *assign() {
-    Node *node;
-    if (consume("*")) {
-        node = new_node(ND_DEREF, unary(), NULL);
-    } else {
-        node = equality();
-    }
+    Node *node = equality();
     if (consume("=")) {
         node = new_node(ND_ASSIGN, node, assign());
     }
