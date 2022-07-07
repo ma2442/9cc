@@ -14,6 +14,7 @@ typedef enum {
     TK_IDENT,     // 識別子
     TK_NUM,       // 整数トークン
     TK_EOF,       // 入力の終わりを表すトークン
+    TK_SIZEOF,    // sizeof
     TK_RETURN,    // return
     TK_CTRL,      // if, else, while, for等 制御構文を表すトークン
 } TokenKind;

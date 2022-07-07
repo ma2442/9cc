@@ -14,22 +14,41 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     node->lhs = lhs;
     node->rhs = rhs;
     // 型情報付与
-    if (node->kind == ND_DEREF) {
-        if (node->lhs->type && node->lhs->type->ptr_to) {
-            node->type = node->lhs->type->ptr_to;
-        }
-    } else if (node->kind == ND_ADDR) {
-        if (node->lhs->type) {
-            node->type = calloc(1, sizeof(Type));
-            node->type->ty = PTR;
-            node->type->ptr_to = node->lhs->type;
-        }
-    } else if (node->kind == ND_ADD || node->kind == ND_SUB) {
-        if (size_deref(node->lhs) != -1) {
+    switch (node->kind) {
+        case ND_DEREF:
+            if (node->lhs->type && node->lhs->type->ptr_to) {
+                node->type = node->lhs->type->ptr_to;
+            }
+            break;
+        case ND_ADDR:
+            if (node->lhs->type) {
+                node->type = calloc(1, sizeof(Type));
+                node->type->ty = PTR;
+                node->type->ptr_to = node->lhs->type;
+            }
+            break;
+        case ND_ADD:
+        case ND_SUB:
+            if (size_deref(node->lhs) != -1) {
+                node->type = node->lhs->type;
+            } else if (size_deref(node->rhs) != -1) {
+                node->type = node->rhs->type;
+            } else {  // 両オペランド共ポインタでない
+                node->type = node->lhs->type;
+            }
+            break;
+        case ND_MUL:
+        case ND_DIV:
+        case ND_ASSIGN:
             node->type = node->lhs->type;
-        } else if (size_deref(node->rhs) != -1) {
-            node->type = node->rhs->type;
-        }
+            break;
+        case ND_EQUAL:
+        case ND_NOT_EQUAL:
+        case ND_LESS_THAN:
+        case ND_LESS_OR_EQUAL:
+            node->type = calloc(1, sizeof(Type));
+            node->type->ty = INT;
+            break;
     }
     return node;
 }
@@ -38,6 +57,8 @@ Node *new_node_num(int val) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
+    node->type = calloc(1, sizeof(Type));
+    node->type->ty = INT;
     return node;
 }
 
@@ -81,6 +102,7 @@ void error(char *fmt, ...) {
 bool consume(char *op) {
     switch (token->kind) {
         case TK_RESERVED:
+        case TK_SIZEOF:
         case TK_RETURN:
         case TK_CTRL:
             break;
@@ -239,6 +261,13 @@ Token *tokenize(char *p) {
 
         //先頭から変数として読める部分の長さを取得
         int ident_len = read_ident(p);
+        // sizeof 判定
+        if (ident_len == 6 && !strncmp(p, "sizeof", ident_len)) {
+            cur = new_token(TK_SIZEOF, cur, p, ident_len);
+            p += ident_len;
+            continue;
+        }
+
         // return 判定
         if (ident_len == 6 && !strncmp(p, "return", ident_len)) {
             cur = new_token(TK_CTRL, cur, p, ident_len);
@@ -321,7 +350,15 @@ Node *primary() {
     return node;
 }
 
+// 単項
 Node *unary() {
+    if (consume("sizeof")) {
+        Type *typ = unary()->type;
+        if (typ == NULL) {
+            error("sizeof:不明な型です");
+        }
+        return new_node_num(sizes[typ->ty]);
+    }
     if (consume("&")) {
         return new_node(ND_ADDR, unary(), NULL);
     }
