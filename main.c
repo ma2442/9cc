@@ -3,6 +3,7 @@
 void init_sizes() {
     sizes[INT] = 4;
     sizes[PTR] = 8;
+    sizes[ARRAY] = sizes[PTR];
 }
 
 int main(int argc, char **argv) {

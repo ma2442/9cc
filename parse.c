@@ -1,8 +1,8 @@
 #include "9cc.h"
 
-// ポインタが参照する型のサイズを返す
+// ポインタや配列が参照する型のサイズを返す
 int size_deref(Node *node) {
-    if (node->type == NULL || node->type->ty != PTR) {
+    if (node->type == NULL || node->type->ptr_to == NULL) {
         return -1;
     }
     return sizes[node->type->ptr_to->ty];
@@ -181,10 +181,17 @@ Node *new_node_deflocal(Token *tok, Type *typ) {
     lvar->next = locals;
     lvar->name = tok->str;
     lvar->len = tok->len;
-    lvar->offset = (locals ? locals->offset : 0) + 8;
     lvar->type = typ;
-    node->offset = lvar->offset;
+    lvar->offset = (locals ? locals->offset : 0);
+    if (typ->ty == ARRAY) {
+        lvar->offset += typ->array_size * sizes[typ->ptr_to->ty];
+    }
+    lvar->offset += sizes[typ->ty];
+    if (lvar->offset % 8) {
+        lvar->offset += 8 - (lvar->offset % 8);
+    }
     node->type = lvar->type;
+    node->offset = lvar->offset;
     locals = lvar;
     return node;
 }
@@ -230,8 +237,9 @@ Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
-    char resv[][10] = {",", "{", "}", "<=", ">=", "==", "!=", "=", ";",  "+",
-                       "-", "*", "/", "(",  ")",  "<",  ">",  "&", "int"};
+    char resv[][10] = {
+        ",", "{", "}", "<=", ">=", "==", "!=", "=",   ";", "+", "-",
+        "*", "/", "(", ")",  "<",  ">",  "&",  "int", "[", "]"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -357,6 +365,9 @@ Node *unary() {
         if (typ == NULL) {
             error("sizeof:不明な型です");
         }
+        if (typ->ty == ARRAY) {
+            return new_node_num(sizes[typ->ptr_to->ty] * typ->array_size);
+        }
         return new_node_num(sizes[typ->ty]);
     }
     if (consume("&")) {
@@ -369,7 +380,13 @@ Node *unary() {
         return new_node(ND_SUB, new_node_num(0), primary());
     }
     consume("+");
-    return primary();
+    Node *node = primary();
+    if (consume("[")) {
+        node = new_node(ND_ADD, node, expr());
+        node = new_node(ND_DEREF, node, NULL);
+        expect("]");
+    }
+    return node;
 }
 
 Node *mul() {
@@ -451,6 +468,22 @@ Type *type() {
 Node *declaration() {
     Type *typ = type();
     Token *tok = consume_ident();
+    Node *node;
+    if (consume("[")) {
+        Type *array = calloc(1, sizeof(Type));
+        array->array_size = expect_number();
+        array->ty = ARRAY;
+        array->ptr_to = typ;
+        typ = array;
+        expect("]");
+        node = new_node_deflocal(tok, typ);
+        // 配列自身(~=ポインタ)には、配列の先頭要素のアドレスを入れる。
+        // その準備として、lhsに配列自身の, rhsに先頭要素のoffsetを保持させる。
+        node->lhs = new_node_lvar(tok);
+        node->rhs = new_node_lvar(tok);
+        node->rhs->offset -= sizes[ARRAY];
+        return node;
+    }
     return new_node_deflocal(tok, typ);
 }
 

@@ -130,7 +130,15 @@ assert 4 'int main(){ int *y; return sizeof(sizeof(1)); }'
 assert 4 'int main(){ int *y; return sizeof(1==1); }'
 assert 4 'int main(){ int *y; return sizeof(1*1); }'
 
+# 配列
+assert 12 'int main(){ int a[3]; return sizeof(a); }'
+assert 1 'int main(){ int a[1]; *a = 1; int *p; p = a; return *p; }'
+assert 1 'int main(){ int a[2]; *a = 1; *(a+1) = 2; int *p; p = a; return *p; }'
+assert 2 'int main(){ int a[2]; *a = 1; *(a+1) = 2; int *p; p = a; return *(p+1); }'
+assert 3 'int main(){ int a[2]; *a = 1; *(a+1) = 2; int *p; p = a; return *p + *(1+p); }'
+assert 1 'int main(){ int a[11]; *a = 1; *(a+10) = 2; int *p; p = a; return *p; }'
+assert 2 'int main(){ int a[11]; *a = 1; *(a+10) = 2; int *p; p = a; return *(1+p+9); }'
 
-
-
+assert 1 'int main(){ int a[11]; a[0] = 1; a[10] = 2; int *p; p = a; return p[0]; }'
+assert 2 'int main(){ int a[11]; a[0] = 1; 10[a] = a[0] + 1; int *p; p = a; return (p+5)[2+3]; }'
 echo OK

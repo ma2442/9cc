@@ -58,11 +58,12 @@ typedef enum {
 } NodeKind;
 
 typedef struct Type Type;
-typedef enum { INT, PTR, LEN_TYPE_KIND } TypeKind;
+typedef enum { INT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
 // 型
 struct Type {
     TypeKind ty;
     struct Type *ptr_to;
+    size_t array_size;
 };
 
 typedef struct Node Node;
