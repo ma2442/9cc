@@ -135,6 +135,17 @@ LVar *find_lvar(Token *tok) {
     return NULL;
 }
 
+// 関数を名前で検索する。 見つからなかった場合はNULLを返す。
+Func *find_func(Token *tok) {
+    for (Func *fn = funcs; fn != NULL; fn = fn->next) {
+        if (fn->len == tok->len && !memcmp(fn->name, tok->str, tok->len)) {
+            return fn;
+        }
+    }
+    return NULL;
+}
+
+
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
@@ -342,6 +353,8 @@ Node *primary() {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
     node->func_name = tok->str;
     node->func_name_len = tok->len;
+    Func *fn = find_func(tok);
+    if(fn){node->type = fn->type;}
 
     // 実引数処理
     if (!consume(")")) {

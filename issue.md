@@ -1,5 +1,12 @@
 ### Todo
 
--   [ ] 関数と引数の型をコール時に確定させる
-    -   新 node が ND_FUNC_CALL, ND_FUNC_CALL_ARGS のとき、
+-   [ ] 関数の引数の型をコール時に確定させる
+
+    -   新 node が ND_FUNC_CALL_ARGS のとき、
         node->type に グローバル変数 funcs より型を設定
+
+-   [ ] 関数の返り値の型をコール時に確定させる
+    -   [ ] 外部関数（やり方不明）
+    -   [x] 内部関数
+
+### Completed

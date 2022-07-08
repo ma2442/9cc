@@ -141,4 +141,8 @@ assert 2 'int main(){ int a[11]; *a = 1; *(a+10) = 2; int *p; p = a; return *(1+
 
 assert 1 'int main(){ int a[11]; a[0] = 1; a[10] = 2; int *p; p = a; return p[0]; }'
 assert 2 'int main(){ int a[11]; a[0] = 1; 10[a] = a[0] + 1; int *p; p = a; return (p+5)[2+3]; }'
+
+# ポインタを返す関数
+assert 30 'int* func(int* p){return p+1;} int main(){int a[3]; a[0]=10; a[1]=20; a[2]=30; return *(func(a)+1);}'
+
 echo OK
