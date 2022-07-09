@@ -1,11 +1,15 @@
 #include "9cc.h"
 
 void gen_lval(Node *node) {
-    if (node->kind != ND_LVAR) {
+    if (node->kind != ND_LVAR && node->kind != ND_GVAR) {
         error("代入の左辺値が変数ではありません");
     }
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", node->offset);
+    if (node->kind == ND_GVAR) {
+        printf("  lea rax, %.*s[rip]\n", node->name_len, node->name);
+    } else if (node->kind == ND_LVAR) {
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", node->offset);
+    }
     printf("  push rax\n");
 }
 
@@ -13,7 +17,6 @@ void gen(Node *node) {
     if (!node) {
         return;
     }
-    char func_name[64];
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     switch (node->kind) {
         case ND_RETURN:
@@ -62,6 +65,7 @@ void gen(Node *node) {
             printf("  push %d\n", node->val);
             return;
         case ND_LVAR:
+        case ND_GVAR:
             gen_lval(node);
             if (node->type->ty != ARRAY) {
                 printf("  pop rax\n");
@@ -70,6 +74,11 @@ void gen(Node *node) {
             }
             return;
         case ND_DEFLOCAL:
+            return;
+        case ND_DEFGLOBAL:
+            printf(".bss\n");
+            printf("%.*s:\n", node->name_len, node->name);
+            printf("  .zero %zu\n", size(node->type));
             return;
         case ND_ADDR:
             gen_lval(node->lhs);
@@ -92,9 +101,7 @@ void gen(Node *node) {
             printf("  sub rsp, 8\n");
 
             // 関数呼び出し
-            strncpy(func_name, node->func_name, node->func_name_len);
-            func_name[node->func_name_len] = '\0';
-            printf("  call %s\n", func_name);
+            printf("  call %.*s\n", node->name_len, node->name);
 
             // rspを16バイト境界揃えから元に戻す
             // できているかよくわからない。なくても動く。
@@ -114,9 +121,8 @@ void gen(Node *node) {
             return;
         case ND_FUNC_DEFINE:
             // 関数名ラベル
-            strncpy(func_name, node->func_name, node->func_name_len);
-            func_name[node->func_name_len] = '\0';
-            printf("%s:\n", func_name);
+            printf(".text\n");
+            printf("%.*s:\n", node->name_len, node->name);
             // プロローグ
             // 変数26個分の領域を確保する
             printf("  push rbp\n");
@@ -162,6 +168,7 @@ void gen(Node *node) {
                 }
                 gen(node->block[i]);
             }
+            return;
     }
 
     gen(node->lhs);

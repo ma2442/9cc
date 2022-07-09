@@ -55,6 +55,8 @@ typedef enum {
     ND_WHILE,            // while (judge) lhs
     ND_FOR,              // for (init; judge; inc) lhs
     ND_BLOCK,            // block { }
+    ND_DEFGLOBAL,        // global variable definition
+    ND_GVAR              // global variable
 } NodeKind;
 
 typedef struct Type Type;
@@ -70,21 +72,21 @@ typedef struct Node Node;
 
 // 抽象構文木のノード
 struct Node {
-    NodeKind kind;      // ノードの種類
-    Node *lhs;          // 左辺, またはif,while,for等の内部statement
-    Node *rhs;          // 右辺, またはelseの内部statement
-    int val;            // kindがND_NUMの場合のみ使う
-    int offset;         // kindがND_LVARの場合のみ使う
-    Type *type;         // int, int*などの型情報
-    int label_num;      // if,while,for等のラベル通し番号
-    Node *next_arg;     // kindがND_FUNC_* の場合に使う
-    char *func_name;    // kindがND_FUNC_* の場合に使う
-    int func_name_len;  // kindがND_FUNC_* の場合に使う
-    int arg_idx;        // ND_FUNC_*_ARGの場合の引数番号(0始まり)
-    Node *init;         // forの初期化式(_____; ; )
-    Node *judge;        // if,while,for等の条件式
-    Node *inc;          // forの後処理式( ; ;____)
-    Node **block;       // block {} 内のstatements
+    NodeKind kind;   // ノードの種類
+    Node *lhs;       // 左辺, またはif,while,for等の内部statement
+    Node *rhs;       // 右辺, またはelseの内部statement
+    int val;         // kindがND_NUMの場合のみ使う
+    int offset;      // kindがND_LVARの場合のみ使う
+    Type *type;      // int, int*などの型情報
+    int label_num;   // if,while,for等のラベル通し番号
+    Node *next_arg;  // kindがND_FUNC_* の場合に使う
+    char *name;      // kindがND_FUNC_* の場合等に使う
+    int name_len;    // kindがND_FUNC_* の場合等に使う
+    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+    Node *init;      // forの初期化式(_____; ; )
+    Node *judge;     // if,while,for等の条件式
+    Node *inc;       // forの後処理式( ; ;____)
+    Node **block;    // block {} 内のstatements
 };
 
 typedef struct LVar LVar;
@@ -109,15 +111,18 @@ struct Func {
     Type *type;
 };
 
-int sizes[LEN_TYPE_KIND];
+size_t sizes[LEN_TYPE_KIND];
 
 // 関数
 Func *funcs;
+// グローバル変数
+LVar *globals;
 // ローカル変数
 LVar *locals;
 
 #endif  // HEADER_H
 extern void init_sizes();
+extern size_t size(Type *typ);
 extern int size_deref(Node *node);
 extern Node *new_node();
 extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);

@@ -1,13 +1,5 @@
 #include "9cc.h"
 
-// ポインタや配列が参照する型のサイズを返す
-int size_deref(Node *node) {
-    if (node->type == NULL || node->type->ptr_to == NULL) {
-        return -1;
-    }
-    return sizes[node->type->ptr_to->ty];
-}
-
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -126,8 +118,8 @@ Token *consume_ident() {
 }
 
 // 変数を名前で検索する。 見つからなかった場合はNULLを返す。
-LVar *find_lvar(Token *tok) {
-    for (LVar *var = locals; var != NULL; var = var->next) {
+LVar *find_var(Token *tok, LVar **vars) {
+    for (LVar *var = *vars; var != NULL; var = var->next) {
         if (var->len == tok->len && !memcmp(var->name, tok->str, tok->len)) {
             return var;
         }
@@ -180,40 +172,60 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
 }
 
 // 変数定義
-Node *new_node_deflocal(Token *tok, Type *typ) {
-    Node *node = new_node(ND_DEFLOCAL, NULL, NULL);
-    LVar *lvar = find_lvar(tok);
+Node *new_node_defvar(Token *tok, Type *typ, LVar **vars) {
+    Node *node;
+    if (*vars == locals) {
+        node = new_node(ND_DEFLOCAL, NULL, NULL);
+    } else {
+        node = new_node(ND_DEFGLOBAL, NULL, NULL);
+    }
+    LVar *lvar = find_var(tok, vars);
+
     if (lvar) {
         // エラー 定義済み
         error_at(tok->str, "定義済みの変数です。");
     }
     lvar = calloc(1, sizeof(LVar));
-    lvar->next = locals;
+    lvar->next = *vars;
     lvar->name = tok->str;
     lvar->len = tok->len;
     lvar->type = typ;
-    lvar->offset = (locals ? locals->offset : 0);
-    lvar->offset += (typ->ty == ARRAY ? typ->array_size * sizes[typ->ptr_to->ty]
-                                      : sizes[typ->ty]);
-    if (lvar->offset % 8) {
-        lvar->offset += 8 - (lvar->offset % 8);
+    // ローカル変数はオフセット設定
+    if (*vars == locals) {
+        lvar->offset = (locals ? locals->offset : 0);
+        lvar->offset += size(typ);
+        if (lvar->offset % 8) {
+            lvar->offset += 8 - (lvar->offset % 8);
+        }
+        node->offset = lvar->offset;
+    } else {  //グローバル変数は名前設定
+        node->name = lvar->name;
+        node->name_len = lvar->len;
     }
     node->type = lvar->type;
-    node->offset = lvar->offset;
-    locals = lvar;
+    *vars = lvar;
     return node;
 }
 
 // 変数名として識別
-Node *new_node_lvar(Token *tok) {
-    Node *node = new_node(ND_LVAR, NULL, NULL);
-    LVar *lvar = find_lvar(tok);
+Node *new_node_var(Token *tok) {
+    // ローカル変数チェック
+    LVar *lvar = find_var(tok, &locals);
+    if (lvar) {
+        Node *node = new_node(ND_LVAR, NULL, NULL);
+        node->offset = lvar->offset;
+        node->type = lvar->type;
+        return node;
+    }
+    // グローバル変数チェック
+    lvar = find_var(tok, &globals);
     if (!lvar) {
-        // エラー 未定義
         error_at(tok->str, "未定義の変数です。");
         return NULL;
     }
-    node->offset = lvar->offset;
+    Node *node = new_node(ND_GVAR, NULL, NULL);
+    node->name = tok->str;
+    node->name_len = tok->len;
     node->type = lvar->type;
     return node;
 }
@@ -343,13 +355,13 @@ Node *primary() {
 
     if (!consume("(")) {
         // 変数名として識別
-        return new_node_lvar(tok);
+        return new_node_var(tok);
     }
 
     // 関数名として識別
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
-    node->func_name = tok->str;
-    node->func_name_len = tok->len;
+    node->name = tok->str;
+    node->name_len = tok->len;
     Func *fn = find_func(tok);
     if (fn) {
         node->type = fn->type;
@@ -377,10 +389,7 @@ Node *unary() {
         if (typ == NULL) {
             error("sizeof:不明な型です");
         }
-        if (typ->ty == ARRAY) {
-            return new_node_num(sizes[typ->ptr_to->ty] * typ->array_size);
-        }
-        return new_node_num(sizes[typ->ty]);
+        return new_node_num(size(typ));
     }
     if (consume("&")) {
         return new_node(ND_ADDR, unary(), NULL);
@@ -477,9 +486,7 @@ Type *type() {
     return typ;
 }
 
-Node *declaration() {
-    Type *typ = type();
-    Token *tok = consume_ident();
+Node *declaration_after_ident(Type *typ, Token *tok, LVar **vars) {
     if (consume("[")) {
         Type *array = calloc(1, sizeof(Type));
         array->array_size = expect_number();
@@ -488,7 +495,7 @@ Node *declaration() {
         typ = array;
         expect("]");
     }
-    return new_node_deflocal(tok, typ);
+    return new_node_defvar(tok, typ, vars);
 }
 
 Node *expr() { return assign(); }
@@ -559,7 +566,9 @@ Node *stmt() {
         node->label_num = label_cnt;
         label_cnt++;
     } else if (consume("int")) {
-        node = declaration();
+        Type *typ = type();
+        Token *tok = consume_ident();
+        node = declaration_after_ident(typ, tok, &locals);
         expect(";");
     } else {
         node = expr();
@@ -569,16 +578,13 @@ Node *stmt() {
 }
 
 // 関数定義ノード
-Node *func() {
-    expect("int");
-    Func *fn = calloc(1, sizeof(Func));
-    fn->next = funcs;
-    fn->type = type();
-    Token *tok = consume_ident();
+Node *func_after_leftparen(Type *typ, Token *tok) {
     if (!tok) {
-        free(fn);
         return NULL;  // エラー
     }
+    Func *fn = calloc(1, sizeof(Func));
+    fn->next = funcs;
+    fn->type = typ;
 
     //ローカル変数初期化
     locals = calloc(1, sizeof(LVar));
@@ -586,13 +592,8 @@ Node *func() {
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
     fn->name = tok->str;
     fn->len = tok->len;
-    node->func_name = tok->str;
-    node->func_name_len = tok->len;
-
-    if (!consume("(")) {
-        free(fn);
-        return NULL;  // エラー
-    }
+    node->name = tok->str;
+    node->name_len = tok->len;
 
     // 仮引数処理
     if (!consume(")")) {
@@ -600,7 +601,9 @@ Node *func() {
         Node *arg = node;
         do {
             consume("int");
-            Node *ln = declaration();
+            typ = type();
+            tok = consume_ident();
+            Node *ln = declaration_after_ident(typ, tok, &locals);
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -619,8 +622,19 @@ Node *func() {
 void program() {
     int i = 0;
     funcs = calloc(1, sizeof(Func));
+    globals = calloc(1, sizeof(LVar));
     while (!at_eof()) {
-        code[i] = func();
+        consume("int");
+        Type *typ = type();
+        Token *tok = consume_ident();
+        Node *node;
+        if (consume("(")) {
+            node = func_after_leftparen(typ, tok);
+        } else {
+            node = declaration_after_ident(typ, tok, &globals);
+            expect(";");
+        }
+        code[i] = node;
         i++;
     }
     code[i] = NULL;
