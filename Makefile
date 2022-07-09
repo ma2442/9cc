@@ -1,7 +1,11 @@
+# -std=c11 : c11規格を指定
+# -g デバッグ情報出力
+# -static スタティックリンクする
 CFLAGS=-std=c11 -g -static
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)
 
+# link
 9cc: $(OBJS)
 	$(CC) -o 9cc $(OBJS) $(LDFLAGS)
 
@@ -16,5 +20,5 @@ qtest: 9cc
 clean:
 	rm -f 9cc *.o *~ tmp*
 
-.PHONY: test clean
+.PHONY: test qtest clean
 

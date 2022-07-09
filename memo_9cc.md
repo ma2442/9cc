@@ -1,1 +1,0 @@
-/home/ma/sync/_else/learn/memo_9cc.md
