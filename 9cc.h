@@ -41,8 +41,8 @@ typedef enum {
     ND_MUL,              // *
     ND_DIV,              // /
     ND_ASSIGN,           // =
-    ND_DEFLOCAL,         // local valiable definition
-    ND_LVAR,             // local valiable
+    ND_DEFLOCAL,         // local variable definition
+    ND_LVAR,             // local variable
     ND_ADDR,             // pointer &
     ND_DEREF,            // pointer *
     ND_FUNC_CALL,        // 関数呼び出し

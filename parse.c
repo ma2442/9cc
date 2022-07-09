@@ -145,7 +145,6 @@ Func *find_func(Token *tok) {
     return NULL;
 }
 
-
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
@@ -194,10 +193,8 @@ Node *new_node_deflocal(Token *tok, Type *typ) {
     lvar->len = tok->len;
     lvar->type = typ;
     lvar->offset = (locals ? locals->offset : 0);
-    if (typ->ty == ARRAY) {
-        lvar->offset += typ->array_size * sizes[typ->ptr_to->ty];
-    }
-    lvar->offset += sizes[typ->ty];
+    lvar->offset += (typ->ty == ARRAY ? typ->array_size * sizes[typ->ptr_to->ty]
+                                      : sizes[typ->ty]);
     if (lvar->offset % 8) {
         lvar->offset += 8 - (lvar->offset % 8);
     }
@@ -354,7 +351,9 @@ Node *primary() {
     node->func_name = tok->str;
     node->func_name_len = tok->len;
     Func *fn = find_func(tok);
-    if(fn){node->type = fn->type;}
+    if (fn) {
+        node->type = fn->type;
+    }
 
     // 実引数処理
     if (!consume(")")) {
@@ -481,7 +480,6 @@ Type *type() {
 Node *declaration() {
     Type *typ = type();
     Token *tok = consume_ident();
-    Node *node;
     if (consume("[")) {
         Type *array = calloc(1, sizeof(Type));
         array->array_size = expect_number();
@@ -489,13 +487,6 @@ Node *declaration() {
         array->ptr_to = typ;
         typ = array;
         expect("]");
-        node = new_node_deflocal(tok, typ);
-        // 配列自身(~=ポインタ)には、配列の先頭要素のアドレスを入れる。
-        // その準備として、lhsに配列自身の, rhsに先頭要素のoffsetを保持させる。
-        node->lhs = new_node_lvar(tok);
-        node->rhs = new_node_lvar(tok);
-        node->rhs->offset -= sizes[ARRAY];
-        return node;
     }
     return new_node_deflocal(tok, typ);
 }

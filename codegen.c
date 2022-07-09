@@ -63,20 +63,13 @@ void gen(Node *node) {
             return;
         case ND_LVAR:
             gen_lval(node);
-            printf("  pop rax\n");
-            printf("  mov rax, [rax]\n");
-            printf("  push rax\n");
+            if (node->type->ty != ARRAY) {
+                printf("  pop rax\n");
+                printf("  mov rax, [rax]\n");
+                printf("  push rax\n");
+            }
             return;
         case ND_DEFLOCAL:
-            if (node->type->ty == ARRAY) {
-                // 配列自身(~=ポインタ)に配列の先頭要素のアドレスを代入
-                gen_lval(node->lhs);
-                gen_lval(node->rhs);
-                printf("  pop rdi\n");
-                printf("  pop rax\n");
-                printf("  mov [rax], rdi\n");
-                printf("  push rdi\n");
-            }
             return;
         case ND_ADDR:
             gen_lval(node->lhs);
