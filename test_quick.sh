@@ -54,6 +54,7 @@ assert 30 'int* func(int* p){return p+1;} int main(){int a[3]; a[0]=10; a[1]=20;
 assert 14 'int x; int y; int main(){ x=4; y=6+x; return y+x; }'
 assert 1 'int x; int main(){ x = 5; int x; x = 1; return x; }'
 assert 5 'int x; int func(int x){ x=1; } int main(){ x=5; func(); return x; }'
+assert 3 'int x; int *y; int main(){y = &x; *y = 3; return x;}'
 assert 2 'int a[11]; int *p; int main(){ a[0] = 1; 10[a] = a[0] + 1; p = a; return (p+5)[2+3]; }'
 
 echo OK
