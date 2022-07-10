@@ -359,14 +359,13 @@ Node *primary() {
 
     // 実引数処理
     if (!consume(")")) {
-        node->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
-        node->next_arg->arg_idx = 0;
-        Node *arg = node->next_arg;
-        while (consume(",")) {
+        node->arg_idx = -1;
+        Node *arg = node;
+        do {
             arg->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
             arg->next_arg->arg_idx = arg->arg_idx + 1;
             arg = arg->next_arg;
-        }
+        } while (consume(","));
         expect(")");
     }
     return node;
