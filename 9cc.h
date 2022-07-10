@@ -11,6 +11,7 @@
 // トークンの種類
 typedef enum {
     TK_RESERVED,  // 記号
+    TK_TYPE,      // 型
     TK_IDENT,     // 識別子
     TK_NUM,       // 整数トークン
     TK_EOF,       // 入力の終わりを表すトークン
@@ -60,7 +61,7 @@ typedef enum {
 } NodeKind;
 
 typedef struct Type Type;
-typedef enum { INT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
+typedef enum { CHAR, INT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
 // 型
 struct Type {
     TypeKind ty;
@@ -122,7 +123,7 @@ LVar *locals;
 
 #endif  // HEADER_H
 extern void init_sizes();
-extern size_t size(Type *typ);
+extern int size(Type *typ);
 extern int size_deref(Node *node);
 extern Node *new_node();
 extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);

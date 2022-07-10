@@ -57,4 +57,13 @@ assert 5 'int x; int func(int x){ x=1; } int main(){ x=5; func(); return x; }'
 assert 3 'int x; int *y; int main(){y = &x; *y = 3; return x;}'
 assert 2 'int a[11]; int *p; int main(){ a[0] = 1; 10[a] = a[0] + 1; p = a; return (p+5)[2+3]; }'
 
+# char
+assert 255 'char x; char y; char func(char z){return z+1;} int main(){char a; a=4; x=1; y=10; return func(239)+x+y+a;}'
+assert 3 'int main(){char x[3]; x[0] = -1; x[1] = 2; int y; y = 4; return x[0] + y;}'
+assert 3 'int main(){ char a[11]; *a = 1; *(a+10) = 2; char *p; p = a; return *p + *(1+p+9); }'
+assert 30 'char* func(char* p){return p+1;} int main(){char a[3]; a[0]=10; a[1]=20; a[2]=30; return *(func(a)+1);}'
+
+# char overflow
+assert 0 'char c; char func(char x){if(x==0) return 256; return 1;} int main(){c=1; char x; x=256; if(x==0) c=256; if(c==0) {if(func(256)==0) return 0;} return 1;}'
+
 echo OK

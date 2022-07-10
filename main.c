@@ -1,14 +1,16 @@
 #include "9cc.h"
 
 void init_sizes() {
+    sizes[CHAR] = 1;
     sizes[INT] = 4;
     sizes[PTR] = 8;
 }
 
 // 型のサイズを計算する関数
-size_t size(Type *typ) {
+int size(Type *typ) {
     if (typ == NULL) {
-        error("size : 型がありません");
+        return -1;
+        // error("size : 型がありません");
     }
     if (typ->ty == ARRAY) {
         return size(typ->ptr_to) * typ->array_size;

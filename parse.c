@@ -108,14 +108,17 @@ bool consume(char *op) {
     return true;
 }
 
-Token *consume_ident() {
-    if (token->kind != TK_IDENT) {
+Token *consume_if_kind_is(TokenKind tk) {
+    if (token->kind != tk) {
         return NULL;
     }
     Token *this = token;
     token = token->next;
     return this;
 }
+
+Token *consume_type() { return consume_if_kind_is(TK_TYPE); }
+Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 
 // 変数を名前で検索する。 見つからなかった場合はNULLを返す。
 LVar *find_var(Token *tok, LVar **vars) {
@@ -252,14 +255,20 @@ int read_ident(char *p) {
     return len;
 }
 
+// Token の種類と予約語のペア構造体
+typedef struct KindWordPair KindWordPair;
+struct KindWordPair {
+    TokenKind tokenkind;
+    char word[10];
+};
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
     Token *cur = &head;
-    char resv[][10] = {
-        ",", "{", "}", "<=", ">=", "==", "!=", "=",   ";", "+", "-",
-        "*", "/", "(", ")",  "<",  ">",  "&",  "int", "[", "]"};
+    char resv[][4] = {",", "{", "}", "<=", ">=", "==", "!=", "=", ";", "+",
+                      "-", "*", "/", "(",  ")",  "<",  ">",  "&", "[", "]"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -267,18 +276,13 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        bool is_tokenized = false;
-        for (int i = 0; resv[i][0] != '\0'; i++) {
+        for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
             int len = strlen(resv[i]);
             if (!memcmp(resv[i], p, len)) {
                 cur = new_token(TK_RESERVED, cur, p, len);
                 p += len;
-                is_tokenized = true;
-                break;
+                goto CONTINUE_WHILE_P;
             }
-        }
-        if (is_tokenized) {
-            continue;
         }
 
         if (isdigit(*p)) {
@@ -289,34 +293,19 @@ Token *tokenize(char *p) {
 
         //先頭から変数として読める部分の長さを取得
         int ident_len = read_ident(p);
-        // sizeof 判定
-        if (ident_len == 6 && !strncmp(p, "sizeof", ident_len)) {
-            cur = new_token(TK_SIZEOF, cur, p, ident_len);
-            p += ident_len;
-            continue;
-        }
-
-        // return 判定
-        if (ident_len == 6 && !strncmp(p, "return", ident_len)) {
-            cur = new_token(TK_CTRL, cur, p, ident_len);
-            p += ident_len;
-            continue;
-        }
 
         // 制御構文if else while for等 判定
-        char keyword[][8] = {"if", "else", "while", "for", ""};
-        is_tokenized = false;
-        for (int i = 0; keyword[i][0] != '\0'; i++) {
-            if (ident_len == strlen(keyword[i]) &&
-                !strncmp(p, keyword[i], ident_len)) {
-                cur = new_token(TK_CTRL, cur, p, ident_len);
+        KindWordPair kdwds[] = {{TK_CTRL, "if"},       {TK_CTRL, "else"},
+                                {TK_CTRL, "while"},    {TK_CTRL, "for"},
+                                {TK_RETURN, "return"}, {TK_SIZEOF, "sizeof"},
+                                {TK_TYPE, "char"},     {TK_TYPE, "int"}};
+        for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
+            if (ident_len == strlen(kdwds[i].word) &&
+                !strncmp(p, kdwds[i].word, ident_len)) {
+                cur = new_token(kdwds[i].tokenkind, cur, p, ident_len);
                 p += ident_len;
-                is_tokenized = true;
-                break;
+                goto CONTINUE_WHILE_P;
             }
-        }
-        if (is_tokenized) {
-            continue;
         }
 
         // 変数名 判定
@@ -327,6 +316,7 @@ Token *tokenize(char *p) {
         }
 
         error_at(p, "トークナイズできません");
+    CONTINUE_WHILE_P:;
     }
 
     new_token(TK_EOF, cur, p, 1);
@@ -474,9 +464,17 @@ Node *assign() {
     return node;
 }
 
-Type *type() {
+Type *type(Token *tok) {
     Type *typ = calloc(1, sizeof(Type));
-    typ->ty = INT;
+    char *words[LEN_TYPE_KIND];
+    words[INT] = "int";
+    words[CHAR] = "char";
+    for (int tk = 0; tk < LEN_TYPE_KIND; tk++) {
+        if (!strncmp(tok->str, words[tk], tok->len)) {
+            typ->ty = tk;
+            break;
+        }
+    }
     while (consume("*")) {
         Type *ptr = calloc(1, sizeof(Type));
         ptr->ty = PTR;
@@ -520,10 +518,14 @@ Node *stmt() {
     Node *node = block();
     if (node) {
         // block {} の場合
-    } else if (consume("return")) {
+        return node;
+    }
+    if (consume("return")) {
         node = new_node(ND_RETURN, expr(), NULL);
         expect(";");
-    } else if (consume("if")) {
+        return node;
+    }
+    if (consume("if")) {
         expect("(");
         Node *judge = expr();
         expect(")");
@@ -534,7 +536,9 @@ Node *stmt() {
         }
         node->label_num = label_cnt;
         label_cnt++;
-    } else if (consume("while")) {
+        return node;
+    }
+    if (consume("while")) {
         expect("(");
         Node *judge = expr();
         expect(")");
@@ -542,7 +546,9 @@ Node *stmt() {
         node->judge = judge;
         node->label_num = label_cnt;
         label_cnt++;
-    } else if (consume("for")) {
+        return node;
+    }
+    if (consume("for")) {
         expect("(");
         Node *init = NULL;
         if (!consume(";")) {
@@ -565,21 +571,24 @@ Node *stmt() {
         node->inc = inc;
         node->label_num = label_cnt;
         label_cnt++;
-    } else if (consume("int")) {
-        Type *typ = type();
-        Token *tok = consume_ident();
+        return node;
+    }
+    Token *tok = consume_type();
+    if (tok) {
+        Type *typ = type(tok);
+        tok = consume_ident();
         node = declaration_after_ident(typ, tok, &locals);
         expect(";");
-    } else {
-        node = expr();
-        expect(";");
+        return node;
     }
+    node = expr();
+    expect(";");
     return node;
 }
 
 // 関数定義ノード
-Node *func_after_leftparen(Type *typ, Token *tok) {
-    if (!tok) {
+Node *func_after_leftparen(Type *typ, Token *func_name) {
+    if (!func_name) {
         return NULL;  // エラー
     }
     Func *fn = calloc(1, sizeof(Func));
@@ -590,18 +599,18 @@ Node *func_after_leftparen(Type *typ, Token *tok) {
     locals = calloc(1, sizeof(LVar));
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
-    fn->name = tok->str;
-    fn->len = tok->len;
-    node->name = tok->str;
-    node->name_len = tok->len;
+    fn->name = func_name->str;
+    fn->len = func_name->len;
+    node->name = func_name->str;
+    node->name_len = func_name->len;
 
     // 仮引数処理
     if (!consume(")")) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
-            consume("int");
-            typ = type();
+            Token *tok = consume_type();
+            typ = type(tok);
             tok = consume_ident();
             Node *ln = declaration_after_ident(typ, tok, &locals);
             ln->kind = ND_LVAR;
@@ -624,9 +633,9 @@ void program() {
     funcs = calloc(1, sizeof(Func));
     globals = calloc(1, sizeof(LVar));
     while (!at_eof()) {
-        consume("int");
-        Type *typ = type();
-        Token *tok = consume_ident();
+        Token *tok = consume_type();
+        Type *typ = type(tok);
+        tok = consume_ident();
         Node *node;
         if (consume("(")) {
             node = func_after_leftparen(typ, tok);

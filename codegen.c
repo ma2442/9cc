@@ -13,6 +13,27 @@ void gen_lval(Node *node) {
     printf("  push rax\n");
 }
 
+void gen_read(Node *node) {
+    printf("  pop rax\n");
+    if (size(node->type) == 1) {
+        // x86-64 では
+        // レジスタ下位32bitに書き込むと上位32bitが0クリアされる。
+        // よって 1バイトの値をpushしたいときは、
+        // ecx(rcxの下位32bit)へ書き込み、 push rcx すればよい。
+        printf("  movzx ecx, BYTE PTR[rax]\n");
+        printf("  push rcx\n");
+    } else {
+        printf("  mov rax, [rax]\n");
+        printf("  push rax\n");
+    }
+}
+
+void gen_tochar() {
+    printf("  pop rax\n");
+    printf("  movzx ecx, al\n");
+    printf("  push rcx\n");
+}
+
 void gen(Node *node) {
     if (!node) {
         return;
@@ -67,27 +88,24 @@ void gen(Node *node) {
         case ND_LVAR:
         case ND_GVAR:
             gen_lval(node);
-            if (node->type->ty != ARRAY) {
-                printf("  pop rax\n");
-                printf("  mov rax, [rax]\n");
-                printf("  push rax\n");
+            if (node->type->ty == ARRAY) {
+                return;
             }
+            gen_read(node);
             return;
         case ND_DEFLOCAL:
             return;
         case ND_DEFGLOBAL:
             printf(".bss\n");
             printf("%.*s:\n", node->name_len, node->name);
-            printf("  .zero %zu\n", size(node->type));
+            printf("  .zero %d\n", size(node->type));
             return;
         case ND_ADDR:
             gen_lval(node->lhs);
             return;
         case ND_DEREF:
             gen(node->lhs);
-            printf("  pop rax\n");
-            printf("  mov rax, [rax]\n");
-            printf("  push rax\n");
+            gen_read(node);
             return;
         case ND_FUNC_CALL:
             gen(node->next_arg);  //実引数計算
@@ -111,6 +129,9 @@ void gen(Node *node) {
 
             // 返り値をスタックに保存
             printf("  push rax\n");
+            if (size(node->type) == 1) {
+                gen_tochar();
+            }
             return;
         case ND_FUNC_CALL_ARG:
             gen(node->rhs);  // value of this arg
@@ -156,10 +177,17 @@ void gen(Node *node) {
                 gen_lval(node->lhs);
             }
             gen(node->rhs);
-            printf("  pop rdi\n");
-            printf("  pop rax\n");
-            printf("  mov [rax], rdi\n");
-            printf("  push rdi\n");
+            if (size(node->lhs->type) == 1) {
+                printf("  pop rcx\n");
+                printf("  pop rax\n");
+                printf("  mov [rax], cl\n");
+                printf("  push rcx\n");
+            } else {
+                printf("  pop rdi\n");
+                printf("  pop rax\n");
+                printf("  mov [rax], rdi\n");
+                printf("  push rdi\n");
+            }
             return;
         case ND_BLOCK:
             for (int i = 0; i <= 128; i++) {

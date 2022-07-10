@@ -155,4 +155,22 @@ assert 3 'int x; int *y; int main(){y = &x; *y = 3; return x;}'
 assert 32 'int **p; int main() { alloc4_2D(&p, 10, 20, 30, 40); int **q; q = 4 + p - 2; *q = *q + 1; return **q;}'
 assert 3 'int a[11]; int main(){ *a = 1; *(a+10) = 2; int *p; p = a; return *p + *(1+p+9); }'
 assert 2 'int a[11]; int main(){ a[0] = 1; 10[a] = a[0] + 1; int *p; p = a; return (p+5)[2+3]; }'
+
+# char
+assert 1 'int main(){ char c; c=1; return c;}'
+assert 255 'char x; char y; char func(char z){return z+1;} int main(){char a; a=4; x=1; y=10; return func(239)+x+y+a;}'
+assert 3 'int main(){char x[3]; x[0] = -1; x[1] = 2; int y; y = 4; return x[0] + y;}'
+assert 2 'char x[3]; int main(){x[0] = -1; x[1] = 2; x[2] = 3; return x[1];}'
+assert 3 'char x[3]; int main(){x[0] = -1; x[1] = 2; x[2] = 3; return x[2];}'
+assert 1 'int main(){char x; return sizeof(x);}'
+assert 3 'int main(){ char a[11]; *a = 1; *(a+10) = 2; char *p; p = a; return *p + *(1+p+9); }'
+assert 30 'char* func(char* p){return p+1;} int main(){char a[3]; a[0]=10; a[1]=20; a[2]=30; return *(func(a)+1);}'
+assert 2 'char a[11]; char *p; int main(){ a[0] = 1; 10[a] = a[0] + 1; p = a; return (p+5)[2+3]; }'
+
+# char overflow
+assert 0 'int main(){char x; x = 256; if(x) return 1; else return 0;}'
+assert 0 'char func(){return 256;} int main(){if(func()) return 1; else return 0;}'
+assert 0 'int func(char x){return x;} int main(){if(func(256)) return 1; else return 0;}'
+assert 0 'char x; int main(){ x = 256; if(x) return 1; else return 0;}'
+
 echo OK
