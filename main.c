@@ -50,5 +50,12 @@ int main(int argc, char **argv) {
         gen(code[i]);
     }
 
+    // 文字列リテラル部のコード生成
+    printf(".data\n");
+    while (strlits) {
+        printf("%s:\n", strlits->name);
+        printf("  .string %.*s\n", strlits->len, strlits->str);
+        strlits = strlits->next;
+    }
     return 0;
 }

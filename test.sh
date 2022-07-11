@@ -173,4 +173,10 @@ assert 0 'char func(){return 256;} int main(){if(func()) return 1; else return 0
 assert 0 'int func(char x){return x;} int main(){if(func(256)) return 1; else return 0;}'
 assert 0 'char x; int main(){ x = 256; if(x) return 1; else return 0;}'
 
+# string literal
+assert 1 'int main(){char *str; str = "abcdefg"; if(str[1] == 98) return 1; return 0;}'
+assert 3 'int main(){return sizeof("abc");}'
+assert 102 'char *str; int main(){str = "df"; return *(str+1);}'
+assert 101 'int main(){return "aceg"[2];}' # == 'e'
+
 echo OK

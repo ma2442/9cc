@@ -61,7 +61,8 @@ Token *token;
 char *user_input;
 
 // ラベル通し番号
-int label_cnt = 0;
+int jmp_label_cnt = 0;
+int str_label_cnt = 0;
 
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
@@ -117,6 +118,7 @@ Token *consume_if_kind_is(TokenKind tk) {
     return this;
 }
 
+Token *consume_str() { return consume_if_kind_is(TK_STR); }
 Token *consume_type() { return consume_if_kind_is(TK_TYPE); }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 
@@ -276,6 +278,16 @@ Token *tokenize(char *p) {
             continue;
         }
 
+        // 文字列判定
+        if (*p == '"') {
+            int len = 1;
+            while (p[len++] != '"') {
+            }
+            cur = new_token(TK_STR, cur, p, len);
+            p += len;
+            continue;
+        }
+
         for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
             int len = strlen(resv[i]);
             if (!memcmp(resv[i], p, len)) {
@@ -329,6 +341,30 @@ Node *statement[100];
 Node *expr();
 
 Node *primary() {
+    // 文字列リテラルとして識別
+    Token *tok_str = consume_str();
+    if (tok_str) {
+        Type *array = calloc(1, sizeof(Type));
+        array->array_size = tok_str->len - 2;  // 引用符""の分を減らす
+        array->ty = ARRAY;
+        array->ptr_to = calloc(1, sizeof(Type));
+        array->ptr_to->ty = CHAR;
+
+        Node *node = new_node(ND_GVAR, NULL, NULL);
+        node->type = array;
+
+        StrLit *strlit = calloc(1, sizeof(StrLit));
+        strlit->str = tok_str->str;
+        strlit->len = tok_str->len;
+        sprintf(strlit->name, ".LC%d", str_label_cnt);
+        str_label_cnt++;
+        node->name = strlit->name;
+        node->name_len = strlen(strlit->name);
+        strlit->next = strlits;
+        strlits = strlit;
+        return node;
+    }
+
     // 次のトークンが"("なら、"(" expr ")" のはず
     if (consume("(")) {
         Node *node = expr();
@@ -391,7 +427,7 @@ Node *unary() {
     }
     consume("+");
     Node *node = primary();
-    if (consume("[")) {
+    if (consume("[")) {  // 配列添え字演算子
         node = new_node(ND_ADD, node, expr());
         node = new_node(ND_DEREF, node, NULL);
         expect("]");
@@ -533,8 +569,8 @@ Node *stmt() {
         if (consume("else")) {
             node->rhs = stmt();
         }
-        node->label_num = label_cnt;
-        label_cnt++;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
         return node;
     }
     if (consume("while")) {
@@ -543,8 +579,8 @@ Node *stmt() {
         expect(")");
         node = new_node(ND_WHILE, stmt(), NULL);
         node->judge = judge;
-        node->label_num = label_cnt;
-        label_cnt++;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
         return node;
     }
     if (consume("for")) {
@@ -568,8 +604,8 @@ Node *stmt() {
         node->init = init;
         node->judge = judge;
         node->inc = inc;
-        node->label_num = label_cnt;
-        label_cnt++;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
         return node;
     }
     Token *tok = consume_type();

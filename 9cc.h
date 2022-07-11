@@ -18,6 +18,7 @@ typedef enum {
     TK_SIZEOF,    // sizeof
     TK_RETURN,    // return
     TK_CTRL,      // if, else, while, for等 制御構文を表すトークン
+    TK_STR,       // 文字列リテラルを表すトークン
 } TokenKind;
 
 typedef struct Token Token;
@@ -81,8 +82,8 @@ struct Node {
     Type *type;      // int, int*などの型情報
     int label_num;   // if,while,for等のラベル通し番号
     Node *next_arg;  // kindがND_FUNC_* の場合に使う
-    char *name;      // kindがND_FUNC_* の場合等に使う
-    int name_len;    // kindがND_FUNC_* の場合等に使う
+    char *name;      // 関数名 または 変数名
+    int name_len;    // nameの長さ
     int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
     Node *init;      // forの初期化式(_____; ; )
     Node *judge;     // if,while,for等の条件式
@@ -112,6 +113,15 @@ struct Func {
     Type *type;
 };
 
+// 文字列リテラル
+typedef struct StrLit StrLit;
+struct StrLit {
+    StrLit *next;
+    char *str;      // 文字列リテラル本体
+    int len;        // 本体の長さ
+    char name[32];  // 名前(ラベル)
+};
+
 size_t sizes[LEN_TYPE_KIND];
 
 // 関数
@@ -120,6 +130,8 @@ Func *funcs;
 LVar *globals;
 // ローカル変数
 LVar *locals;
+// 文字列リテラル
+StrLit *strlits;
 
 #endif  // HEADER_H
 extern void init_sizes();
@@ -131,7 +143,7 @@ extern Node *new_node_num(int val);
 extern Token *token;
 
 extern char *user_input;
-extern int label_cnt;
+extern int jmp_label_cnt;
 extern void error_at(char *loc, char *fmt, ...);
 extern void error(char *fmt, ...);
 extern bool consume(char *op);

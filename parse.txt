@@ -9,15 +9,19 @@ stmt    =
     | "while" "(" expr ")" stmt
     | "for" "(" expr? ";" expr? ";" expr? ")" stmt
     | ...
-declaration = "int" "*"* ident ("[" num "]")*
+declaration = ("int" | "char") "*"* ident ("[" num "]")*
 expr    = assign
 assign  = equality ("=" assign)?
 equality    = relational (("=="|"!=") relational)*
 relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"=") mul)*
 mul = unary (("*"|"/") unary)* // <- "%" は?
-unary   = "sizeof" unary | ("+"|"-")? primary | ("*"|"&") unary | primary "[" expr "]"
-primary = ident 
+unary = "sizeof" unary
+    | ("*"|"&") unary  
+    | ("+"|"-")? primary 
+    | primary "[" expr "]" 
+primary = '"' [^"]* '"' 
+    | ident 
     | ident "(" (expr ("," expr)* )? ")" 
     | num 
     | "(" expr ")"

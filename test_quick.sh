@@ -66,4 +66,10 @@ assert 30 'char* func(char* p){return p+1;} int main(){char a[3]; a[0]=10; a[1]=
 # char overflow
 assert 0 'char c; char func(char x){if(x==0) return 256; return 1;} int main(){c=1; char x; x=256; if(x==0) c=256; if(c==0) {if(func(256)==0) return 0;} return 1;}'
 
+# string literal
+assert 1 'int main(){char *str; str = "abcdefg"; if(str[1] == 98) return 1; return 0;}'
+assert 3 'int main(){return sizeof("abc");}'
+assert 102 'char *str; int main(){str = "df"; return *(str+1);}'
+assert 101 'int main(){return "aceg"[2];}' # == 'e'
+
 echo OK
