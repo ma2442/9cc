@@ -18,12 +18,11 @@ int size(Type *typ) {
     return sizes[typ->ty];
 }
 
-// ポインタや配列が参照する型のサイズかエラー:-1を返す
-int size_deref(Node *node) {
-    if (node->type == NULL || node->type->ptr_to == NULL) {
-        return -1;
-    }
-    return sizes[node->type->ptr_to->ty];
+// デリファレンス可能な型を判別(ARRAY, PTR)
+bool can_deref(Type *typ) {
+    if (typ == NULL) return false;
+    if (typ->ptr_to == NULL) return false;
+    return true;
 }
 
 int main(int argc, char **argv) {

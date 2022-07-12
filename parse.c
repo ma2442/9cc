@@ -8,7 +8,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     // 型情報付与
     switch (node->kind) {
         case ND_DEREF:
-            if (node->lhs->type && node->lhs->type->ptr_to) {
+            if (can_deref(node->lhs->type)) {
                 node->type = node->lhs->type->ptr_to;
             }
             break;
@@ -21,9 +21,9 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
             break;
         case ND_ADD:
         case ND_SUB:
-            if (size_deref(node->lhs) != -1) {
+            if (can_deref(node->lhs->type)) {
                 node->type = node->lhs->type;
-            } else if (size_deref(node->rhs) != -1) {
+            } else if (can_deref(node->rhs->type)) {
                 node->type = node->rhs->type;
             } else {  // 両オペランド共ポインタでない
                 node->type = node->lhs->type;
@@ -311,7 +311,7 @@ Node *unary() {
     }
     consume("+");
     Node *node = primary();
-    if (consume("[")) {  // 配列添え字演算子
+    while (consume("[")) {  // 配列添え字演算子
         node = new_node(ND_ADD, node, expr());
         node = new_node(ND_DEREF, node, NULL);
         expect("]");
@@ -404,15 +404,17 @@ Type *type(Token *tok) {
 }
 
 Node *declaration_after_ident(Type *typ, Token *tok, LVar **vars) {
-    if (consume("[")) {
-        Type *array = calloc(1, sizeof(Type));
-        array->array_size = expect_number();
-        array->ty = ARRAY;
-        array->ptr_to = typ;
-        typ = array;
+    Type head;
+    Type *last = &head;
+    while (consume("[")) {
+        last->ptr_to = calloc(1,sizeof(Type));
+        last = last->ptr_to;
+        last->array_size = expect_number();
+        last->ty = ARRAY;
         expect("]");
     }
-    return new_node_defvar(tok, typ, vars);
+    last->ptr_to = typ;
+    return new_node_defvar(tok, head.ptr_to, vars);
 }
 
 Node *expr() { return assign(); }

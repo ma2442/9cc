@@ -184,9 +184,28 @@ assert 101 'int main(){return "aceg"[2];}' # == 'e'
 assert 0 'int main(){printf("Hello, world! %d\n", 20220711); return 0;}'
 
 # INT型 4byte ひとつ前の要素の書き換えの影響を受けないことを確認
-assert 3 ' int main(){int a[3]; a[1]=3; a[0]=1; return a[1];} ' 
-assert 3 ' int a[3]; int main(){a[1]=3; a[0]=1; return a[1];} '
-assert 3 ' int main(){ int x; int y; y=3; x=1; return y;} '
-assert 3 ' int x; int y; int main(){y=3; x=1; return y;} '
+assert 3 'int main(){int a[3]; a[1]=3; a[0]=1; return a[1];} ' 
+assert 3 'int a[3]; int main(){a[1]=3; a[0]=1; return a[1];} '
+assert 3 'int main(){ int x; int y; y=3; x=1; return y;} '
+assert 3 'int x; int y; int main(){y=3; x=1; return y;} '
+
+# 二次元配列
+assert 40 'int main(){int a[2][5]; return sizeof(a);}'
+assert 20 'int main(){int a[4][5]; return sizeof(a[0]);}'
+assert 4 'int main(){int a[4][5]; return sizeof(a[0][0]);}'
+assert 5 'int main(){int a[2][3]; int i; int j; *(*(a+1)+1)=5; return *(*(a+1)+1);}'
+assert 1 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][0];}'
+assert 2 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][1];}'
+assert 3 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][2];}'
+assert 11 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][0];}'
+assert 12 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][1];}'
+assert 13 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][2];}'
+assert 1 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][0];}'
+assert 2 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][1];}'
+assert 3 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[0][2];}'
+assert 11 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][0];}'
+assert 12 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][1];}'
+assert 13 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][2];}'
+
 
 echo OK

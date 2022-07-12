@@ -15,6 +15,9 @@ void gen_lval(Node *node) {
 }
 
 void gen_read(Node *node) {
+    if (node->type->ty == ARRAY) {
+        return;
+    }
     printf("  pop rax\n");
     if (size(node->type) == 1) {
         printf("  movsx rcx, BYTE PTR [rax]\n");  // CHAR 符号拡張
@@ -28,7 +31,7 @@ void gen_read(Node *node) {
 
 void gen_tochar() {
     printf("  pop rax\n");
-    printf("  movzx ecx, al\n");
+    printf("  movsx rcx, al\n");
     printf("  push rcx\n");
 }
 
@@ -88,9 +91,6 @@ void gen(Node *node) {
         case ND_LVAR:
         case ND_GVAR:
             gen_lval(node);
-            if (node->type->ty == ARRAY) {
-                return;
-            }
             gen_read(node);
             return;
         case ND_DEFLOCAL:
@@ -110,8 +110,6 @@ void gen(Node *node) {
         case ND_FUNC_CALL:
             gen(node->next_arg);  //実引数計算
             // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
-            // 0x0fを半端な数に書き換えても正常動作するので、
-            // できているかよくわからない。なくても動く。
             printf("  mov rbx, rsp\n");
             printf("  and rbx, 0x0f\n");
             printf("  sub rsp, rbx\n");
@@ -123,7 +121,6 @@ void gen(Node *node) {
             printf("  call %.*s\n", node->name_len, node->name);
 
             // rspを16バイト境界揃えから元に戻す
-            // できているかよくわからない。なくても動く。
             printf("  pop rbx\n");
             printf("  add rsp, rbx\n");
 
@@ -171,26 +168,21 @@ void gen(Node *node) {
         case ND_ASSIGN:
             if (node->lhs->kind == ND_DEREF) {
                 gen(node->lhs->lhs);
-                dst_size = size(node->lhs->lhs->type->ptr_to);
             } else {
                 gen_lval(node->lhs);
-                dst_size = size(node->lhs->type);
             }
+            dst_size = size(node->lhs->type);
             gen(node->rhs);
+            printf("  pop rcx\n");
+            printf("  pop rax\n");
             if (dst_size == 1) {
-                printf("  pop rcx\n");
-                printf("  pop rax\n");
                 printf("  mov [rax], cl\n");
-                printf("  push rcx\n");
+            } else if (dst_size == 4) {
+                printf("  mov DWORD PTR [rax], ecx\n");
             } else {
-                printf("  pop rdi\n");
-                printf("  pop rax\n");
-                if (dst_size == 4)
-                    printf("  mov DWORD PTR [rax], edi\n");
-                else
-                    printf("  mov [rax], rdi\n");
-                printf("  push rdi\n");
+                printf("  mov [rax], rcx\n");
             }
+            printf("  push rcx\n");
             return;
         case ND_BLOCK:
             for (int i = 0; i <= 128; i++) {
@@ -210,12 +202,10 @@ void gen(Node *node) {
 
     // ポインタの加減算
     if (node->kind == ND_ADD || node->kind == ND_SUB) {
-        int szd_l = size_deref(node->lhs);
-        int szd_r = size_deref(node->rhs);
-        if (szd_l > szd_r && szd_r == -1) {
-            printf("  imul rdi, %d\n", szd_l);
-        } else if (szd_l < szd_r && szd_l == -1) {
-            printf("  imul rax, %d\n", szd_r);
+        if (can_deref(node->lhs->type)) {
+            printf("  imul rdi, %d\n", size(node->lhs->type->ptr_to));
+        } else if (can_deref(node->rhs->type)) {
+            printf("  imul rax, %d\n", size(node->rhs->type->ptr_to));
         }
     }
 

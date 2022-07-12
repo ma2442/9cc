@@ -40,22 +40,17 @@ assert 99 'int swap(int *x, int *y){int tmp; tmp = *x; *x = *y; *y = tmp; return
 assert 32 'int main() {int **p; alloc4_2D(&p, 10, 20, 30, 40); int **q; q = 4 + p - 2; *q = *q + 1; return **q;}'
 
 # sizeof
-assert 12 'int main(){ int x; int *y; return sizeof(x+3) + sizeof(y+3); }'
-assert 24 'int main(){ int *y;int a[3]; return sizeof(*y) + sizeof(sizeof(1)) + sizeof(1*1) + sizeof(a); }'
+assert 0 'int main(){ int x; int *y; int a[3]; return (sizeof(x+3)!=4) + (sizeof(y+3)!=8) + (sizeof(*y)!=4) + (sizeof(sizeof(1))!=4) + (sizeof(1*1)!=4) + (sizeof(a)!=12); }'
 
 # 配列
-assert 3 'int main(){ int a[11]; *a = 1; *(a+10) = 2; int *p; p = a; return *p + *(1+p+9); }'
-assert 2 'int main(){ int a[11]; a[0] = 1; 10[a] = a[0] + 1; int *p; p = a; return (p+5)[2+3]; }'
+assert 0 'int main(){ int b[11]; *b = 1; *(b+10) = 2; int *q; q = b; int a[11]; a[0] = 1; 10[a] = a[0] + 1; int *p; p = a; return (*q!=1) + (*(1+q+9)!=2) + ((p+5)[2+3]!=2); }'
 
 # ポインタを返す関数
 assert 30 'int* func(int* p){return p+1;} int main(){int a[3]; a[0]=10; a[1]=20; a[2]=30; return *(func(a)+1);}'
 
 # グローバル変数
-assert 14 'int x; int y; int main(){ x=4; y=6+x; return y+x; }'
-assert 1 'int x; int main(){ x = 5; int x; x = 1; return x; }'
-assert 5 'int x; int func(int x){ x=1; } int main(){ x=5; func(); return x; }'
-assert 3 'int x; int *y; int main(){y = &x; *y = 3; return x;}'
-assert 2 'int a[11]; int *p; int main(){ a[0] = 1; 10[a] = a[0] + 1; p = a; return (p+5)[2+3]; }'
+assert 0 'int x; int y; int func(int x){ x=1; } int main(){ x=4; func(); if(x==4){ y=6+x; if((y+x==14)) {int x; x = 1; return (x!=1);} return 1;} return 2; }'
+assert 0 'int x; int *y; int a[11]; int *p; int main(){y = &x; *y = 3; a[0] = 1; 10[a] = a[0] + 1; p = a; return ((p+5)[2+3]!=2) + (x!=3);}'
 
 # char
 assert 255 'char x; char y; char func(char z){return z+1;} int main(){char a; a=4; x=1; y=10; return func(239)+x+y+a;}'
@@ -67,17 +62,15 @@ assert 30 'char* func(char* p){return p+1;} int main(){char a[3]; a[0]=10; a[1]=
 assert 0 'char c; char func(char x){if(x==0) return 256; return 1;} int main(){c=1; char x; x=256; if(x==0) c=256; if(c==0) {if(func(256)==0) return 0;} return 1;}'
 
 # string literal
-assert 1 'int main(){char *str; str = "abcdefg"; if(str[1] == 98) return 1; return 0;}'
-assert 3 'int main(){return sizeof("abc");}'
-assert 102 'char *str; int main(){str = "df"; return *(str+1);}'
-assert 101 'int main(){return "aceg"[2];}' # == 'e'
-assert 0 'int main(){printf("Hello, world! %d\n", 20220711); return 0;}'
+assert 0 'int main(){printf("Hello, world! %d\n", 20220711); char *str; str = "abcdefg"; char *df; df = "df";  return (str[1] != 98) + (sizeof("abc")!=3) + ("aceg"[2]!=101) + (*(df+1)!=102);}'  # 101 == 'e', 102 == 'f'
 
 # 4バイト型 ひとつ前の要素の書き換えの影響を受けないことを確認
-assert 3 ' int main(){int a[3]; a[1]=3; a[0]=1; return a[1];} ' 
-assert 3 ' int a[3]; int main(){a[1]=3; a[0]=1; return a[1];} '
-assert 3 ' int main(){ int x; int y; y=3; x=1; return y;} '
-assert 3 ' int x; int y; int main(){y=3; x=1; return y;} '
+assert 0 'int a[3]; int main(){a[1]=3; a[0]=1; if(a[1]==3){int b[3]; b[1]=4; b[0]=1; if(b[1]==4) return 0; else return 1;} return 2;} ' 
+assert 2 'int x; int y; int main(){ int a; int b; y=3; x=1; b=4; a=1;  return (b==4) + (y==3);} '
 
+# 二次元配列
+assert 5 'int main(){int a[2][3]; int i; int j; *(*(a+1)+1)=5; return *(*(a+1)+1);}'
+assert 1 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1; else 0;}'
+assert 1 'int a[2][3]; int main(){int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1; else 0;}'
 
 echo OK
