@@ -4,7 +4,7 @@ int ngCol[8];
 int ngDown[16];
 int ngUp[16];
 int rest;
-char grid[64];
+char grid[8][8];
 int put(int r, int c, int b) {
     ngRaw[r] = b;
     ngCol[c] = b;
@@ -24,7 +24,7 @@ int solve(int r, int c) {
     int j;
     if (isNg(r, c)) return 0;
     if (rest == 1) {
-        grid[r * 8 + c] = 81;
+        grid[r][c] = 81;
         return 1;
     }
     put(r, c, 1);
@@ -32,7 +32,7 @@ int solve(int r, int c) {
     for (i = 0; i < 8; i = i + 1) {
         for (j = 0; j < 8; j = j + 1) {
             if (solve(i, j)) {
-                grid[r * 8 + c] = 81;
+                grid[r][c] = 81;
                 return 1;
             }
         }
@@ -48,13 +48,13 @@ int main() {
     rest = 8;
     for (i = 0; i < 8; i = i + 1)
         for (j = 0; j < 8; j = j + 1) {
-            grid[8 * i + j] = 46;
+            grid[i][j] = 46;
         }
     for (i = 0; i < 8; i = i + 1)
         for (j = 0; j < 8; j = j + 1)
             if (solve(i, j)) {
                 for (k = 0; k < 8; k = k + 1) {
-                    printf("%.8s\n", grid + 8 * k);
+                    printf("%.8s\n", grid[k]);
                 }
 
                 return 0;
