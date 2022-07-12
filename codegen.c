@@ -6,26 +6,24 @@ void gen_lval(Node *node) {
     }
     if (node->kind == ND_GVAR) {
         printf("  lea rax, %.*s[rip]\n", node->name_len, node->name);
+        printf("  push rax\n");
+
     } else if (node->kind == ND_LVAR) {
-        printf("  mov rax, rbp\n");
-        printf("  sub rax, %d\n", node->offset);
+        printf("  lea rax, [rbp-%d]\n", node->offset);
+        printf("  push rax\n");
     }
-    printf("  push rax\n");
 }
 
 void gen_read(Node *node) {
     printf("  pop rax\n");
     if (size(node->type) == 1) {
-        // x86-64 では
-        // レジスタ下位32bitに書き込むと上位32bitが0クリアされる。
-        // よって 1バイトの値をpushしたいときは、
-        // ecx(rcxの下位32bit)へ書き込み、 push rcx すればよい。
-        printf("  movzx ecx, BYTE PTR[rax]\n");
-        printf("  push rcx\n");
+        printf("  movsx rcx, BYTE PTR [rax]\n");  // CHAR 符号拡張
+    } else if (size(node->type) == 4) {
+        printf("  movsx rcx, DWORD PTR [rax]\n");  // INT 符号拡張
     } else {
-        printf("  mov rax, [rax]\n");
-        printf("  push rax\n");
+        printf("  mov rcx, [rax]\n");
     }
+    printf("  push rcx\n");
 }
 
 void gen_tochar() {
@@ -39,6 +37,8 @@ void gen(Node *node) {
         return;
     }
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    int dst_size;  // 書き込み先のサイズ
+
     switch (node->kind) {
         case ND_RETURN:
             gen(node->lhs);
@@ -96,7 +96,7 @@ void gen(Node *node) {
         case ND_DEFLOCAL:
             return;
         case ND_DEFGLOBAL:
-            printf(".bss\n");
+            printf(".data\n");
             printf("%.*s:\n", node->name_len, node->name);
             printf("  .zero %d\n", size(node->type));
             return;
@@ -116,14 +116,14 @@ void gen(Node *node) {
             printf("  and rbx, 0x0f\n");
             printf("  sub rsp, rbx\n");
             printf("  push rbx\n");
-            printf("  sub rsp, 8\n");
 
+            // 可変長引数関数に渡す浮動小数 = 0個
+            printf("  mov al, 0\n");
             // 関数呼び出し
             printf("  call %.*s\n", node->name_len, node->name);
 
             // rspを16バイト境界揃えから元に戻す
             // できているかよくわからない。なくても動く。
-            printf("  add rsp, 8\n");
             printf("  pop rbx\n");
             printf("  add rsp, rbx\n");
 
@@ -134,11 +134,11 @@ void gen(Node *node) {
             }
             return;
         case ND_FUNC_CALL_ARG:
-            gen(node->rhs);  // value of this arg
+            gen(node->rhs);       // value of this arg
+            gen(node->next_arg);  // next arg
             if (arg_storage[node->arg_idx][0] != '\0') {
                 printf("  pop %s\n", arg_storage[node->arg_idx]);
             }
-            gen(node->next_arg);  // next arg
             return;
         case ND_FUNC_DEFINE:
             // 関数名ラベル
@@ -161,23 +161,23 @@ void gen(Node *node) {
             return;
         case ND_FUNC_DEFINE_ARG:
             gen_lval(node->lhs);
-            if (arg_storage[node->arg_idx][0] != '\0') {
-                printf("  push %s\n", arg_storage[node->arg_idx]);
-            }
+            printf("  push %s\n", arg_storage[node->arg_idx]);
+            gen(node->next_arg);
             printf("  pop rdi\n");
             printf("  pop rax\n");
             printf("  mov [rax], rdi\n");
-            printf("  push rdi\n");
-            gen(node->next_arg);
+            // printf("  push rdi\n");
             return;
         case ND_ASSIGN:
             if (node->lhs->kind == ND_DEREF) {
                 gen(node->lhs->lhs);
+                dst_size = size(node->lhs->lhs->type->ptr_to);
             } else {
                 gen_lval(node->lhs);
+                dst_size = size(node->lhs->type);
             }
             gen(node->rhs);
-            if (size(node->lhs->type) == 1) {
+            if (dst_size == 1) {
                 printf("  pop rcx\n");
                 printf("  pop rax\n");
                 printf("  mov [rax], cl\n");
@@ -185,7 +185,10 @@ void gen(Node *node) {
             } else {
                 printf("  pop rdi\n");
                 printf("  pop rax\n");
-                printf("  mov [rax], rdi\n");
+                if (dst_size == 4)
+                    printf("  mov DWORD PTR [rax], edi\n");
+                else
+                    printf("  mov [rax], rdi\n");
                 printf("  push rdi\n");
             }
             return;

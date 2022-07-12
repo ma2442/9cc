@@ -102,6 +102,9 @@ assert 6 'int acc(int x){ if(x==1) { return 1; } else { return x + acc(x-1); }} 
 assert 1 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } int main() { return fib(1); }'
 assert 8 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } int main() { return fib(6); }'
 
+# 関数コール (引数2の計算により引数1が書き換わらない = 全引数のpopがまとめて最後に行われていることの確認)
+assert 55 'int func(int x, int y){return x+y;} int main(){return func(2+3, 20+30);}' 
+
 #単項&、*
 assert 3 'int main(){int x; int *y; x = 3; y = &x; return *y;}'
 assert 4 'int main(){int x; int y; int *z; x = 4; y = 5; z = &y + 2; return *z;}'
@@ -178,5 +181,12 @@ assert 1 'int main(){char *str; str = "abcdefg"; if(str[1] == 98) return 1; retu
 assert 3 'int main(){return sizeof("abc");}'
 assert 102 'char *str; int main(){str = "df"; return *(str+1);}'
 assert 101 'int main(){return "aceg"[2];}' # == 'e'
+assert 0 'int main(){printf("Hello, world! %d\n", 20220711); return 0;}'
+
+# INT型 4byte ひとつ前の要素の書き換えの影響を受けないことを確認
+assert 3 ' int main(){int a[3]; a[1]=3; a[0]=1; return a[1];} ' 
+assert 3 ' int a[3]; int main(){a[1]=3; a[0]=1; return a[1];} '
+assert 3 ' int main(){ int x; int y; y=3; x=1; return y;} '
+assert 3 ' int x; int y; int main(){y=3; x=1; return y;} '
 
 echo OK

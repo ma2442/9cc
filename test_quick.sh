@@ -30,7 +30,7 @@ assert 5 'int main(){int i; i=3; if(i==0){i=1; i=i+1;} else if (i==3) {i=4; i=i+
 assert 45 'int main(){int i; int k; int res; int res_while; i=0; res=0; while(i<3){ for(k=0; k<5; k = k+1){res= res+1; res= res+2;} res_while = res_while+1; i=i+1;} return res; }'
 
 #外部関数コール、関数定義&コール
-assert 9 'int func1(){ return 1; } int func2(int x, int y){return x + y;} int main(){ bar6(1,2,3,4,5,6); return func1() + func2(1, 3) + 4; }'
+assert 60 'int func1(){ return 1; } int func2(int x, int y){return x + y;} int main(){ bar6(1,2,3,4,5,6); return func1() + func2(2+3, 20+30) + 4; }'
 assert 8 'int fib(int x){ if(x==1) { return 1;} else if(x==2) { return 1;} else { return fib(x-1) + fib(x-2);} } int main() { return fib(6); }'
 
 # int* 定義, 代入・アクセス
@@ -71,5 +71,13 @@ assert 1 'int main(){char *str; str = "abcdefg"; if(str[1] == 98) return 1; retu
 assert 3 'int main(){return sizeof("abc");}'
 assert 102 'char *str; int main(){str = "df"; return *(str+1);}'
 assert 101 'int main(){return "aceg"[2];}' # == 'e'
+assert 0 'int main(){printf("Hello, world! %d\n", 20220711); return 0;}'
+
+# 4バイト型 ひとつ前の要素の書き換えの影響を受けないことを確認
+assert 3 ' int main(){int a[3]; a[1]=3; a[0]=1; return a[1];} ' 
+assert 3 ' int a[3]; int main(){a[1]=3; a[0]=1; return a[1];} '
+assert 3 ' int main(){ int x; int y; y=3; x=1; return y;} '
+assert 3 ' int x; int y; int main(){y=3; x=1; return y;} '
+
 
 echo OK

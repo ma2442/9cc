@@ -57,5 +57,6 @@ int main(int argc, char **argv) {
         printf("  .string %.*s\n", strlits->len, strlits->str);
         strlits = strlits->next;
     }
+
     return 0;
 }
