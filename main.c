@@ -44,17 +44,24 @@ int main(int argc, char **argv) {
     printf(".text\n");
     printf(".globl main\n");
 
+    // 文字列リテラル部のコード生成
+    printf(".data\n");
+    Var *glb = globals_end->prev;
+    while (glb) {
+        printf("%.*s:\n", glb->len, glb->name);
+        printf("  .zero %d\n", size(glb->type));
+        glb = glb->prev;
+    }
+    StrLit *strl = strlits_end->prev;
+    while (strl) {
+        printf("%s:\n", strl->name);
+        printf("  .string %.*s\n", strl->len, strl->str);
+        strl = strl->prev;
+    }
+
     // 先頭の式から順にコード生成
     for (int i = 0; code[i] != NULL; i++) {
         gen(code[i]);
-    }
-
-    // 文字列リテラル部のコード生成
-    printf(".data\n");
-    while (strlits) {
-        printf("%s:\n", strlits->name);
-        printf("  .string %.*s\n", strlits->len, strlits->str);
-        strlits = strlits->next;
     }
 
     return 0;

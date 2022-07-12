@@ -91,11 +91,12 @@ struct Node {
     Node **block;    // block {} 内のstatements
 };
 
-typedef struct LVar LVar;
+typedef struct Var Var;
 
 // ローカル変数
-struct LVar {
-    LVar *next;  // 次の変数かNULL
+struct Var {
+    Var *prev;
+    Var *next;   // 次の変数かNULL
     char *name;  // 変数の名前
     int len;     // 名前の長さ
     int offset;  // RBPからのオフセット
@@ -109,13 +110,14 @@ struct Func {
     Func *next;
     char *name;
     int len;  // 名前の長さ
-    LVar *args;
+    Var *args;
     Type *type;
 };
 
 // 文字列リテラル
 typedef struct StrLit StrLit;
 struct StrLit {
+    StrLit *prev;
     StrLit *next;
     char *str;      // 文字列リテラル本体
     int len;        // 本体の長さ
@@ -127,11 +129,13 @@ size_t sizes[LEN_TYPE_KIND];
 // 関数
 Func *funcs;
 // グローバル変数
-LVar *globals;
+Var *globals;
+Var *globals_end;
 // ローカル変数
-LVar *locals;
+Var *locals;
 // 文字列リテラル
 StrLit *strlits;
+StrLit *strlits_end;
 
 #endif  // HEADER_H
 extern void init_sizes();

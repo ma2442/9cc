@@ -117,8 +117,8 @@ Token *consume_type() { return consume_if_kind_is(TK_TYPE); }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 
 // 変数を名前で検索する。 見つからなかった場合はNULLを返す。
-LVar *find_var(Token *tok, LVar **vars) {
-    for (LVar *var = *vars; var != NULL; var = var->next) {
+Var *find_var(Token *tok, Var **vars) {
+    for (Var *var = *vars; var != NULL; var = var->next) {
         if (var->len == tok->len && !memcmp(var->name, tok->str, tok->len)) {
             return var;
         }
@@ -161,21 +161,22 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // 変数定義
-Node *new_node_defvar(Token *tok, Type *typ, LVar **vars) {
+Node *new_node_defvar(Token *tok, Type *typ, Var **vars) {
     Node *node;
     if (*vars == locals) {
         node = new_node(ND_DEFLOCAL, NULL, NULL);
     } else {
         node = new_node(ND_DEFGLOBAL, NULL, NULL);
     }
-    LVar *lvar = find_var(tok, vars);
+    Var *lvar = find_var(tok, vars);
 
     if (lvar) {
         // エラー 定義済み
         error_at(tok->str, "定義済みの変数です。");
     }
-    lvar = calloc(1, sizeof(LVar));
+    lvar = calloc(1, sizeof(Var));
     lvar->next = *vars;
+    (*vars)->prev = lvar;
     lvar->name = tok->str;
     lvar->len = tok->len;
     lvar->type = typ;
@@ -199,7 +200,7 @@ Node *new_node_defvar(Token *tok, Type *typ, LVar **vars) {
 // 変数名として識別
 Node *new_node_var(Token *tok) {
     // ローカル変数チェック
-    LVar *lvar = find_var(tok, &locals);
+    Var *lvar = find_var(tok, &locals);
     if (lvar) {
         Node *node = new_node(ND_LVAR, NULL, NULL);
         node->offset = lvar->offset;
@@ -245,6 +246,7 @@ Node *primary() {
         node->name = strlit->name;
         node->name_len = strlen(strlit->name);
         strlit->next = strlits;
+        strlits->prev = strlit;
         strlits = strlit;
         return node;
     }
@@ -403,11 +405,11 @@ Type *type(Token *tok) {
     return typ;
 }
 
-Node *declaration_after_ident(Type *typ, Token *tok, LVar **vars) {
+Node *declaration_after_ident(Type *typ, Token *tok, Var **vars) {
     Type head;
     Type *last = &head;
     while (consume("[")) {
-        last->ptr_to = calloc(1,sizeof(Type));
+        last->ptr_to = calloc(1, sizeof(Type));
         last = last->ptr_to;
         last->array_size = expect_number();
         last->ty = ARRAY;
@@ -517,7 +519,7 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     fn->type = typ;
 
     //ローカル変数初期化
-    locals = calloc(1, sizeof(LVar));
+    locals = calloc(1, sizeof(Var));
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
     fn->name = func_name->str;
@@ -552,7 +554,10 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
 void program() {
     int i = 0;
     funcs = calloc(1, sizeof(Func));
-    globals = calloc(1, sizeof(LVar));
+    strlits = calloc(1, sizeof(StrLit));
+    strlits_end = strlits;
+    globals = calloc(1, sizeof(Var));
+    globals_end = globals;
     while (!at_eof()) {
         Token *tok = consume_type();
         Type *typ = type(tok);

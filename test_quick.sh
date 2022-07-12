@@ -62,8 +62,7 @@ assert 30 'char* func(char* p){return p+1;} int main(){char a[3]; a[0]=10; a[1]=
 assert 0 'char c; char func(char x){if(x==0) return 256; return 1;} int main(){c=1; char x; x=256; if(x==0) c=256; if(c==0) {if(func(256)==0) return 0;} return 1;}'
 
 # string literal
-assert 0 'int main(){printf("Hello, world! %d\n", 20220711); char *str; str = "abcdefg"; char *df; df = "df";  return (str[1] != 98) + (sizeof("abc")!=3) + ("aceg"[2]!=101) + (*(df+1)!=102);}'  # 101 == 'e', 102 == 'f'
-
+assert 0 'char *str; int main(){printf("Hello, world! %d\n", 20220711); str = "abcdefg"; char *df; df = "df";  return (str[1] != 98) + (sizeof("abc")!=3) + ("aceg"[2]!=101) + (*(df+1)!=102);}'  # 101 == 'e', 102 == 'f'
 # 4バイト型 ひとつ前の要素の書き換えの影響を受けないことを確認
 assert 0 'int a[3]; int main(){a[1]=3; a[0]=1; if(a[1]==3){int b[3]; b[1]=4; b[0]=1; if(b[1]==4) return 0; else return 1;} return 2;} ' 
 assert 2 'int x; int y; int main(){ int a; int b; y=3; x=1; b=4; a=1;  return (b==4) + (y==3);} '

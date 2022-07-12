@@ -93,13 +93,6 @@ void gen(Node *node) {
             gen_lval(node);
             gen_read(node);
             return;
-        case ND_DEFLOCAL:
-            return;
-        case ND_DEFGLOBAL:
-            printf(".data\n");
-            printf("%.*s:\n", node->name_len, node->name);
-            printf("  .zero %d\n", size(node->type));
-            return;
         case ND_ADDR:
             gen_lval(node->lhs);
             return;
@@ -191,6 +184,9 @@ void gen(Node *node) {
                 }
                 gen(node->block[i]);
             }
+            return;
+        case ND_DEFGLOBAL:
+        case ND_DEFLOCAL:
             return;
     }
 
