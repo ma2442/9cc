@@ -17,8 +17,7 @@ relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"=") mul)*
 mul = unary (("*"|"/") unary)* // <- "%" は?
 unary = "sizeof" unary
-    | ("*"|"&") unary  
-    | ("+"|"-")? primary 
+    | ("+"|"-"|"*"|"&") unary  
     | primary "[" expr "]" 
 primary = '"' [^"]* '"' 
     | ident 

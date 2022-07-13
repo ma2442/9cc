@@ -3,8 +3,24 @@
 assert() {
     expected="$1"
     input="$2"
+    echo "$input" > test/tmp/tmp.c
+    ./9cc test/tmp/tmp.c > tmp.s
+    cc -o tmp tmp.s testfuncs.o
+    ./tmp
+    actual="$?"
 
-    ./9cc "$input" > tmp.s
+    if [ "$actual" = "$expected" ]; then
+        echo "$input => $actual"
+    else
+        echo "$input => $expected expected, but got $actual"
+        exit 1
+    fi
+}
+
+assertf(){
+    expected="$1"
+    input="$2"
+    ./9cc test/"$input" > tmp.s
     cc -o tmp tmp.s testfuncs.o
     ./tmp
     actual="$?"
@@ -30,6 +46,8 @@ assert 5 'int main(){return +10-5;}'
 assert 6 'int main(){return -3+9;}'
 assert 1 'int main(){return -(-13)+-12;}'
 assert 4 'int main(){return (+3+5)/-2*-(1);}'
+assert 10 'int main() { return - -10; }'
+assert 10 'int main() { return - - +10; }'
 
 assert 1 'int main(){return 3==1+2;}'
 assert 0 'int main(){return 3!=1+2;}'
@@ -207,5 +225,5 @@ assert 11 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[
 assert 12 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][1];}'
 assert 13 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][2];}'
 
-
+assertf 1 arr.c
 echo OK

@@ -3,8 +3,24 @@
 assert() {
     expected="$1"
     input="$2"
+    echo "$input" > test/tmp/tmp.c
+    ./9cc test/tmp/tmp.c > tmp.s
+    cc -o tmp tmp.s testfuncs.o
+    ./tmp
+    actual="$?"
 
-    ./9cc "$input" > tmp.s
+    if [ "$actual" = "$expected" ]; then
+        echo "$input => $actual"
+    else
+        echo "$input => $expected expected, but got $actual"
+        exit 1
+    fi
+}
+
+assertf(){
+    expected="$1"
+    input="$2"
+    ./9cc test/"$input" > tmp.s
     cc -o tmp tmp.s testfuncs.o
     ./tmp
     actual="$?"
@@ -69,7 +85,8 @@ assert 2 'int x; int y; int main(){ int a; int b; y=3; x=1; b=4; a=1;  return (b
 
 # 二次元配列
 assert 5 'int main(){int a[2][3]; int i; int j; *(*(a+1)+1)=5; return *(*(a+1)+1);}'
-assert 1 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1; else 0;}'
-assert 1 'int a[2][3]; int main(){int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1; else 0;}'
+assert 1 'int main(){int a[2][3]; int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1;  return 0;}'
+assert 1 'int a[2][3]; int main(){int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} if(a[0][0]==1) if(a[0][2]==3) if(a[1][0]==11) if(a[1][2]==13) return 1; return 0;}'
+assertf 1 arr.c
 
 echo OK

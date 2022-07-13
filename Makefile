@@ -17,8 +17,11 @@ test: 9cc
 qtest: 9cc
 	./test_quick.sh
 
+ptest: 9cc
+	./test_practical.sh
+
 clean:
 	rm -f 9cc *.o *~ tmp*
 
-.PHONY: test qtest clean
+.PHONY: test qtest ptest clean
 

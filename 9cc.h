@@ -137,6 +137,9 @@ Var *locals;
 StrLit *strlits;
 StrLit *strlits_end;
 
+// 入力ファイル名
+char *filename;
+
 #endif  // HEADER_H
 extern void init_sizes();
 extern int size(Type *typ);
@@ -148,7 +151,7 @@ extern Token *token;
 
 extern char *user_input;
 extern int jmp_label_cnt;
-extern void error_at(char *loc, char *fmt, ...);
+extern void error_at(char *loc, char *msg);
 extern void error(char *fmt, ...);
 extern bool consume(char *op);
 extern Token *consume_ident();

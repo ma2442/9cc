@@ -58,18 +58,32 @@ Node *new_node_num(int val) {
 int jmp_label_cnt = 0;
 int str_label_cnt = 0;
 
-// エラー箇所を報告する
-void error_at(char *loc, char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
+// エラーの起きた場所を報告するための関数
+// 下のようなフォーマットでエラーメッセージを表示する
+//
+// foo.c:10: x = y + + 5;
+//                   ^ 式ではありません
+void error_at(char *loc, char *msg) {
+    // locが含まれている行の開始地点と終了地点を取得
+    char *line = loc;
+    while (user_input < line && line[-1] != '\n') line--;
 
-    int pos = loc - user_input;
-    fprintf(stderr, "%s\n", user_input);
-    fprintf(stderr, "%*s", pos, " ");  // pos個の空白を出力
-    fprintf(stderr, "^ ");
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
+    char *end = loc;
+    while (*end != '\n') end++;
+
+    // 見つかった行が全体の何行目なのかを調べる
+    int line_num = 1;
+    for (char *p = user_input; p < line; p++)
+        if (*p == '\n') line_num++;
+
+    // 見つかった行を、ファイル名と行番号と一緒に表示
+    int indent = fprintf(stderr, "%s:%d: ", filename, line_num);
+    fprintf(stderr, "%.*s\n", (int)(end - line), line);
+
+    // エラー箇所を"^"で指し示して、エラーメッセージを表示
+    int pos = loc - line + indent;
+    fprintf(stderr, "%*s", pos, "");  // pos個の空白を出力
+    fprintf(stderr, "^ %s\n", msg);
     exit(1);
 }
 
@@ -141,7 +155,7 @@ Func *find_func(Token *tok) {
 void expect(char *op) {
     if (token->kind != TK_RESERVED || strlen(op) != token->len ||
         memcmp(token->str, op, token->len)) {
-        error_at(token->str, "'%c'ではありません", op);
+        error_at(token->str, "'%c'ではありません");
     }
     token = token->next;
     return;
@@ -302,16 +316,18 @@ Node *unary() {
         }
         return new_node_num(size(typ));
     }
+    if (consume("+")){
+        return unary();
+    }
+    if (consume("-")) {
+        return new_node(ND_SUB, new_node_num(0), unary());
+    }
     if (consume("&")) {
         return new_node(ND_ADDR, unary(), NULL);
     }
     if (consume("*")) {
         return new_node(ND_DEREF, unary(), NULL);
     }
-    if (consume("-")) {
-        return new_node(ND_SUB, new_node_num(0), primary());
-    }
-    consume("+");
     Node *node = primary();
     while (consume("[")) {  // 配列添え字演算子
         node = new_node(ND_ADD, node, expr());
