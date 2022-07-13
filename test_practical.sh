@@ -29,22 +29,23 @@ fi
 
 runtest(){
 NAME=$1
-echo ----- test $NAME -----
-INPUT_9CC=${DIR}/${NAME}_9cc.c
-INPUT_CC=${DIR}/${NAME}.c
-# tr -d < $INPUT_9CC '\n' > $TMPDIR/tmp.c
+echo ----- test "$NAME" -----
+INPUT="$DIR"/"$NAME".c
+# tr -d < $INPUT '\n' > $TMPDIR/tmp.c
 # ./9cc "$(cat $TMPDIR/tmp.c)" > tmp.s 
-./9cc $INPUT_9CC > tmp.s 
+./9cc "$INPUT" > tmp.s 
 cc -o tmp tmp.s testfuncs.o
 ./tmp > $YOUR_ANS
 
-cc $INPUT_CC -o ${TMPDIR}/a.out
-./${TMPDIR}/a.out > $EXPECT_ANS
+OUTNAME="$TMPDIR"/tmpcc
+cc -S "$INPUT" -o "$OUTNAME".s -w
+cc -o "$OUTNAME" "$OUTNAME".s testfuncs.o
+$OUTNAME > $EXPECT_ANS
 judge
 }
 
 ######################################################################
 # テスト実行部
 make 
-runtest 8queen
+runtest nqueen
 echo "all done."
