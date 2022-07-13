@@ -187,6 +187,7 @@ void gen(Node *node) {
             return;
         case ND_DEFGLOBAL:
         case ND_DEFLOCAL:
+            if (node->lhs) gen(node->lhs);
             return;
     }
 

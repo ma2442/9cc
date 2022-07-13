@@ -226,4 +226,10 @@ assert 12 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[
 assert 13 'int a[2][3]; int main(){ int i; int j; for(i=0; i<sizeof(a)/sizeof(a[0]); i=i+1)for(j=0; j<sizeof(a[0])/sizeof(a[0][0]); j=j+1){a[i][j]=10*i+j+1;} return a[1][2];}'
 
 assertf 1 arr.c
+
+# 変数宣言と同時に代入
+assert 0 'int main(){int x=1; if(x!=1) return 1; return 0;}'
+assert 0 'int main(){int x; int y=x=1+3; if(y!=4) return 1; return 0;}'
+assert 0 'int main(){int x; int y=2+(x=1); if(y!=3) return 1; return 0;}'
+assert 0 'int main(){int a[2]; int *p=a; a[0]=1; a[1]=2; if(*p!=1) return 1; return 0;}'
 echo OK

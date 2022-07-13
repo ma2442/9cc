@@ -316,7 +316,7 @@ Node *unary() {
         }
         return new_node_num(size(typ));
     }
-    if (consume("+")){
+    if (consume("+")) {
         return unary();
     }
     if (consume("-")) {
@@ -517,6 +517,9 @@ Node *stmt() {
         Type *typ = type(tok);
         tok = consume_ident();
         node = declaration_after_ident(typ, tok, &locals);
+        if (consume("=")) {
+            node->lhs = new_node(ND_ASSIGN, new_node_var(tok), assign());
+        }
         expect(";");
         return node;
     }

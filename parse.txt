@@ -1,7 +1,7 @@
 program = func*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
 stmt    =
-    declaration ";"
+    declaration ("=" assign)? ";"
     | expr ";" 
     | "{" stmt* "}"
     | "return" expr ";" 

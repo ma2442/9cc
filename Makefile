@@ -14,14 +14,14 @@ $(OBJS): 9cc.h
 test: 9cc
 	./test.sh
 
-qtest: 9cc
+testq: 9cc
 	./test_quick.sh
 
-ptest: 9cc
+testp: 9cc
 	./test_practical.sh
 
 clean:
 	rm -f 9cc *.o *~ tmp*
 
-.PHONY: test qtest ptest clean
+.PHONY: test testq testp clean
 
