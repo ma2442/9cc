@@ -234,8 +234,8 @@ Node *new_node_var(Token *tok) {
     return node;
 }
 
-Node *code[100];
-Node *statement[100];
+Node *code[CODE_LEN];
+Node *statement[STMT_LEN];
 
 Node *expr();
 
@@ -443,8 +443,8 @@ Node *block() {
         return NULL;
     }
     Node *node = new_node(ND_BLOCK, NULL, NULL);
-    node->block = calloc(128, sizeof(Node *));
-    for (int i = 0; i <= 128; i++) {
+    node->block = calloc(BLOCK_LEN, sizeof(Node *));
+    for (int i = 0; i <= BLOCK_LEN; i++) {
         if (consume("}")) {
             break;
         }

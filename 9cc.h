@@ -8,6 +8,10 @@
 
 #ifndef HEADER_H
 #define HEADER_H
+#define BLOCK_LEN 128
+#define CODE_LEN 100
+#define STMT_LEN 100
+
 // トークンの種類
 typedef enum {
     TK_RESERVED,  // 記号
@@ -160,8 +164,8 @@ extern int expect_number();
 extern bool at_eof();
 extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 extern Token *tokenize(char *p);
-extern Node *code[100];
-extern Node *statement[100];
+extern Node *code[CODE_LEN];
+extern Node *statement[STMT_LEN];
 extern Node *primary();
 extern Node *unary();
 extern Node *mul();
