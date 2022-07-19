@@ -198,9 +198,7 @@ Node *new_node_defvar(Token *tok, Type *typ, Var **vars) {
     if (*vars == locals) {
         lvar->offset = (locals ? locals->offset : 0);
         lvar->offset += size(typ);
-        if (lvar->offset % 8) {
-            lvar->offset += 8 - (lvar->offset % 8);
-        }
+        lvar->offset = ((lvar->offset + 7) / 8) * 8;  // 8の倍数に揃える
         node->offset = lvar->offset;
     } else {  //グローバル変数は名前設定
         node->name = lvar->name;
@@ -567,6 +565,8 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     funcs = fn;
     // 関数本文 "{" stmt* "}"
     node->rhs = block();
+    // 変数分の確保領域を記憶
+    node->offset = locals->offset;
     return node;
 }
 

@@ -78,11 +78,11 @@ typedef struct Node Node;
 
 // 抽象構文木のノード
 struct Node {
-    NodeKind kind;   // ノードの種類
-    Node *lhs;       // 左辺, またはif,while,for等の内部statement
-    Node *rhs;       // 右辺, またはelseの内部statement
-    int val;         // kindがND_NUMの場合のみ使う
-    int offset;      // kindがND_LVARの場合のみ使う
+    NodeKind kind;  // ノードの種類
+    Node *lhs;      // 左辺, またはif,while,for等の内部statement
+    Node *rhs;      // 右辺, またはelseの内部statement
+    int val;        // kindがND_NUMの場合のみ使う
+    int offset;  // 変数:オフセット、関数:変数分の確保領域
     Type *type;      // int, int*などの型情報
     int label_num;   // if,while,for等のラベル通し番号
     Node *next_arg;  // kindがND_FUNC_* の場合に使う

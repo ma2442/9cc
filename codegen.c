@@ -135,10 +135,10 @@ void gen(Node *node) {
             printf(".text\n");
             printf("%.*s:\n", node->name_len, node->name);
             // プロローグ
-            // 変数26個分の領域を確保する
+            // 変数分の領域を確保する
             printf("  push rbp\n");
             printf("  mov rbp, rsp\n");
-            printf("  sub rsp, 208\n");
+            if (node->offset) printf("  sub rsp, %d\n", node->offset);
             // 仮引数
             gen(node->next_arg);
             // 関数本文  "{" stmt* "}"

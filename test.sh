@@ -38,5 +38,6 @@ assertf 255 test1.c
 assertf 255 test2.c
 assertf 255 test3.c
 assertf 1 comment.c
+assertf 255 test4.c
 
 echo OK
