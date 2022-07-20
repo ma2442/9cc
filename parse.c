@@ -64,7 +64,6 @@ int str_label_cnt = 0;
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
 void error_at(char *loc, char *fmt, ...) {
-
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;
@@ -293,27 +292,6 @@ Node *func_call(Token *tok) {
     return node;
 }
 
-// tok==NULL: ++x or --x, else: x++ or x--
-Node *incdec(Token *tok) {
-    bool is_pre = !tok;
-    int kind = -1;
-    if (consume("++")) {
-        kind = ND_ADD;
-    } else if (consume("--")) {
-        kind = ND_SUB;
-    } else {
-        return NULL;
-    }
-    if (is_pre) tok = consume_ident();
-    Node *nd_addsub = new_node(kind, new_node_var(tok), new_node_num(1));
-    Node *nd_assign = new_node(ND_ASSIGN, new_node_var(tok), nd_addsub);
-    if (is_pre) return nd_assign;
-
-    Node *node = new_node_var(tok);
-    node->lhs = nd_assign;
-    return node;
-}
-
 Node *primary() {
     // 文字列リテラルとして識別
     Node *node = str_literal();
@@ -326,45 +304,56 @@ Node *primary() {
         return node;
     }
 
-    // ++x or --x
-    node = incdec(NULL);
-    if (node) return node;
-
     // 変数名,関数名の識別
     Token *tok = consume_ident();
     // 識別子がなければ数値
     if (!tok) return new_node_num(expect_number());
-    if (!consume("(")) {  //関数でなければ変数
-        node = incdec(tok);
-        if (node) return node;     // x++ or x--
-        return new_node_var(tok);  // 変数名として識別
-    }
+    //関数でなければ変数
+    if (!consume("(")) return new_node_var(tok);
     // 関数名として識別
     return func_call(tok);
 }
 
+int consume_incdec() {
+    if (consume("++")) return ND_ADD;
+    if (consume("--")) return ND_SUB;
+    return -1;
+}
+
+// tok==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
+Node *incdec(bool is_post) {
+    Node *node = NULL;
+    if (is_post) node = unary();
+    int kind = consume_incdec();
+    if (kind == -1) return node;
+    if (!is_post) node = unary();
+    Node *nd_assign = new_node(ND_ASSIGN, node, NULL);
+    nd_assign->assign_kind = (is_post ? ASN_POST_INCDEC : ASN_PRE_INCDEC);
+    Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
+    nd_typ->type = nd_assign->lhs->type;
+    nd_assign->rhs = new_node(kind, nd_typ, new_node_num(1));
+    return nd_assign;
+}
+Node *post_incdec() { return incdec(true); }
+Node *pre_incdec() { return incdec(false); }
+
 // 単項
 Node *unary() {
     if (consume("sizeof")) {
-        Type *typ = unary()->type;
+        Type *typ = post_incdec()->type;
         if (typ == NULL) {
             error("sizeof:不明な型です");
         }
         return new_node_num(size(typ));
     }
-    if (consume("+")) {
-        return unary();
-    }
-    if (consume("-")) {
-        return new_node(ND_SUB, new_node_num(0), unary());
-    }
-    if (consume("&")) {
-        return new_node(ND_ADDR, unary(), NULL);
-    }
-    if (consume("*")) {
-        return new_node(ND_DEREF, unary(), NULL);
-    }
-    Node *node = primary();
+    Node *node = pre_incdec();
+    if (node) return node;
+    if (consume("+")) return post_incdec();
+    if (consume("-")) return new_node(ND_SUB, new_node_num(0), post_incdec());
+    if (consume("&")) return new_node(ND_ADDR, post_incdec(), NULL);
+    if (consume("*")) return new_node(ND_DEREF, post_incdec(), NULL);
+
+    node = primary();
     while (consume("[")) {  // 配列添え字演算子
         node = new_node(ND_ADD, node, expr());
         node = new_node(ND_DEREF, node, NULL);
@@ -374,12 +363,12 @@ Node *unary() {
 }
 
 Node *mul() {
-    Node *node = unary();
+    Node *node = post_incdec();
     for (;;) {
         if (consume("*")) {
-            node = new_node(ND_MUL, node, unary());
+            node = new_node(ND_MUL, node, post_incdec());
         } else if (consume("/")) {
-            node = new_node(ND_DIV, node, unary());
+            node = new_node(ND_DIV, node, post_incdec());
         } else {
             return node;
         }

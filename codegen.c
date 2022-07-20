@@ -35,10 +35,14 @@ void gen_tochar() {
     printf("  push rcx\n");
 }
 
+void replicate_top() {
+    printf("  pop rax\n");
+    printf("  push rax\n");
+    printf("  push rax\n");
+}
+
 void gen(Node *node) {
-    if (!node) {
-        return;
-    }
+    if (!node || node->kind == ND_DUMMY) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     int dst_size;  // 書き込み先のサイズ
 
@@ -92,11 +96,6 @@ void gen(Node *node) {
         case ND_GVAR:
             gen_lval(node);
             gen_read(node);
-            // x++, x-- の場合 新しい値を割当てて評価値を捨てる
-            if (node->lhs) {
-                gen(node->lhs);
-                printf("  pop rax\n");
-            }
             return;
         case ND_ADDR:
             gen_lval(node->lhs);
@@ -169,6 +168,22 @@ void gen(Node *node) {
             } else {
                 gen_lval(node->lhs);
             }
+            if (node->assign_kind == ASN_POST_INCDEC) {
+                // POST INCDEC EVAL,   ASSIGN L,  ADD L
+                // [addr],              addr,     [addr] =STACK TOP
+                replicate_top();
+                gen_read(node->lhs);
+                printf("  pop rax\n");
+                printf("  pop rdi\n");
+                printf("  push rax\n");
+                printf("  push rdi\n");
+                printf("  push rax\n");
+            } else if (node->assign_kind != ASN_NORMAL) {
+                // ASSIGN L,  ADD L
+                // addr,     [addr] =STACK TOP
+                replicate_top();
+                gen_read(node->lhs);
+            }
             dst_size = size(node->lhs->type);
             gen(node->rhs);
             printf("  pop rcx\n");
@@ -180,7 +195,7 @@ void gen(Node *node) {
             } else {
                 printf("  mov [rax], rcx\n");
             }
-            printf("  push rcx\n");
+            if (node->assign_kind != ASN_POST_INCDEC) printf("  push rcx\n");
             return;
         case ND_BLOCK:
             for (int i = 0; i <= 128; i++) {

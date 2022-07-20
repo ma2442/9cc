@@ -63,7 +63,8 @@ typedef enum {
     ND_FOR,              // for (init; judge; inc) lhs
     ND_BLOCK,            // block { }
     ND_DEFGLOBAL,        // global variable definition
-    ND_GVAR              // global variable, or x++, x--
+    ND_GVAR,             // global variable, or x++, x--
+    ND_DUMMY             // 何もしないノード (x++や--xなどに使用)
 } NodeKind;
 
 typedef struct Type Type;
@@ -94,6 +95,7 @@ struct Node {
     Node *judge;     // if,while,for等の条件式
     Node *inc;       // forの後処理式( ; ;____)
     Node **block;    // block {} 内のstatements
+    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_PRE_INCDEC } assign_kind;
 };
 
 typedef struct Var Var;
