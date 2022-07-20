@@ -63,7 +63,8 @@ int str_label_cnt = 0;
 //
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
-void error_at(char *loc, char *msg) {
+void error_at(char *loc, char *fmt, ...) {
+
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;
@@ -83,7 +84,12 @@ void error_at(char *loc, char *msg) {
     // エラー箇所を"^"で指し示して、エラーメッセージを表示
     int pos = loc - line + indent;
     fprintf(stderr, "%*s", pos, "");  // pos個の空白を出力
-    fprintf(stderr, "^ %s\n", msg);
+    fprintf(stderr, "^ ");
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
     exit(1);
 }
 
@@ -155,7 +161,7 @@ Func *find_func(Token *tok) {
 void expect(char *op) {
     if (token->kind != TK_RESERVED || strlen(op) != token->len ||
         memcmp(token->str, op, token->len)) {
-        error_at(token->str, "'%c'ではありません");
+        error_at(token->str, "'%s'ではありません", op);
     }
     token = token->next;
     return;
