@@ -41,8 +41,15 @@ void replicate_top() {
     printf("  push rax\n");
 }
 
+void swap_top() {
+    printf("  pop rax\n");
+    printf("  pop rdi\n");
+    printf("  push rax\n");
+    printf("  push rdi\n");
+}
+
 void gen(Node *node) {
-    if (!node || node->kind == ND_DUMMY) return;
+    if (!node) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     int dst_size;  // 書き込み先のサイズ
 
@@ -169,20 +176,18 @@ void gen(Node *node) {
                 gen_lval(node->lhs);
             }
             if (node->assign_kind == ASN_POST_INCDEC) {
+                // 後置インクリメント
                 // POST INCDEC EVAL,   ASSIGN L,  ADD L
-                // [addr],              addr,     [addr] =STACK TOP
+                // [addr],              addr,     addr =STACK TOP
                 replicate_top();
                 gen_read(node->lhs);
-                printf("  pop rax\n");
-                printf("  pop rdi\n");
-                printf("  push rax\n");
-                printf("  push rdi\n");
-                printf("  push rax\n");
-            } else if (node->assign_kind != ASN_NORMAL) {
+                swap_top();
+                replicate_top();
+            } else if (node->assign_kind == ASN_COMPOSITE) {
+                // 前置インクリメントと複合代入
                 // ASSIGN L,  ADD L
-                // addr,     [addr] =STACK TOP
+                // addr,      addr =STACK TOP
                 replicate_top();
-                gen_read(node->lhs);
             }
             dst_size = size(node->lhs->type);
             gen(node->rhs);
@@ -211,11 +216,19 @@ void gen(Node *node) {
             return;
     }
 
-    gen(node->lhs);
-    gen(node->rhs);
-
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
+    // インクリメント･デクリメント･複合代入の場合は省略項の評価を遅らせる。
+    if (node->lhs->kind == ND_DUMMY) {
+        gen(node->rhs);
+        swap_top();
+        gen_read(node);
+        printf("  pop rax\n");
+        printf("  pop rdi\n");
+    } else {
+        gen(node->lhs);
+        gen(node->rhs);
+        printf("  pop rdi\n");
+        printf("  pop rax\n");
+    }
 
     // ポインタの加減算
     if (node->kind == ND_ADD || node->kind == ND_SUB) {

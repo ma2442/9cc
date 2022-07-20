@@ -320,7 +320,17 @@ int consume_incdec() {
     return -1;
 }
 
+//複合代入
+int consume_compo_assign() {
+    if (consume("+=")) return ND_ADD;
+    if (consume("-=")) return ND_SUB;
+    if (consume("*=")) return ND_MUL;
+    if (consume("/=")) return ND_DIV;
+    return -1;
+}
+
 // tok==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
+// 前置インクリメントは複合代入と同じ処理
 Node *incdec(bool is_post) {
     Node *node = NULL;
     if (is_post) node = unary();
@@ -328,7 +338,7 @@ Node *incdec(bool is_post) {
     if (kind == -1) return node;
     if (!is_post) node = unary();
     Node *nd_assign = new_node(ND_ASSIGN, node, NULL);
-    nd_assign->assign_kind = (is_post ? ASN_POST_INCDEC : ASN_PRE_INCDEC);
+    nd_assign->assign_kind = (is_post ? ASN_POST_INCDEC : ASN_COMPOSITE);
     Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
     nd_typ->type = nd_assign->lhs->type;
     nd_assign->rhs = new_node(kind, nd_typ, new_node_num(1));
@@ -420,8 +430,16 @@ Node *equality() {
 
 Node *assign() {
     Node *node = equality();
-    if (consume("=")) {
-        node = new_node(ND_ASSIGN, node, assign());
+    if (consume("=")) return new_node(ND_ASSIGN, node, assign());
+    // 複合代入演算子 += -= *= /=
+    int kind = consume_compo_assign();
+    if (kind != -1) {
+        Node *nd_assign = new_node(ND_ASSIGN, node, NULL);
+        nd_assign->assign_kind = ASN_COMPOSITE;
+        Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
+        nd_typ->type = nd_assign->lhs->type;
+        nd_assign->rhs = new_node(kind, nd_typ, assign());
+        return nd_assign;
     }
     return node;
 }

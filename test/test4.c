@@ -53,9 +53,33 @@ int main_t2() {
     return 0;
 }
 
+// 複合代入 += -= *= /=
+int main_t3() {
+    int x = 0;
+    if (5 != (x += 5)) return 1;
+    x -= 1 + 1;
+    x *= 30;
+    int y;
+    if ((x /= 10 - 5) != 18) return 2;
+    x += x += 2;
+    if(x!=40) return 3;
+    int a[10];
+    int *p = a;
+    int i;
+    for (i = 0; i < 10; i += 2) {
+        *p = i;
+        p += 2;
+    }
+    for (i = 0; i < 10; i += 2) {
+        if (a[i] != i) return 4;
+    }
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1() != 0) return 1;
     if (main_t2() != 0) return 2;
+    if (main_t3() != 0) return 3;
     return 255;
 }

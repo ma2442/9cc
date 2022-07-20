@@ -64,7 +64,7 @@ typedef enum {
     ND_BLOCK,            // block { }
     ND_DEFGLOBAL,        // global variable definition
     ND_GVAR,             // global variable, or x++, x--
-    ND_DUMMY             // 何もしないノード (x++や--xなどに使用)
+    ND_DUMMY             // x++,--x,複合代入等により省略された項
 } NodeKind;
 
 typedef struct Type Type;
@@ -95,7 +95,7 @@ struct Node {
     Node *judge;     // if,while,for等の条件式
     Node *inc;       // forの後処理式( ; ;____)
     Node **block;    // block {} 内のstatements
-    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_PRE_INCDEC } assign_kind;
+    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
 };
 
 typedef struct Var Var;
