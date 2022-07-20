@@ -92,6 +92,11 @@ void gen(Node *node) {
         case ND_GVAR:
             gen_lval(node);
             gen_read(node);
+            // x++, x-- の場合 新しい値を割当てて評価値を捨てる
+            if (node->lhs) {
+                gen(node->lhs);
+                printf("  pop rax\n");
+            }
             return;
         case ND_ADDR:
             gen_lval(node->lhs);

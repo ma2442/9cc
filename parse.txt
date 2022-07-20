@@ -20,7 +20,8 @@ unary = "sizeof" unary
     | ("+"|"-"|"*"|"&") unary  
     | primary "[" expr "]" 
 primary = '"' [^"]* '"' 
-    | ident 
+    | ident ("++"|"--")?
+    | ("++"|"--")? ident
     | ident "(" (expr ("," expr)* )? ")" 
     | num 
     | "(" expr ")"

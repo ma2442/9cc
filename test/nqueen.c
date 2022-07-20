@@ -30,7 +30,7 @@ int solve(int r, int c) {
         return 0;
     }
     put(r, c, 1);
-    for (i = 0; i < n; i = i + 1) {
+    for (i = 0; i < n; i++) {
         if (solve(i, c + 1)) {
             grid[r][c] = 81;  // 'Q'
             return 1;
@@ -43,15 +43,15 @@ int main() {
     n_max = 11;
     int i;
     int j;
-    for (n = 1; n < n_max + 1; n = n + 1) {
+    for (n = 1; n < n_max + 1; n++) {
         cnt = 0;
-        for (i = 0; i < n; i = i + 1)
-            for (j = 0; j < n; j = j + 1) {
+        for (i = 0; i < n; i++)
+            for (j = 0; j < n; j++) {
                 grid[i][j] = 46;  // '.'
             }
-        for (i = 0; i < n; i = i + 1)
+        for (i = 0; i < n; i++)
             if (solve(i, 0)) {
-                for (j = 0; j < n; j = j + 1) printf("%.8s\n", grid[j]);
+                for (j = 0; j < n; j++) printf("%.8s\n", grid[j]);
                 return 0;
             }
         printf("%d x %d : %d\n", n, n, cnt);

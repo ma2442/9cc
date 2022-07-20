@@ -237,52 +237,34 @@ Node *statement[STMT_LEN];
 
 Node *expr();
 
-Node *primary() {
-    // 文字列リテラルとして識別
+// 文字列リテラル
+Node *str_literal() {
     Token *tok_str = consume_str();
-    if (tok_str) {
-        Type *array = calloc(1, sizeof(Type));
-        array->array_size = tok_str->len - 2;  // 引用符""の分を減らす
-        array->ty = ARRAY;
-        array->ptr_to = calloc(1, sizeof(Type));
-        array->ptr_to->ty = CHAR;
+    if (!tok_str) return NULL;
+    Type *array = calloc(1, sizeof(Type));
+    array->array_size = tok_str->len - 2;  // 引用符""の分を減らす
+    array->ty = ARRAY;
+    array->ptr_to = calloc(1, sizeof(Type));
+    array->ptr_to->ty = CHAR;
 
-        Node *node = new_node(ND_GVAR, NULL, NULL);
-        node->type = array;
+    Node *node = new_node(ND_GVAR, NULL, NULL);
+    node->type = array;
 
-        StrLit *strlit = calloc(1, sizeof(StrLit));
-        strlit->str = tok_str->str;
-        strlit->len = tok_str->len;
-        sprintf(strlit->name, ".LC%d", str_label_cnt);
-        str_label_cnt++;
-        node->name = strlit->name;
-        node->name_len = strlen(strlit->name);
-        strlit->next = strlits;
-        strlits->prev = strlit;
-        strlits = strlit;
-        return node;
-    }
+    StrLit *strlit = calloc(1, sizeof(StrLit));
+    strlit->str = tok_str->str;
+    strlit->len = tok_str->len;
+    sprintf(strlit->name, ".LC%d", str_label_cnt);
+    str_label_cnt++;
+    node->name = strlit->name;
+    node->name_len = strlen(strlit->name);
+    strlit->next = strlits;
+    strlits->prev = strlit;
+    strlits = strlit;
+    return node;
+}
 
-    // 次のトークンが"("なら、"(" expr ")" のはず
-    if (consume("(")) {
-        Node *node = expr();
-        expect(")");
-        return node;
-    }
-
-    // 変数名,関数名の識別
-    Token *tok = consume_ident();
-    if (!tok) {
-        // 識別子がなければ数値のはず
-        return new_node_num(expect_number());
-    }
-
-    if (!consume("(")) {
-        // 変数名として識別
-        return new_node_var(tok);
-    }
-
-    // 関数名として識別
+// 関数コールノード 引数は関数名
+Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
     node->name = tok->str;
     node->name_len = tok->len;
@@ -303,6 +285,56 @@ Node *primary() {
         expect(")");
     }
     return node;
+}
+
+// tok==NULL: ++x or --x, else: x++ or x--
+Node *incdec(Token *tok) {
+    bool is_pre = !tok;
+    int kind = -1;
+    if (consume("++")) {
+        kind = ND_ADD;
+    } else if (consume("--")) {
+        kind = ND_SUB;
+    } else {
+        return NULL;
+    }
+    if (is_pre) tok = consume_ident();
+    Node *nd_addsub = new_node(kind, new_node_var(tok), new_node_num(1));
+    Node *nd_assign = new_node(ND_ASSIGN, new_node_var(tok), nd_addsub);
+    if (is_pre) return nd_assign;
+
+    Node *node = new_node_var(tok);
+    node->lhs = nd_assign;
+    return node;
+}
+
+Node *primary() {
+    // 文字列リテラルとして識別
+    Node *node = str_literal();
+    if (node) return node;
+
+    // 次のトークンが"("なら、"(" expr ")" のはず
+    if (consume("(")) {
+        node = expr();
+        expect(")");
+        return node;
+    }
+
+    // ++x or --x
+    node = incdec(NULL);
+    if (node) return node;
+
+    // 変数名,関数名の識別
+    Token *tok = consume_ident();
+    // 識別子がなければ数値
+    if (!tok) return new_node_num(expect_number());
+    if (!consume("(")) {  //関数でなければ変数
+        node = incdec(tok);
+        if (node) return node;     // x++ or x--
+        return new_node_var(tok);  // 変数名として識別
+    }
+    // 関数名として識別
+    return func_call(tok);
 }
 
 // 単項

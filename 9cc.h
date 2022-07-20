@@ -48,7 +48,7 @@ typedef enum {
     ND_DIV,              // /
     ND_ASSIGN,           // =
     ND_DEFLOCAL,         // local variable definition
-    ND_LVAR,             // local variable
+    ND_LVAR,             // local variable, or x++, x--
     ND_ADDR,             // pointer &
     ND_DEREF,            // pointer *
     ND_FUNC_CALL,        // 関数呼び出し
@@ -62,7 +62,7 @@ typedef enum {
     ND_FOR,              // for (init; judge; inc) lhs
     ND_BLOCK,            // block { }
     ND_DEFGLOBAL,        // global variable definition
-    ND_GVAR              // global variable
+    ND_GVAR              // global variable, or x++, x--
 } NodeKind;
 
 typedef struct Type Type;

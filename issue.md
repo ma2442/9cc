@@ -21,6 +21,7 @@
 - [ ] && ||
 - [ ] アロー演算子 ->
 - [ ] typedef
+- [ ] continue, break
 - [ ] bool
 - [ ] void
 - [ ] size_t
