@@ -31,6 +31,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
             break;
         case ND_MUL:
         case ND_DIV:
+        case ND_MOD:
         case ND_ASSIGN:
             node->type = node->lhs->type;
             break;
@@ -326,6 +327,7 @@ int consume_compo_assign() {
     if (consume("-=")) return ND_SUB;
     if (consume("*=")) return ND_MUL;
     if (consume("/=")) return ND_DIV;
+    if (consume("%=")) return ND_MOD;
     return -1;
 }
 
@@ -379,6 +381,8 @@ Node *mul() {
             node = new_node(ND_MUL, node, post_incdec());
         } else if (consume("/")) {
             node = new_node(ND_DIV, node, post_incdec());
+        } else if (consume("%")) {
+            node = new_node(ND_MOD, node, post_incdec());
         } else {
             return node;
         }

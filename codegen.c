@@ -273,7 +273,14 @@ void gen(Node *node) {
             printf("  cqo\n");
             printf("  idiv rdi\n");
             break;
+        case ND_MOD:
+            printf("  cqo\n");
+            printf("  idiv rdi\n");
+            break;
     }
 
-    printf("  push rax\n");
+    if (node->kind == ND_MOD)
+        printf("  push rdx\n");
+    else
+        printf("  push rax\n");
 }

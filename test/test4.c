@@ -62,7 +62,7 @@ int main_t3() {
     int y;
     if ((x /= 10 - 5) != 18) return 2;
     x += x += 2;
-    if(x!=40) return 3;
+    if (x != 40) return 3;
     int a[10];
     int *p = a;
     int i;
@@ -76,10 +76,24 @@ int main_t3() {
     return 0;
 }
 
+// 余り mod % %=
+int main_t4() {
+    if (5 % 2 != 1) return 1;
+    if (12 % 3 != 0) return 2;
+    if (100 + 21 % 10 != 101) return 3;
+    if ((100 + 21) % 10 != 1) return 4;
+    if (123 % 100 % 10 != 3) return 5;
+    if (123 / 100 % 10 != 1) return 6;
+    int x = 123;
+    if (x %= 10 != 3) return 7;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1() != 0) return 1;
     if (main_t2() != 0) return 2;
     if (main_t3() != 0) return 3;
+    if (main_t4() != 0) return 4;
     return 255;
 }
