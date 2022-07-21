@@ -35,6 +35,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
         case ND_ASSIGN:
             node->type = node->lhs->type;
             break;
+        case ND_IF_ELSE:
         case ND_EQUAL:
         case ND_NOT_EQUAL:
         case ND_LESS_THAN:
@@ -432,8 +433,32 @@ Node *equality() {
     }
 }
 
-Node *assign() {
+Node *bool_and() {
     Node *node = equality();
+    if (consume("&&")) {
+        Node *judge = node;
+        node = new_node(ND_IF_ELSE, bool_and(), new_node_num(1));
+        node->judge = judge;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
+    }
+    return node;
+}
+
+Node *bool_or() {
+    Node *node = bool_and();
+    if (consume("||")) {
+        Node *judge = node;
+        node = new_node(ND_IF_ELSE, new_node_num(1), bool_or());
+        node->judge = judge;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
+    }
+    return node;
+}
+
+Node *assign() {
+    Node *node = bool_or();
     if (consume("=")) return new_node(ND_ASSIGN, node, assign());
     // 複合代入演算子 += -= *= /=
     int kind = consume_compo_assign();

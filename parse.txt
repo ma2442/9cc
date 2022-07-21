@@ -11,7 +11,9 @@ stmt    =
     | ...
 declaration = ("int" | "char") "*"* ident ("[" num "]")*
 expr    = assign
-assign  = equality ("=" assign)?
+assign  = bool_or ("=" assign)?
+bool_or = bool_and ("||" bool_and)*
+bool_and = equality ("&&" equality)*
 equality    = relational (("=="|"!=") relational)*
 relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"=") mul)*

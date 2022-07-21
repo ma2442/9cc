@@ -102,9 +102,18 @@ _Bool main_t5() {
     return 0;
 }
 
-// int main_t6(){
-//     return sizeof(int)!=4 ;
-// }
+int main_t6() {
+    int x;
+    if ((1 && 1) == 0) return 1;
+    if (1 && 0) return 2;
+    if ((1 || 0) == 0) return 3;
+    if (0 || 0) return 4;
+    if ((1 == 1 && 1 + 1) == 0) return 1;
+    if (((x = 0) || (x = 1)) == 0) return 2;
+    if ((0 || 2 && 3) == 0) return 3;
+    if ((0 && 1 || 2) == 0) return 4;
+    return 0;
+}
 
 int main() {
     if (main_t0() != 1) return 0;
@@ -113,6 +122,6 @@ int main() {
     if (main_t3() != 0) return 3;
     if (main_t4() != 0) return 4;
     if (main_t5() != 0) return 5;
-    // if (main_t6() != 0) return 6;
+    if (main_t6() != 0) return 6;
     return 255;
 }

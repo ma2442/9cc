@@ -16,8 +16,10 @@ void gen_lval(Node* node) {
 
 void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
     char* reg = "al";
-    if (strcmp(src, "rax") == 0) reg = "al";
-    if (strcmp(src, "rcx") == 0) reg = "cl";
+    if (strcmp(src, "rdi") == 0)
+        reg = "dil";
+    else if (strcmp(src, "rcx") == 0)
+        reg = "cl";
     printf("  cmp %s, %s\n", src, cmpval);
     printf("  %s %s\n", cmptype, reg);
     printf("  movzb %s, %s\n", dest, reg);
