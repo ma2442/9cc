@@ -41,8 +41,6 @@ struct Token {
 
 // 抽象構文木のノードの種類
 typedef enum {
-    ND_BOOL_AND,         // &&
-    ND_BOOL_OR,          // ||
     ND_EQUAL,            // ==
     ND_NOT_EQUAL,        // !=
     ND_LESS_THAN,        // <

@@ -239,6 +239,15 @@ Node *new_node_var(Token *tok) {
     return node;
 }
 
+Node *new_node_bool(Node *node, Node *lhs, Node *rhs) {
+    Node *judge = node;
+    node = new_node(ND_IF_ELSE, lhs, rhs);
+    node->judge = judge;
+    node->label_num = jmp_label_cnt;
+    jmp_label_cnt++;
+    return node;
+}
+
 Node *code[CODE_LEN];
 Node *statement[STMT_LEN];
 
@@ -365,7 +374,8 @@ Node *unary() {
     if (consume("-")) return new_node(ND_SUB, new_node_num(0), post_incdec());
     if (consume("&")) return new_node(ND_ADDR, post_incdec(), NULL);
     if (consume("*")) return new_node(ND_DEREF, post_incdec(), NULL);
-
+    if (consume("!"))
+        return new_node_bool(post_incdec(), new_node_num(0), new_node_num(1));
     node = primary();
     while (consume("[")) {  // 配列添え字演算子
         node = new_node(ND_ADD, node, expr());
@@ -435,25 +445,13 @@ Node *equality() {
 
 Node *bool_and() {
     Node *node = equality();
-    if (consume("&&")) {
-        Node *judge = node;
-        node = new_node(ND_IF_ELSE, bool_and(), new_node_num(1));
-        node->judge = judge;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
-    }
+    if (consume("&&")) node = new_node_bool(node, bool_and(), new_node_num(1));
     return node;
 }
 
 Node *bool_or() {
     Node *node = bool_and();
-    if (consume("||")) {
-        Node *judge = node;
-        node = new_node(ND_IF_ELSE, new_node_num(1), bool_or());
-        node->judge = judge;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
-    }
+    if (consume("||")) node = new_node_bool(node, new_node_num(1), bool_or());
     return node;
 }
 

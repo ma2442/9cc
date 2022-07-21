@@ -88,7 +88,7 @@ int main_t4() {
     if (x %= 10 != 3) return 7;
     return 0;
 }
-
+// _Bool
 _Bool main_t5() {
     if (1 != (100 == 100)) return 1;
     _Bool b = 123;
@@ -101,7 +101,7 @@ _Bool main_t5() {
     if (b != 1) return 4;
     return 0;
 }
-
+// && ||
 int main_t6() {
     int x;
     if ((1 && 1) == 0) return 1;
@@ -114,14 +114,23 @@ int main_t6() {
     if ((0 && 1 || 2) == 0) return 4;
     return 0;
 }
+// !x 否定 NOT
+int main_t7() {
+    if (!1) return 1;
+    if (!2) return 2;
+    if (!!0) return 3;
+    if (!((1 == 1 && 1 + 1) == 0)) return 4;
+    return !!1;
+}
 
 int main() {
     if (main_t0() != 1) return 0;
-    if (main_t1() != 0) return 1;
-    if (main_t2() != 0) return 2;
-    if (main_t3() != 0) return 3;
-    if (main_t4() != 0) return 4;
-    if (main_t5() != 0) return 5;
-    if (main_t6() != 0) return 6;
+    if (main_t1()) return 1;
+    if (main_t2()) return 2;
+    if (main_t3()) return 3;
+    if (main_t4()) return 4;
+    if (main_t5()) return 5;
+    if (main_t6()) return 6;
+    if (!main_t7()) return 7;
     return 255;
 }
