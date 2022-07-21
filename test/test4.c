@@ -89,11 +89,30 @@ int main_t4() {
     return 0;
 }
 
+_Bool main_t5() {
+    if (1 != (100 == 100)) return 1;
+    _Bool b = 123;
+    if (b != 1) return 2;
+    b = 0;
+    if (b != 0) return 3;
+    b++;
+    b++;
+    b++;
+    if (b != 1) return 4;
+    return 0;
+}
+
+// int main_t6(){
+//     return sizeof(int)!=4 ;
+// }
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1() != 0) return 1;
     if (main_t2() != 0) return 2;
     if (main_t3() != 0) return 3;
     if (main_t4() != 0) return 4;
+    if (main_t5() != 0) return 5;
+    // if (main_t6() != 0) return 6;
     return 255;
 }

@@ -40,7 +40,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
         case ND_LESS_THAN:
         case ND_LESS_OR_EQUAL:
             node->type = calloc(1, sizeof(Type));
-            node->type->ty = INT;
+            node->type->ty = BOOL;
             break;
     }
     return node;
@@ -450,11 +450,8 @@ Node *assign() {
 
 Type *type(Token *tok) {
     Type *typ = calloc(1, sizeof(Type));
-    char *words[LEN_TYPE_KIND];
-    words[INT] = "int";
-    words[CHAR] = "char";
     for (int tk = 0; tk < LEN_TYPE_KIND; tk++) {
-        if (!strncmp(tok->str, words[tk], tok->len)) {
+        if (!strncmp(tok->str, type_words[tk], tok->len)) {
             typ->ty = tk;
             break;
         }

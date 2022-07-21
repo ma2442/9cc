@@ -24,6 +24,7 @@
 - [ ] size_t
 - [ ] NULL
 - [ ] 三項演算子 ?:
+- [ ] スタティックキャスト (int) x
 
 ### Optional To Do 未使用
 

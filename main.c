@@ -6,8 +6,15 @@
 
 void init_sizes() {
     sizes[CHAR] = 1;
+    sizes[BOOL] = 1;
     sizes[INT] = 4;
     sizes[PTR] = 8;
+}
+
+void init_words() {
+    type_words[INT] = STR_INT;
+    type_words[CHAR] = STR_CHAR;
+    type_words[BOOL] = STR_BOOL;
 }
 
 // 型のサイズを計算する関数
@@ -61,6 +68,7 @@ int main(int argc, char **argv) {
     filename = argv[1];
     user_input = read_file(filename);
     init_sizes();
+    init_words();
 
     // トークナイズする
     token = tokenize(user_input);

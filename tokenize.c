@@ -50,8 +50,8 @@ Token *tokenize(char *p) {
     head.next = NULL;
     Token *cur = &head;
     char resv[][4] = {"++", "--", "+=", "-=", "*=", "/=", "%=", ",", "{", "}",
-                      "<=", ">=", "==", "!=", "=",  ";",  "+", "-", "*",
-                      "/", "%",  "(",  ")",  "<",  ">",  "&",  "[", "]"};
+                      "<=", ">=", "==", "!=", "=",  ";",  "+",  "-", "*", "/",
+                      "%",  "(",  ")",  "<",  ">",  "&",  "[",  "]"};
 
     while (*p) {
         if (isspace(*p)) {
@@ -103,10 +103,10 @@ Token *tokenize(char *p) {
         int ident_len = read_ident(p);
 
         // 制御構文if else while for等 判定
-        KindWordPair kdwds[] = {{TK_CTRL, "if"},       {TK_CTRL, "else"},
-                                {TK_CTRL, "while"},    {TK_CTRL, "for"},
-                                {TK_RETURN, "return"}, {TK_SIZEOF, "sizeof"},
-                                {TK_TYPE, "char"},     {TK_TYPE, "int"}};
+        KindWordPair kdwds[] = {
+            {TK_CTRL, "if"},    {TK_CTRL, "else"},     {TK_CTRL, "while"},
+            {TK_CTRL, "for"},   {TK_RETURN, "return"}, {TK_SIZEOF, "sizeof"},
+            {TK_TYPE, STR_INT}, {TK_TYPE, STR_CHAR},   {TK_TYPE, STR_BOOL}};
         for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
             if (ident_len == strlen(kdwds[i].word) &&
                 !strncmp(p, kdwds[i].word, ident_len)) {

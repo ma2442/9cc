@@ -199,7 +199,7 @@ int main_t31() {
 }
 int main_t32() {
     int* y;
-    return sizeof(1 == 1);
+    return sizeof(1 == 1) == 1;
 }
 int main_t33() {
     int* y;
@@ -315,7 +315,7 @@ int main() {
     if (main_t29() != 4) return 29;
     if (main_t30() != 4) return 30;
     if (main_t31() != 4) return 31;
-    if (main_t32() != 4) return 32;
+    if (main_t32() != 1) return 32;
     if (main_t33() != 4) return 33;
     if (main_t34() != 12) return 34;
     if (main_t35() != 1) return 35;

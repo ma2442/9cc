@@ -11,6 +11,9 @@
 #define BLOCK_LEN 128
 #define CODE_LEN 100
 #define STMT_LEN 100
+#define STR_INT "int"
+#define STR_CHAR "char"
+#define STR_BOOL "_Bool"
 
 // トークンの種類
 typedef enum {
@@ -68,7 +71,7 @@ typedef enum {
 } NodeKind;
 
 typedef struct Type Type;
-typedef enum { CHAR, INT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
+typedef enum { CHAR, INT, BOOL, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
 // 型
 struct Type {
     TypeKind ty;
@@ -132,6 +135,7 @@ struct StrLit {
 };
 
 size_t sizes[LEN_TYPE_KIND];
+char *type_words[LEN_TYPE_KIND];
 
 // 関数
 Func *funcs;
@@ -148,7 +152,6 @@ StrLit *strlits_end;
 char *filename;
 
 #endif  // HEADER_H
-extern void init_sizes();
 extern int size(Type *typ);
 extern bool can_deref(Type *typ);
 extern Node *new_node();

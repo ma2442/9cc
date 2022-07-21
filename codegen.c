@@ -1,6 +1,6 @@
 #include "9cc.h"
 
-void gen_lval(Node *node) {
+void gen_lval(Node* node) {
     if (node->kind != ND_LVAR && node->kind != ND_GVAR) {
         error("代入の左辺値が変数ではありません");
     }
@@ -14,7 +14,16 @@ void gen_lval(Node *node) {
     }
 }
 
-void gen_read(Node *node) {
+void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
+    char* reg = "al";
+    if (strcmp(src, "rax") == 0) reg = "al";
+    if (strcmp(src, "rcx") == 0) reg = "cl";
+    printf("  cmp %s, %s\n", src, cmpval);
+    printf("  %s %s\n", cmptype, reg);
+    printf("  movzb %s, %s\n", dest, reg);
+}
+
+void gen_read(Node* node) {
     if (node->type->ty == ARRAY) {
         return;
     }
@@ -23,6 +32,8 @@ void gen_read(Node *node) {
         printf("  movsx rcx, BYTE PTR [rax]\n");  // CHAR 符号拡張
     } else if (size(node->type) == 4) {
         printf("  movsx rcx, DWORD PTR [rax]\n");  // INT 符号拡張
+    } else if (node->type->ty == BOOL) {
+        gen_cmp("rax", "0", "setne", "rcx");
     } else {
         printf("  mov rcx, [rax]\n");
     }
@@ -48,7 +59,7 @@ void swap_top() {
     printf("  push rdi\n");
 }
 
-void gen(Node *node) {
+void gen(Node* node) {
     if (!node) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     int dst_size;  // 書き込み先のサイズ
@@ -189,10 +200,13 @@ void gen(Node *node) {
                 // addr,      addr =STACK TOP
                 replicate_top();
             }
+
             dst_size = size(node->lhs->type);
             gen(node->rhs);
             printf("  pop rcx\n");
             printf("  pop rax\n");
+            if (node->lhs->type->ty == BOOL)
+                gen_cmp("rcx", "0", "setne", "rcx");
             if (dst_size == 1) {
                 printf("  mov [rax], cl\n");
             } else if (dst_size == 4) {
@@ -241,24 +255,16 @@ void gen(Node *node) {
 
     switch (node->kind) {
         case ND_EQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  sete al\n");
-            printf("  movzb rax, al\n");
+            gen_cmp("rax", "rdi", "sete", "rax");
             break;
         case ND_NOT_EQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  setne al\n");
-            printf("  movzb rax, al\n");
+            gen_cmp("rax", "rdi", "setne", "rax");
             break;
         case ND_LESS_THAN:
-            printf("  cmp rax, rdi\n");
-            printf("  setl al\n");
-            printf("  movzb rax, al\n");
+            gen_cmp("rax", "rdi", "setl", "rax");
             break;
         case ND_LESS_OR_EQUAL:
-            printf("  cmp rax, rdi\n");
-            printf("  setle al\n");
-            printf("  movzb rax, al\n");
+            gen_cmp("rax", "rdi", "setle", "rax");
             break;
         case ND_ADD:
             printf("  add rax, rdi\n");
