@@ -79,28 +79,6 @@ struct Type {
     size_t array_size;
 };
 
-typedef struct Node Node;
-
-// 抽象構文木のノード
-struct Node {
-    NodeKind kind;   // ノードの種類
-    Node *lhs;       // 左辺, またはif,while,for等の内部statement
-    Node *rhs;       // 右辺, またはelseの内部statement
-    int val;         // kindがND_NUMの場合のみ使う
-    int offset;      // 変数:オフセット、関数:変数分の確保領域
-    Type *type;      // int, int*などの型情報
-    int label_num;   // if,while,for等のラベル通し番号
-    Node *next_arg;  // kindがND_FUNC_* の場合に使う
-    char *name;      // 関数名 または 変数名
-    int name_len;    // nameの長さ
-    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
-    Node *init;      // forの初期化式(_____; ; )
-    Node *judge;     // if,while,for等の条件式
-    Node *inc;       // forの後処理式( ; ;____)
-    Node **block;    // block {} 内のstatements
-    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
-};
-
 typedef struct Var Var;
 
 // ローカル変数
@@ -119,8 +97,9 @@ typedef struct Func Func;
 struct Func {
     Func *next;
     char *name;
-    int len;  // 名前の長さ
-    Var *args;
+    int len;    // 名前の長さ
+    Var *args;  // 引数情報
+    int stack_size;  // 変数分の確保領域
     Type *type;
 };
 
@@ -132,6 +111,28 @@ struct StrLit {
     char *str;      // 文字列リテラル本体
     int len;        // 本体の長さ
     char name[32];  // 名前(ラベル)
+};
+
+typedef struct Node Node;
+
+// 抽象構文木のノード
+struct Node {
+    NodeKind kind;   // ノードの種類
+    Node *lhs;       // 左辺, またはif,while,for等の内部statement
+    Node *rhs;       // 右辺, またはelseの内部statement
+    Var *var;        // 変数情報
+    Func *func;      // 関数情報
+    StrLit *strlit;  // 文字列リテラル情報
+    int val;         // kindがND_NUMの場合のみ使う
+    Type *type;      // int, int*などの型情報
+    int label_num;   // if,while,for等のラベル通し番号
+    Node *next_arg;  // kindがND_FUNC_* の場合に使う
+    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+    Node *init;      // forの初期化式(_____; ; )
+    Node *judge;     // if,while,for等の条件式
+    Node *inc;       // forの後処理式( ; ;____)
+    Node **block;    // block {} 内のstatements
+    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
 };
 
 size_t sizes[LEN_TYPE_KIND];

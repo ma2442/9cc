@@ -20,16 +20,22 @@ int main_t2() {
     return y_t2 + x_t2;
 }
 int x_t3;
-int func_t3() { x_t3 = 5; }
+int func_t3() {
+    x_t3 = 5;
+    return 0;
+}
 int main_t3() {
     func_t3();
     return x_t3;
 }
 int x_t4;
-int func_t4(int x_t4) { x_t4 = 1; }
+int func_t4(int x_t4) {
+    x_t4 = 1;
+    return 0;
+}
 int main_t4() {
     x_t4 = 5;
-    func_t4();
+    func_t4(1);
     return x_t4;
 }
 int x_t5;

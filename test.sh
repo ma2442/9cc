@@ -33,11 +33,12 @@ assertf(){
     fi
 }
 
-assertf 255 test_quick.c
 assertf 255 test1.c
 assertf 255 test2.c
 assertf 255 test3.c
 assertf 1 comment.c
 assertf 255 test4.c
+assertf 255 test_quick.c
+exit 0
 
 echo OK

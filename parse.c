@@ -189,53 +189,38 @@ Node *new_node_defvar(Token *tok, Type *typ, Var **vars) {
     } else {
         node = new_node(ND_DEFGLOBAL, NULL, NULL);
     }
-    Var *lvar = find_var(tok, vars);
+    Var *var = find_var(tok, vars);
 
-    if (lvar) {
+    if (var) {
         // エラー 定義済み
         error_at(tok->str, "定義済みの変数です。");
     }
-    lvar = calloc(1, sizeof(Var));
-    lvar->next = *vars;
-    (*vars)->prev = lvar;
-    lvar->name = tok->str;
-    lvar->len = tok->len;
-    lvar->type = typ;
-    // ローカル変数はオフセット設定
-    if (*vars == locals) {
-        lvar->offset = (locals ? locals->offset : 0);
-        lvar->offset += size(typ);
-        lvar->offset = ((lvar->offset + 7) / 8) * 8;  // 8の倍数に揃える
-        node->offset = lvar->offset;
-    } else {  //グローバル変数は名前設定
-        node->name = lvar->name;
-        node->name_len = lvar->len;
-    }
-    node->type = lvar->type;
-    *vars = lvar;
+    var = calloc(1, sizeof(Var));
+    var->next = *vars;
+    (*vars)->prev = var;
+    var->name = tok->str;
+    var->len = tok->len;
+    var->type = typ;
+    node->var = var;
+    node->type = var->type;
+    *vars = var;
     return node;
 }
 
 // 変数名として識別
 Node *new_node_var(Token *tok) {
     // ローカル変数チェック
-    Var *lvar = find_var(tok, &locals);
-    if (lvar) {
-        Node *node = new_node(ND_LVAR, NULL, NULL);
-        node->offset = lvar->offset;
-        node->type = lvar->type;
-        return node;
-    }
+    Var *var = find_var(tok, &locals);
+    NodeKind kind = (var ? ND_LVAR : ND_GVAR);
     // グローバル変数チェック
-    lvar = find_var(tok, &globals);
-    if (!lvar) {
+    if (!var) var = find_var(tok, &globals);
+    if (!var) {
         error_at(tok->str, "未定義の変数です。");
         return NULL;
     }
-    Node *node = new_node(ND_GVAR, NULL, NULL);
-    node->name = tok->str;
-    node->name_len = tok->len;
-    node->type = lvar->type;
+    Node *node = new_node(kind, NULL, NULL);
+    node->var = var;
+    node->type = var->type;
     return node;
 }
 
@@ -271,8 +256,7 @@ Node *str_literal() {
     strlit->len = tok_str->len;
     sprintf(strlit->name, ".LC%d", str_label_cnt);
     str_label_cnt++;
-    node->name = strlit->name;
-    node->name_len = strlen(strlit->name);
+    node->strlit = strlit;
     strlit->next = strlits;
     strlits->prev = strlit;
     strlits = strlit;
@@ -282,11 +266,14 @@ Node *str_literal() {
 // 関数コールノード 引数は関数名
 Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
-    node->name = tok->str;
-    node->name_len = tok->len;
     Func *fn = find_func(tok);
     if (fn) {
+        node->func = fn;
         node->type = fn->type;
+    } else {
+        node->func = calloc(1, sizeof(Func));
+        node->func->name = tok->str;
+        node->func->len = tok->len;
     }
 
     // 実引数処理
@@ -595,6 +582,12 @@ Node *stmt() {
     return node;
 }
 
+// アラインメント(alnの倍数)に揃える
+int align(int x, int aln) {
+    // return (x + aln - 1) & ~(aln - 1);
+    return ((x + aln - 1) / aln) * aln;
+}
+
 // 関数定義ノード
 Node *func_after_leftparen(Type *typ, Token *func_name) {
     if (!func_name) {
@@ -610,8 +603,7 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
     fn->name = func_name->str;
     fn->len = func_name->len;
-    node->name = func_name->str;
-    node->name_len = func_name->len;
+    node->func = fn;
 
     // 仮引数処理
     if (!consume(")")) {
@@ -634,8 +626,18 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     funcs = fn;
     // 関数本文 "{" stmt* "}"
     node->rhs = block();
-    // 変数分の確保領域を記憶
-    node->offset = locals->offset;
+    // ローカル変数のオフセットを計算
+    int ofst = 0;
+    for (Var *lcl = locals; lcl->next != NULL; lcl = lcl->next) {
+        int sz = size(lcl->type);
+        // オフセット境界 例えばintなら4バイト境界に揃える
+        int aln = (lcl->type->ty == ARRAY ? 1 : sz);
+        ofst += sz;
+        ofst = align(ofst, aln);  // 型サイズの倍数に揃える
+        lcl->offset = ofst;
+    }
+    // スタックサイズを8の倍数に揃える
+    fn->stack_size = align(ofst, 8);
     return node;
 }
 

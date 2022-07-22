@@ -91,7 +91,7 @@ int main_t15() {
     int* z;
     x = 4;
     y = 5;
-    z = &y + 2;
+    z = &y - 1;
     return *z;
 }
 // int* 定義

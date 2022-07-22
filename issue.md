@@ -6,6 +6,7 @@
 
 ### Essential To Do 使用中かつ代替不可能
 
+- [ ] 関数宣言
 - [ ] extern
 - [ ] #include <..>, #include ".."
 - [ ] #define
@@ -13,12 +14,12 @@
 
 ### Want To Do 使用中だが代替可能
 
+- [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 - [ ] {} 配列初期化
 - [ ] 文字リテラル 'a' ..
 - [ ] エスケープシーケンス '\0', '\n'..
 - [ ] typedef
 - [ ] continue, break
-- [ ] bool
 - [ ] void
 - [ ] size_t
 - [ ] NULL
@@ -33,7 +34,7 @@
 - [ ] static
 - [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
 - [ ] (int\* p)[10] のような入れ子になっている型定義
-- [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
+- [ ] 共用体
 
 ### Issue
 
@@ -51,6 +52,7 @@
 
 - [x] 否定 !
 - [x] && ||
+- [x] _Bool
 - [x] 剰余演算子 %, %=
 - [x] +=, -=, \*=, /=
 - [x] インクリメント ++, デクリメント --

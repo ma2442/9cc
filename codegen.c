@@ -3,15 +3,16 @@
 void gen_lval(Node* node) {
     if (node->kind != ND_LVAR && node->kind != ND_GVAR) {
         error("代入の左辺値が変数ではありません");
+        return;
     }
-    if (node->kind == ND_GVAR) {
-        printf("  lea rax, %.*s[rip]\n", node->name_len, node->name);
-        printf("  push rax\n");
-
-    } else if (node->kind == ND_LVAR) {
-        printf("  lea rax, [rbp-%d]\n", node->offset);
-        printf("  push rax\n");
+    if (node->kind == ND_LVAR) {
+        printf("  lea rax, [rbp-%d]\n", node->var->offset);
+    } else if (node->var) {  // gloval var
+        printf("  lea rax, %.*s[rip]\n", node->var->len, node->var->name);
+    } else if (node->strlit) {  // str literal
+        printf("  lea rax, %.*s[rip]\n", node->strlit->len, node->strlit->name);
     }
+    printf("  push rax\n");
 }
 
 void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
@@ -25,7 +26,7 @@ void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
     printf("  movzb %s, %s\n", dest, reg);
 }
 
-void gen_read(Node* node) {
+void gen_load(Node* node) {
     if (node->type->ty == ARRAY) {
         return;
     }
@@ -40,6 +41,20 @@ void gen_read(Node* node) {
         printf("  mov rcx, [rax]\n");
     }
     printf("  push rcx\n");
+}
+
+void gen_store(Type* type) {
+    printf("  pop rcx\n");
+    printf("  pop rax\n");
+    int dst_size = size(type);  // 書き込み先のサイズ
+    if (type->ty == BOOL) gen_cmp("rcx", "0", "setne", "rcx");
+    if (dst_size == 1) {
+        printf("  mov [rax], cl\n");
+    } else if (dst_size == 4) {
+        printf("  mov DWORD PTR [rax], ecx\n");
+    } else {
+        printf("  mov [rax], rcx\n");
+    }
 }
 
 void gen_tochar() {
@@ -64,7 +79,6 @@ void swap_top() {
 void gen(Node* node) {
     if (!node) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-    int dst_size;  // 書き込み先のサイズ
 
     switch (node->kind) {
         case ND_RETURN:
@@ -115,14 +129,14 @@ void gen(Node* node) {
         case ND_LVAR:
         case ND_GVAR:
             gen_lval(node);
-            gen_read(node);
+            gen_load(node);
             return;
         case ND_ADDR:
             gen_lval(node->lhs);
             return;
         case ND_DEREF:
             gen(node->lhs);
-            gen_read(node);
+            gen_load(node);
             return;
         case ND_FUNC_CALL:
             gen(node->next_arg);  //実引数計算
@@ -135,7 +149,7 @@ void gen(Node* node) {
             // 可変長引数関数に渡す浮動小数 = 0個
             printf("  mov al, 0\n");
             // 関数呼び出し
-            printf("  call %.*s\n", node->name_len, node->name);
+            printf("  call %.*s\n", node->func->len, node->func->name);
 
             // rspを16バイト境界揃えから元に戻す
             printf("  pop rbx\n");
@@ -157,12 +171,13 @@ void gen(Node* node) {
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
-            printf("%.*s:\n", node->name_len, node->name);
+            printf("%.*s:\n", node->func->len, node->func->name);
             // プロローグ
             // 変数分の領域を確保する
             printf("  push rbp\n");
             printf("  mov rbp, rsp\n");
-            if (node->offset) printf("  sub rsp, %d\n", node->offset);
+            if (node->func->stack_size > 0)
+                printf("  sub rsp, %d\n", node->func->stack_size);
             // 仮引数
             gen(node->next_arg);
             // 関数本文  "{" stmt* "}"
@@ -177,9 +192,7 @@ void gen(Node* node) {
             gen_lval(node->lhs);
             printf("  push %s\n", arg_storage[node->arg_idx]);
             gen(node->next_arg);
-            printf("  pop rdi\n");
-            printf("  pop rax\n");
-            printf("  mov [rax], rdi\n");
+            gen_store(node->lhs->type);
             // printf("  push rdi\n");
             return;
         case ND_ASSIGN:
@@ -193,7 +206,7 @@ void gen(Node* node) {
                 // POST INCDEC EVAL,   ASSIGN L,  ADD L
                 // [addr],              addr,     addr =STACK TOP
                 replicate_top();
-                gen_read(node->lhs);
+                gen_load(node->lhs);
                 swap_top();
                 replicate_top();
             } else if (node->assign_kind == ASN_COMPOSITE) {
@@ -203,19 +216,8 @@ void gen(Node* node) {
                 replicate_top();
             }
 
-            dst_size = size(node->lhs->type);
             gen(node->rhs);
-            printf("  pop rcx\n");
-            printf("  pop rax\n");
-            if (node->lhs->type->ty == BOOL)
-                gen_cmp("rcx", "0", "setne", "rcx");
-            if (dst_size == 1) {
-                printf("  mov [rax], cl\n");
-            } else if (dst_size == 4) {
-                printf("  mov DWORD PTR [rax], ecx\n");
-            } else {
-                printf("  mov [rax], rcx\n");
-            }
+            gen_store(node->lhs->type);
             if (node->assign_kind != ASN_POST_INCDEC) printf("  push rcx\n");
             return;
         case ND_BLOCK:
@@ -236,7 +238,7 @@ void gen(Node* node) {
     if (node->lhs->kind == ND_DUMMY) {
         gen(node->rhs);
         swap_top();
-        gen_read(node);
+        gen_load(node);
         printf("  pop rax\n");
         printf("  pop rdi\n");
     } else {
