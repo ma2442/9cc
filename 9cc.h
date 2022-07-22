@@ -97,8 +97,8 @@ typedef struct Func Func;
 struct Func {
     Func *next;
     char *name;
-    int len;    // 名前の長さ
-    Var *args;  // 引数情報
+    int len;         // 名前の長さ
+    Var *args;       // 引数情報
     int stack_size;  // 変数分の確保領域
     Type *type;
 };
@@ -108,9 +108,9 @@ typedef struct StrLit StrLit;
 struct StrLit {
     StrLit *prev;
     StrLit *next;
-    char *str;      // 文字列リテラル本体
-    int len;        // 本体の長さ
-    char name[32];  // 名前(ラベル)
+    char *str;   // 文字列リテラル本体
+    int len;     // 本体の長さ
+    char *name;  // 名前(ラベル)
 };
 
 typedef struct Node Node;

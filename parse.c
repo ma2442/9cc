@@ -254,6 +254,8 @@ Node *str_literal() {
     StrLit *strlit = calloc(1, sizeof(StrLit));
     strlit->str = tok_str->str;
     strlit->len = tok_str->len;
+
+    strlit->name = calloc(str_label_cnt + 4, sizeof(char));
     sprintf(strlit->name, ".LC%d", str_label_cnt);
     str_label_cnt++;
     node->strlit = strlit;
