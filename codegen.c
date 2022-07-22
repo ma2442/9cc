@@ -10,7 +10,7 @@ void gen_lval(Node* node) {
     } else if (node->var) {  // gloval var
         printf("  lea rax, %.*s[rip]\n", node->var->len, node->var->name);
     } else if (node->strlit) {  // str literal
-        printf("  lea rax, %.*s[rip]\n", node->strlit->len, node->strlit->name);
+        printf("  lea rax, %s[rip]\n", node->strlit->name);
     }
     printf("  push rax\n");
 }
