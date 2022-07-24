@@ -1,16 +1,28 @@
 #include "9cc.h"
 
 void gen_lval(Node* node) {
-    if (node->kind != ND_LVAR && node->kind != ND_GVAR) {
-        error("代入の左辺値が変数ではありません");
-        return;
-    }
-    if (node->kind == ND_LVAR) {
-        printf("  lea rax, [rbp-%d]\n", node->var->offset);
-    } else if (node->var) {  // gloval var
-        printf("  lea rax, %.*s[rip]\n", node->var->len, node->var->name);
-    } else if (node->strlit) {  // str literal
-        printf("  lea rax, %s[rip]\n", node->strlit->name);
+    switch (node->kind) {
+        case ND_LVAR:  // local var
+            printf("  lea rax, [rbp-%d]\n", node->var->offset);
+            break;
+        case ND_GVAR:
+            if (node->strlit)  // str literal
+                printf("  lea rax, %s[rip]\n", node->strlit->name);
+            else  // gloval var
+                printf("  lea rax, %.*s[rip]\n", node->var->len,
+                       node->var->name);
+            break;
+        case ND_MEMBER:  // struct member
+            gen_lval(node->lhs);
+            printf("  pop rax\n");
+            printf("  add rax, %d\n", node->var->offset);
+            break;
+        case ND_DEREF:  // *p = ..
+            gen(node->lhs);
+            return;
+        default:
+            error("代入の左辺値が変数ではありません");
+            return;
     }
     printf("  push rax\n");
 }
@@ -27,9 +39,7 @@ void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
 }
 
 void gen_load(Node* node) {
-    if (node->type->ty == ARRAY) {
-        return;
-    }
+    if (node->type->ty == ARRAY || node->type->ty == STRUCT) return;
     printf("  pop rax\n");
     if (size(node->type) == 1) {
         printf("  movsx rcx, BYTE PTR [rax]\n");  // CHAR 符号拡張
@@ -47,6 +57,15 @@ void gen_store(Type* type) {
     printf("  pop rcx\n");
     printf("  pop rax\n");
     int dst_size = size(type);  // 書き込み先のサイズ
+    
+    if (type->ty == STRUCT) {
+        for (int i = 0; i < dst_size; i += type->strct->align){
+            printf("  mov rdi, [rcx+%d]\n", i);
+            printf("  mov [rax+%d], rdi\n", i);
+        }
+        return;
+    }
+
     if (type->ty == BOOL) gen_cmp("rcx", "0", "setne", "rcx");
     if (dst_size == 1) {
         printf("  mov [rax], cl\n");
@@ -128,6 +147,7 @@ void gen(Node* node) {
             return;
         case ND_LVAR:
         case ND_GVAR:
+        case ND_MEMBER:
             gen_lval(node);
             gen_load(node);
             return;
@@ -196,11 +216,7 @@ void gen(Node* node) {
             // printf("  push rdi\n");
             return;
         case ND_ASSIGN:
-            if (node->lhs->kind == ND_DEREF) {
-                gen(node->lhs->lhs);
-            } else {
-                gen_lval(node->lhs);
-            }
+            gen_lval(node->lhs);
             if (node->assign_kind == ASN_POST_INCDEC) {
                 // 後置インクリメント
                 // POST INCDEC EVAL,   ASSIGN L,  ADD L
@@ -215,7 +231,6 @@ void gen(Node* node) {
                 // addr,      addr =STACK TOP
                 replicate_top();
             }
-
             gen(node->rhs);
             gen_store(node->lhs->type);
             if (node->assign_kind != ASN_POST_INCDEC) printf("  push rcx\n");

@@ -113,6 +113,7 @@ bool consume(char *op) {
         case TK_SIZEOF:
         case TK_RETURN:
         case TK_CTRL:
+        case TK_STRUCT:
             break;
         default:
             return false;
@@ -134,7 +135,11 @@ Token *consume_if_kind_is(TokenKind tk) {
 }
 
 Token *consume_str() { return consume_if_kind_is(TK_STR); }
-Token *consume_type() { return consume_if_kind_is(TK_TYPE); }
+Token *consume_type() {
+    Token *tok = consume_if_kind_is(TK_STRUCT);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_TYPE);
+}
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 
 // 変数を名前で検索する。 見つからなかった場合はNULLを返す。
@@ -152,6 +157,16 @@ Func *find_func(Token *tok) {
     for (Func *fn = funcs; fn != NULL; fn = fn->next) {
         if (fn->len == tok->len && !memcmp(fn->name, tok->str, tok->len)) {
             return fn;
+        }
+    }
+    return NULL;
+}
+
+// 構造体を名前で検索する。 見つからなかった場合はNULLを返す。
+Struct *find_struct(Token *tok) {
+    for (Struct *stc = structs; stc != NULL; stc = stc->next) {
+        if (stc->len == tok->len && !memcmp(stc->name, tok->str, tok->len)) {
+            return stc;
         }
     }
     return NULL;
@@ -219,6 +234,20 @@ Node *new_node_var(Token *tok) {
         return NULL;
     }
     Node *node = new_node(kind, NULL, NULL);
+    node->var = var;
+    node->type = var->type;
+    return node;
+}
+
+// メンバ変数として識別
+Node *new_node_mem(Node *nd_stc, Token *tok) {
+    // ローカル変数チェック
+    Var *var = find_var(tok, &(nd_stc->type->strct->mems));
+    if (!var) {
+        error_at(tok->str, "未定義のメンバです。");
+        return NULL;
+    }
+    Node *node = new_node(ND_MEMBER, nd_stc, NULL);
     node->var = var;
     node->type = var->type;
     return node;
@@ -292,32 +321,77 @@ Node *func_call(Token *tok) {
     return node;
 }
 
+int consume_incdec() {
+    if (consume("++")) return ND_ADD;
+    if (consume("--")) return ND_SUB;
+    return -1;
+}
+
+// node==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
+// 前置インクリメントは複合代入と同じ処理
+Node *incdec(Node *node) {
+    int kind = consume_incdec();
+    if (kind == -1) return NULL;
+    int asn_kind = ASN_COMPOSITE;
+    if (!node) {
+        node = unary();
+    } else {
+        asn_kind = ASN_POST_INCDEC;
+    }
+    node = new_node(ND_ASSIGN, node, NULL);
+    node->assign_kind = asn_kind;
+    Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
+    nd_typ->type = node->lhs->type;
+    node->rhs = new_node(kind, nd_typ, new_node_num(1));
+    return node;
+}
+
+// regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->")ident) )*
+Node *regex() {
+    Node *node = primary();
+    for (;;) {
+        Node *next = incdec(node);  // x++ or x--
+        if (next) {
+            node = next;
+        } else if (consume("[")) {  // 配列添え字演算子
+            node = new_node(ND_ADD, node, expr());
+            node = new_node(ND_DEREF, node, NULL);
+            expect("]");
+        } else if (consume(".")) {
+            node = new_node_mem(node, consume_ident());
+        } else if (consume("->")) {
+            node = new_node(ND_DEREF, node, NULL);
+            node = new_node_mem(node, consume_ident());
+        } else {
+            break;
+        }
+    }
+    return node;
+}
+
+// primary = strlit
+//     | "(" expr ")"
+//     | ident "(" ( expr (","expr)* )? ")" // func call
+//     | ident
+//     | num
 Node *primary() {
     // 文字列リテラルとして識別
     Node *node = str_literal();
     if (node) return node;
-
     // 次のトークンが"("なら、"(" expr ")" のはず
     if (consume("(")) {
         node = expr();
         expect(")");
         return node;
     }
-
     // 変数名,関数名の識別
     Token *tok = consume_ident();
     // 識別子がなければ数値
     if (!tok) return new_node_num(expect_number());
-    //関数でなければ変数
-    if (!consume("(")) return new_node_var(tok);
     // 関数名として識別
-    return func_call(tok);
-}
-
-int consume_incdec() {
-    if (consume("++")) return ND_ADD;
-    if (consume("--")) return ND_SUB;
-    return -1;
+    if (consume("(")) return func_call(tok);
+    //関数でなければ変数
+    return new_node_var(tok);
 }
 
 //複合代入
@@ -330,59 +404,35 @@ int consume_compo_assign() {
     return -1;
 }
 
-// tok==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
-// 前置インクリメントは複合代入と同じ処理
-Node *incdec(bool is_post) {
-    Node *node = NULL;
-    if (is_post) node = unary();
-    int kind = consume_incdec();
-    if (kind == -1) return node;
-    if (!is_post) node = unary();
-    Node *nd_assign = new_node(ND_ASSIGN, node, NULL);
-    nd_assign->assign_kind = (is_post ? ASN_POST_INCDEC : ASN_COMPOSITE);
-    Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
-    nd_typ->type = nd_assign->lhs->type;
-    nd_assign->rhs = new_node(kind, nd_typ, new_node_num(1));
-    return nd_assign;
-}
-Node *post_incdec() { return incdec(true); }
-Node *pre_incdec() { return incdec(false); }
-
-// 単項
+// 単項 unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
 Node *unary() {
     if (consume("sizeof")) {
-        Type *typ = post_incdec()->type;
+        Type *typ = unary()->type;
         if (typ == NULL) {
             error("sizeof:不明な型です");
         }
         return new_node_num(size(typ));
     }
-    Node *node = pre_incdec();
+    Node *node = incdec(NULL);  // ++x or --x
     if (node) return node;
-    if (consume("+")) return post_incdec();
-    if (consume("-")) return new_node(ND_SUB, new_node_num(0), post_incdec());
-    if (consume("&")) return new_node(ND_ADDR, post_incdec(), NULL);
-    if (consume("*")) return new_node(ND_DEREF, post_incdec(), NULL);
+    if (consume("+")) return unary();
+    if (consume("-")) return new_node(ND_SUB, new_node_num(0), unary());
+    if (consume("&")) return new_node(ND_ADDR, unary(), NULL);
+    if (consume("*")) return new_node(ND_DEREF, unary(), NULL);
     if (consume("!"))
-        return new_node_bool(post_incdec(), new_node_num(0), new_node_num(1));
-    node = primary();
-    while (consume("[")) {  // 配列添え字演算子
-        node = new_node(ND_ADD, node, expr());
-        node = new_node(ND_DEREF, node, NULL);
-        expect("]");
-    }
-    return node;
+        return new_node_bool(unary(), new_node_num(0), new_node_num(1));
+    return regex();
 }
 
 Node *mul() {
-    Node *node = post_incdec();
+    Node *node = unary();
     for (;;) {
         if (consume("*")) {
-            node = new_node(ND_MUL, node, post_incdec());
+            node = new_node(ND_MUL, node, unary());
         } else if (consume("/")) {
-            node = new_node(ND_DIV, node, post_incdec());
+            node = new_node(ND_DIV, node, unary());
         } else if (consume("%")) {
-            node = new_node(ND_MOD, node, post_incdec());
+            node = new_node(ND_MOD, node, unary());
         } else {
             return node;
         }
@@ -467,6 +517,12 @@ Type *type(Token *tok) {
             typ->ty = tk;
             break;
         }
+    }
+    if (typ->ty == STRUCT) {
+        tok = consume_ident();
+        typ->strct = find_struct(tok);
+        // if (!typ->strct) return NULL;
+        if (!typ->strct) error_at(tok->str, "未定義の構造体です");
     }
     while (consume("*")) {
         Type *ptr = calloc(1, sizeof(Type));
@@ -590,6 +646,16 @@ int align(int x, int aln) {
     return ((x + aln - 1) / aln) * aln;
 }
 
+// オフセットを計算･設定
+int set_offset(Var *var, int base) {
+    Type *prm = var->type;
+    while (prm->ty == ARRAY) prm = prm->ptr_to;
+    int aln = (prm->ty == STRUCT ? 16 : size(prm));
+    // オフセット境界 例えばintなら4バイト境界に揃える
+    var->offset = align(base, aln);
+    return var->offset;
+}
+
 // 関数定義ノード
 Node *func_after_leftparen(Type *typ, Token *func_name) {
     if (!func_name) {
@@ -632,15 +698,40 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     int ofst = 0;
     for (Var *lcl = locals; lcl->next != NULL; lcl = lcl->next) {
         int sz = size(lcl->type);
-        // オフセット境界 例えばintなら4バイト境界に揃える
-        int aln = (lcl->type->ty == ARRAY ? 1 : sz);
-        ofst += sz;
-        ofst = align(ofst, aln);  // 型サイズの倍数に揃える
-        lcl->offset = ofst;
+        ofst = set_offset(lcl, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
     fn->stack_size = align(ofst, 8);
     return node;
+}
+
+// 構造体定義ノード
+void struct_after_leftbrace(Token *tok) {
+    if (find_struct(tok)) error_at(tok->str, "構造体の定義が重複しています");
+    Struct *stc = calloc(1, sizeof(Struct));
+    stc->name = tok->str;
+    stc->len = tok->len;
+    // メンバに同じ構造体型を持てるように構造体リストに先行登録
+    stc->next = structs;
+    structs = stc;
+
+    //メンバ初期化
+    locals = calloc(1, sizeof(Var));
+    int ofst = 0;
+    while (!consume("}")) {
+        Type *typ = type(consume_type());
+        tok = consume_ident();
+        // メンバ作成（メンバのノードは不要なので放置）
+        declaration_after_ident(typ, tok, &locals);
+        expect(";");
+        int sz = size(locals->type);
+        ofst = set_offset(locals, ofst) + sz;
+    }
+    expect(";");
+    structs->mems = locals;
+    // 構造体サイズを8の倍数に揃える
+    structs->align = 8;
+    structs->size = align(ofst, structs->align);
 }
 
 void program() {
@@ -650,15 +741,25 @@ void program() {
     strlits_end = strlits;
     globals = calloc(1, sizeof(Var));
     globals_end = globals;
+    structs = calloc(1, sizeof(Struct));
     while (!at_eof()) {
-        Token *tok = consume_type();
-        Type *typ = type(tok);
-        tok = consume_ident();
+        Token *tok_typ = consume_type();
+        Token *tok_idt = consume_ident();
+        // 構造体定義
+        // TODO: tok_idt == NULL のパターンの定義( struct {~}..; )実装
+        if (tok_typ->kind == TK_STRUCT && tok_idt && consume("{")) {
+            struct_after_leftbrace(tok_idt);
+            continue;
+        }
+        // 関数定義 または グローバル変数宣言
+        token = tok_typ->next;
+        Type *typ = type(tok_typ);
+        tok_idt = consume_ident();
         Node *node;
         if (consume("(")) {
-            node = func_after_leftparen(typ, tok);
+            node = func_after_leftparen(typ, tok_idt);
         } else {
-            node = declaration_after_ident(typ, tok, &globals);
+            node = declaration_after_ident(typ, tok_idt, &globals);
             expect(";");
         }
         code[i] = node;

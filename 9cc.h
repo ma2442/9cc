@@ -14,6 +14,15 @@
 #define STR_INT "int"
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
+#define STR_STRUCT "struct"
+
+typedef struct Token Token;
+typedef struct Node Node;
+typedef struct Type Type;
+typedef struct Func Func;
+typedef struct Struct Struct;
+typedef struct StrLit StrLit;
+typedef struct Var Var;
 
 // トークンの種類
 typedef enum {
@@ -26,9 +35,8 @@ typedef enum {
     TK_RETURN,    // return
     TK_CTRL,      // if, else, while, for等 制御構文を表すトークン
     TK_STR,       // 文字列リテラルを表すトークン
+    TK_STRUCT
 } TokenKind;
-
-typedef struct Token Token;
 
 // トークン型
 struct Token {
@@ -67,19 +75,18 @@ typedef enum {
     ND_BLOCK,            // block { }
     ND_DEFGLOBAL,        // global variable definition
     ND_GVAR,             // global variable, or x++, x--
-    ND_DUMMY             // x++,--x,複合代入等により省略された項
+    ND_DUMMY,            // x++,--x,複合代入等により省略された項
+    ND_MEMBER            // 構造体メンバへのアクセス
 } NodeKind;
 
-typedef struct Type Type;
-typedef enum { CHAR, INT, BOOL, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
+typedef enum { CHAR, INT, BOOL, STRUCT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
 // 型
 struct Type {
     TypeKind ty;
-    struct Type *ptr_to;
+    Type *ptr_to;
     size_t array_size;
+    Struct *strct;
 };
-
-typedef struct Var Var;
 
 // ローカル変数
 struct Var {
@@ -90,8 +97,6 @@ struct Var {
     int offset;  // RBPからのオフセット
     Type *type;  // 型
 };
-
-typedef struct Func Func;
 
 // 関数名と引数情報
 struct Func {
@@ -104,7 +109,6 @@ struct Func {
 };
 
 // 文字列リテラル
-typedef struct StrLit StrLit;
 struct StrLit {
     StrLit *prev;
     StrLit *next;
@@ -113,7 +117,14 @@ struct StrLit {
     char *name;  // 名前(ラベル)
 };
 
-typedef struct Node Node;
+struct Struct {
+    Struct *next;
+    char *name;
+    int len;
+    Var *mems;
+    int size;
+    int align;
+};
 
 // 抽象構文木のノード
 struct Node {
@@ -148,6 +159,8 @@ Var *locals;
 // 文字列リテラル
 StrLit *strlits;
 StrLit *strlits_end;
+// 構造体
+Struct *structs;
 
 // 入力ファイル名
 char *filename;
@@ -173,6 +186,7 @@ extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 extern Token *tokenize(char *p);
 extern Node *code[CODE_LEN];
 extern Node *statement[STMT_LEN];
+extern Node *regex();
 extern Node *primary();
 extern Node *unary();
 extern Node *mul();

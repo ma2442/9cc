@@ -1,5 +1,6 @@
 program = func*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
+struct = "struct" ident "{" ( declaration ";" )* "}" ";"
 stmt    =
     declaration ("=" assign)? ";"
     | expr ";" 
@@ -16,17 +17,16 @@ bool_or = bool_and ("||" bool_and)*
 bool_and = equality ("&&" equality)*
 equality    = relational (("=="|"!=") relational)*
 relational  = add (("<"|">"|"<="|">=") add)*
-add = mul (("+"|"=") mul)*
-mul = unary (("*"|"/") unary)* // <- "%" は?
-unary = "sizeof" unary
-    | ("+"|"-"|"*"|"&") unary  
-    | primary "[" expr "]" 
-primary = '"' [^"]* '"' 
-    | ident ("++"|"--")?
-    | ("++"|"--")? ident
-    | ident "(" (expr ("," expr)* )? ")" 
-    | num 
+add = mul (("+"|"-") mul)*
+mul = unary (("*"|"/"|"%") unary)*
+unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
+regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->") ident) )*
+primary = strlit
     | "(" expr ")"
+    | ident "(" ( expr (","expr)* )? ")" // func call
+    | ident
+    | num 
+strlit = '"' [^"]* '"'  // 文字列リテラル
 ident = ("_" | ALPHA | alpha) ("_" | ALPHA | alpha | ten)*
 
 ALPHA = "A" | "B" | ... | "Z"

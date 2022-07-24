@@ -9,23 +9,24 @@ void init_sizes() {
     sizes[BOOL] = 1;
     sizes[INT] = 4;
     sizes[PTR] = 8;
+    sizes[STRUCT] = -1;
+    sizes[ARRAY] = -1;
 }
 
 void init_words() {
     type_words[INT] = STR_INT;
     type_words[CHAR] = STR_CHAR;
     type_words[BOOL] = STR_BOOL;
+    type_words[STRUCT] = STR_STRUCT;
+    type_words[PTR] = "";
+    type_words[ARRAY] = "";
 }
 
 // 型のサイズを計算する関数
 int size(Type *typ) {
-    if (typ == NULL) {
-        return -1;
-        // error("size : 型がありません");
-    }
-    if (typ->ty == ARRAY) {
-        return size(typ->ptr_to) * typ->array_size;
-    }
+    if (typ == NULL) return -1;
+    if (typ->ty == ARRAY) return size(typ->ptr_to) * typ->array_size;
+    if (typ->ty == STRUCT) return typ->strct->size;
     return sizes[typ->ty];
 }
 
