@@ -58,8 +58,10 @@ int main_t2() {
     for (i = 0; i < sizeof(a) / sizeof(a[0]); i++) {
         a[i].x = i;
         a[i].y = i * 10;
-        if (i != sizeof(a) / sizeof(a[0]) - 1) a[i].next = &a[i + 1];
-        else a[i].next = 0;
+        if (i != sizeof(a) / sizeof(a[0]) - 1)
+            a[i].next = &a[i + 1];
+        else
+            a[i].next = 0;
     }
     for (i = 0; i < sizeof(a) / sizeof(a[0]); i++) {
         if (a[i].x != i) return i;
@@ -76,20 +78,53 @@ int main_t2() {
 
 // 構造体コピー
 struct pos g_t3;
-int main_t3(){
+int main_t3() {
     struct pos a;
     struct pos b;
     a.x = 1;
     a.y = 2;
     a.next = &a;
-    b=a;
-    if(a.x != b.x) return 1;
-    if(a.y != b.y) return 2;
-    if(a.next != b.next) return 3;
+    b = a;
+    if (a.x != b.x) return 1;
+    if (a.y != b.y) return 2;
+    if (a.next != b.next) return 3;
     g_t3 = a;
-    if(a.x != g_t3.x) return 4;
-    if(a.y != g_t3.y) return 5;
-    if(a.next != g_t3.next) return 6;
+    if (a.x != g_t3.x) return 4;
+    if (a.y != g_t3.y) return 5;
+    if (a.next != g_t3.next) return 6;
+    return 0;
+}
+
+struct sizeint {  // sizeof(sizeint) == 12
+    char c;
+    int x;
+    char c2;
+};
+
+struct sizetest {  // sizeof(sizetest) == 4 + 12 + 12 == 28
+    char c;
+    struct sizeint stc;
+    char a[11];
+};
+
+int main_t4() {
+    struct sizetest szts[3];
+    struct sizetest tmp;
+    if (sizeof(szts) != 84) return 1;
+    int i;
+    for (i = sizeof(szts) / sizeof(szts[0]) - 1; i >= 0; i--) {
+        tmp.c = i;
+        tmp.stc.c = 10 + i;
+        tmp.stc.c2 = 20 + i;
+        tmp.a[10] = 30 + i;
+        szts[i] = tmp;
+    }
+    for (i = sizeof(szts) / sizeof(szts[0]) - 1; i >= 0; i--) {
+        if (szts[i].c != i) return 2;
+        if (szts[i].stc.c != 10 + i) return 3;
+        if (szts[i].stc.c2 != 20 + i) return 4;
+        if (szts[i].a[10] != 30 + i) return 5;
+    }
     return 0;
 }
 
@@ -98,5 +133,6 @@ int main() {
     if (main_t1()) return 1;
     if (main_t2()) return 2;
     if (main_t3()) return 3;
+    if (main_t4()) return 4;
     return 255;
 }

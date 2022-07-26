@@ -200,3 +200,13 @@ extern void program();
 
 extern void gen_lval(Node *node);
 extern void gen(Node *node);
+
+// type.c
+extern void init_sizes();
+extern void init_words();
+extern int size(Type *typ);
+extern bool can_deref(Type *typ);
+extern int align(int x, int aln);
+extern int calc_align(Type *type);
+extern int set_offset(Var *var, int base);
+extern void typing(Node *node);

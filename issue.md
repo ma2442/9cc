@@ -1,9 +1,5 @@
 ### To Do
 
-- [ ] struct
-- [ ] 構造体メンバアクセス演算子 .
-- [ ] アロー演算子 ->
-
 ### Essential To Do 使用中かつ代替不可能
 
 - [ ] 関数宣言
@@ -52,14 +48,17 @@
 
 - [ ] find_struct, find_func, find_lvar を線形探索から二分探索に変更
       おそらく structs, funcs, locals を二分木にする必要あり
-- [ ] struct のアラインメントを可変にする（現在は 8 バイト固定、コピーも QWORD ごと）
+
+### Completed
+
+- [x] struct のアラインメントを可変にする（現在は 8 バイト固定、コピーも QWORD ごと）
       メンバのアラインメントの最大値に合わせる。
       8 バイトの例: long long がメンバにる。
       4 バイトの例: アラインメントが 4 の struct がメンバにいて、それが最大。
       1 バイトの例: \_Bool や char、及びそれらからなる struct や array のみがメンバ。
-
-### Completed
-
+- [x] struct
+- [x] 構造体メンバアクセス演算子 .
+- [x] アロー演算子 ->
 - [x] 否定 !
 - [x] && ||
 - [x] \_Bool

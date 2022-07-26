@@ -1,5 +1,42 @@
 #include "9cc.h"
 
+typedef enum AsmWord AsmWord;
+enum AsmWord { RAX, RDI, RCX, QWORD_PTR, MOVS, MOVZ };
+
+// レジスタや命令を扱うサイズごとに適切な名前に変換する
+char* cnvword(AsmWord word, int byte) {
+    switch (word) {
+        case QWORD_PTR:
+            if (byte == 8) return "";
+            if (byte == 4) return "dword ptr";
+            if (byte == 2) return "word ptr";
+            if (byte == 1) return "byte ptr";
+        case RAX:
+            if (byte == 8) return "rax";
+            if (byte == 4) return "eax";
+            if (byte == 2) return "ax";
+            if (byte == 1) return "al";
+        case RDI:
+            if (byte == 8) return "rdi";
+            if (byte == 4) return "edi";
+            if (byte == 2) return "di";
+            if (byte == 1) return "dil";
+        case RCX:
+            if (byte == 8) return "rcx";
+            if (byte == 4) return "ecx";
+            if (byte == 2) return "cx";
+            if (byte == 1) return "cl";
+        case MOVS:  // 符号拡張 (byteはソースサイズ)
+            if (byte == 8) return "mov";     // mov    8 byte, 8 byte
+            if (byte == 4) return "movsxd";  // movsxd 8 byte, 4 byte
+            return "movsx";                  // movsx  8 byte, 2/1 byte
+        case MOVZ:  // ゼロ拡張 (byteはソースサイズ)
+            if (byte == 8) return "mov";  // mov   8 byte, 8 byte
+            if (byte == 4) return "mov";  // mov   8 byte, 4 byte (movzxも可)
+            return "movzx";               // movzx 8 byte, 2/1 byte
+    }
+}
+
 void gen_lval(Node* node) {
     switch (node->kind) {
         case ND_LVAR:  // local var
@@ -27,29 +64,18 @@ void gen_lval(Node* node) {
     printf("  push rax\n");
 }
 
-void gen_cmp(char* src, char* cmpval, char* cmptype, char* dest) {
-    char* reg = "al";
-    if (strcmp(src, "rdi") == 0)
-        reg = "dil";
-    else if (strcmp(src, "rcx") == 0)
-        reg = "cl";
-    printf("  cmp %s, %s\n", src, cmpval);
-    printf("  %s %s\n", cmptype, reg);
-    printf("  movzb %s, %s\n", dest, reg);
+void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
+    char* src1byte = cnvword(src, 1);
+    printf("  cmp %s, %s\n", cnvword(src, 8), cmpval);
+    printf("  %s %s\n", cmptype, src1byte);
+    printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
 }
 
 void gen_load(Node* node) {
     if (node->type->ty == ARRAY || node->type->ty == STRUCT) return;
     printf("  pop rax\n");
-    if (size(node->type) == 1) {
-        printf("  movsx rcx, BYTE PTR [rax]\n");  // CHAR 符号拡張
-    } else if (size(node->type) == 4) {
-        printf("  movsx rcx, DWORD PTR [rax]\n");  // INT 符号拡張
-    } else if (node->type->ty == BOOL) {
-        gen_cmp("rax", "0", "setne", "rcx");
-    } else {
-        printf("  mov rcx, [rax]\n");
-    }
+    int sz = size(node->type);
+    printf("  %s rcx, %s[rax]\n", cnvword(MOVS, sz), cnvword(QWORD_PTR, sz));
     printf("  push rcx\n");
 }
 
@@ -57,23 +83,26 @@ void gen_store(Type* type) {
     printf("  pop rcx\n");
     printf("  pop rax\n");
     int dst_size = size(type);  // 書き込み先のサイズ
-    
     if (type->ty == STRUCT) {
-        for (int i = 0; i < dst_size; i += type->strct->align){
+        for (int i = 0; i < dst_size; i += type->strct->align) {
             printf("  mov rdi, [rcx+%d]\n", i);
-            printf("  mov [rax+%d], rdi\n", i);
+            // 8バイト境界から8バイト先までコピーの必要があるなら
+            // QWORD コピーが望ましい
+            if (i % 8 == 0 && i + 8 <= dst_size) {
+                printf("  mov [rax+%d], rdi\n", i);
+                continue;
+            }
+            // QWORD未満のコピーはアラインサイズごとにする
+            printf("  mov %s[rax+%d], %s\n",
+                   cnvword(QWORD_PTR, type->strct->align), i,
+                   cnvword(RDI, type->strct->align));
         }
         return;
     }
 
-    if (type->ty == BOOL) gen_cmp("rcx", "0", "setne", "rcx");
-    if (dst_size == 1) {
-        printf("  mov [rax], cl\n");
-    } else if (dst_size == 4) {
-        printf("  mov DWORD PTR [rax], ecx\n");
-    } else {
-        printf("  mov [rax], rcx\n");
-    }
+    if (type->ty == BOOL) gen_cmp(RCX, "0", "setne", RCX);
+    printf("  mov %s[rax], %s\n", cnvword(QWORD_PTR, dst_size),
+           cnvword(RCX, dst_size));
 }
 
 void gen_tochar() {
@@ -274,16 +303,16 @@ void gen(Node* node) {
 
     switch (node->kind) {
         case ND_EQUAL:
-            gen_cmp("rax", "rdi", "sete", "rax");
+            gen_cmp(RAX, "rdi", "sete", RAX);
             break;
         case ND_NOT_EQUAL:
-            gen_cmp("rax", "rdi", "setne", "rax");
+            gen_cmp(RAX, "rdi", "setne", RAX);
             break;
         case ND_LESS_THAN:
-            gen_cmp("rax", "rdi", "setl", "rax");
+            gen_cmp(RAX, "rdi", "setl", RAX);
             break;
         case ND_LESS_OR_EQUAL:
-            gen_cmp("rax", "rdi", "setle", "rax");
+            gen_cmp(RAX, "rdi", "setle", RAX);
             break;
         case ND_ADD:
             printf("  add rax, rdi\n");

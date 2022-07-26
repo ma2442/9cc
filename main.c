@@ -4,39 +4,6 @@
 
 #include "9cc.h"
 
-void init_sizes() {
-    sizes[CHAR] = 1;
-    sizes[BOOL] = 1;
-    sizes[INT] = 4;
-    sizes[PTR] = 8;
-    sizes[STRUCT] = -1;
-    sizes[ARRAY] = -1;
-}
-
-void init_words() {
-    type_words[INT] = STR_INT;
-    type_words[CHAR] = STR_CHAR;
-    type_words[BOOL] = STR_BOOL;
-    type_words[STRUCT] = STR_STRUCT;
-    type_words[PTR] = "";
-    type_words[ARRAY] = "";
-}
-
-// 型のサイズを計算する関数
-int size(Type *typ) {
-    if (typ == NULL) return -1;
-    if (typ->ty == ARRAY) return size(typ->ptr_to) * typ->array_size;
-    if (typ->ty == STRUCT) return typ->strct->size;
-    return sizes[typ->ty];
-}
-
-// デリファレンス可能な型を判別(ARRAY, PTR)
-bool can_deref(Type *typ) {
-    if (typ == NULL) return false;
-    if (typ->ptr_to == NULL) return false;
-    return true;
-}
-
 // 指定されたファイルの内容を返す
 char *read_file(char *path) {
     // ファイルを開く

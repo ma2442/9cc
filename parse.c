@@ -6,44 +6,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     node->lhs = lhs;
     node->rhs = rhs;
     // 型情報付与
-    switch (node->kind) {
-        case ND_DEREF:
-            if (can_deref(node->lhs->type)) {
-                node->type = node->lhs->type->ptr_to;
-            }
-            break;
-        case ND_ADDR:
-            if (node->lhs->type) {
-                node->type = calloc(1, sizeof(Type));
-                node->type->ty = PTR;
-                node->type->ptr_to = node->lhs->type;
-            }
-            break;
-        case ND_ADD:
-        case ND_SUB:
-            if (can_deref(node->lhs->type)) {
-                node->type = node->lhs->type;
-            } else if (can_deref(node->rhs->type)) {
-                node->type = node->rhs->type;
-            } else {  // 両オペランド共ポインタでない
-                node->type = node->lhs->type;
-            }
-            break;
-        case ND_MUL:
-        case ND_DIV:
-        case ND_MOD:
-        case ND_ASSIGN:
-            node->type = node->lhs->type;
-            break;
-        case ND_IF_ELSE:
-        case ND_EQUAL:
-        case ND_NOT_EQUAL:
-        case ND_LESS_THAN:
-        case ND_LESS_OR_EQUAL:
-            node->type = calloc(1, sizeof(Type));
-            node->type->ty = BOOL;
-            break;
-    }
+    typing(node);
     return node;
 }
 
@@ -640,22 +603,6 @@ Node *stmt() {
     return node;
 }
 
-// アラインメント(alnの倍数)に揃える
-int align(int x, int aln) {
-    // return (x + aln - 1) & ~(aln - 1);
-    return ((x + aln - 1) / aln) * aln;
-}
-
-// オフセットを計算･設定
-int set_offset(Var *var, int base) {
-    Type *prm = var->type;
-    while (prm->ty == ARRAY) prm = prm->ptr_to;
-    int aln = (prm->ty == STRUCT ? 16 : size(prm));
-    // オフセット境界 例えばintなら4バイト境界に揃える
-    var->offset = align(base, aln);
-    return var->offset;
-}
-
 // 関数定義ノード
 Node *func_after_leftparen(Type *typ, Token *func_name) {
     if (!func_name) {
@@ -729,8 +676,11 @@ void struct_after_leftbrace(Token *tok) {
     }
     expect(";");
     structs->mems = locals;
-    // 構造体サイズを8の倍数に揃える
-    structs->align = 8;
+    // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
+    Type typ;
+    typ.ty = STRUCT;
+    typ.strct = structs;
+    structs->align = calc_align(&typ);
     structs->size = align(ofst, structs->align);
 }
 
