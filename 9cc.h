@@ -160,7 +160,8 @@ Var *locals;
 StrLit *strlits;
 StrLit *strlits_end;
 // 構造体
-Struct *structs;
+Struct *global_structs;
+Struct *local_structs;
 
 // 入力ファイル名
 char *filename;
@@ -179,6 +180,7 @@ extern void error_at(char *loc, char *fmt, ...);
 extern void error(char *fmt, ...);
 extern bool consume(char *op);
 extern Token *consume_ident();
+extern Token *consume_type();
 extern void expect(char *op);
 extern int expect_number();
 extern bool at_eof();
@@ -186,6 +188,8 @@ extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 extern Token *tokenize(char *p);
 extern Node *code[CODE_LEN];
 extern Node *statement[STMT_LEN];
+extern Struct *find_struct(Token *tok, Struct **structs);
+extern Struct *fit_struct(Token *tag, bool islocal);
 extern Node *regex();
 extern Node *primary();
 extern Node *unary();
@@ -196,6 +200,7 @@ extern Node *equality();
 extern Node *assign();
 extern Node *expr();
 extern Node *stmt();
+extern Node *declaration_var(Type *typ, Token *tok, Var **vars);
 extern void program();
 
 extern void gen_lval(Node *node);
@@ -210,3 +215,4 @@ extern int align(int x, int aln);
 extern int calc_align(Type *type);
 extern int set_offset(Var *var, int base);
 extern void typing(Node *node);
+extern Type *base_type(bool islocal);

@@ -128,11 +128,43 @@ int main_t4() {
     return 0;
 }
 
+struct {
+    int val;
+} noname;
+
+struct lst {
+    int val;
+    struct lst *next;
+} globalls;
+
+struct lst func_t5(struct lst ls) {
+    ls.val++;
+    return ls;
+}
+// 無名 struct 定義テスト
+// struct tag スコープテスト
+// 関数引数、返り値の型をstructにするテスト
+int main_t5() {
+    noname.val = 1;
+    if (noname.val != 1) return 1;
+    struct {
+        int local;
+    } noname;
+    noname.local = 2;
+    if (noname.local != 2) return 2;
+    globalls.val = 10;
+    struct lst localls = globalls;
+    localls = func_t5(localls);
+    if (localls.val != 11) return 3;
+    return 0;
+}
+
 int main() {
     if (main_t0()) return 0;
     if (main_t1()) return 1;
     if (main_t2()) return 2;
     if (main_t3()) return 3;
     if (main_t4()) return 4;
+    if (main_t5()) return 5;
     return 255;
 }

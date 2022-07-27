@@ -1,6 +1,5 @@
 program = func*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
-struct = "struct" ident "{" ( declaration ";" )* "}" ";"
 stmt    =
     declaration ("=" assign)? ";"
     | expr ";" 
@@ -10,7 +9,9 @@ stmt    =
     | "while" "(" expr ")" stmt
     | "for" "(" expr? ";" expr? ";" expr? ")" stmt
     | ...
-declaration = ("int" | "char") "*"* ident ("[" num "]")*
+declaration = type ident ("[" num "]")*
+type = ("int" | "char" | stc ) "*"* 
+stc = "struct" ident "{" ( declaration ";" )* "}"
 expr    = assign
 assign  = bool_or ("=" assign)?
 bool_or = bool_and ("||" bool_and)*

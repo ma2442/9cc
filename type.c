@@ -107,3 +107,91 @@ void typing(Node *node) {
             break;
     }
 }
+
+// 型の後方にある **... を読んでポインタ型にして返す
+Type *type_pointer(Type *typ) {
+    while (consume("*")) {
+        Type *ptr = calloc(1, sizeof(Type));
+        ptr->ty = PTR;
+        ptr->ptr_to = typ;
+        typ = ptr;
+    }
+    return typ;
+}
+
+int tag_cnt = 0;
+
+// 構造体定義
+// TODO: tok_tag == NULL のパターンの定義( struct {~}..; )実装
+Type *def_struct(Token *tag, Struct **stcs) {
+    if (!consume("{")) return NULL;
+    if (!tag) {  // タグ自動生成
+        tag = calloc(1, sizeof(Token));
+        tag->str = calloc(32, sizeof(char));
+        sprintf(tag->str, "__struct__tag__%d__", tag_cnt++);
+        tag->len = strlen(tag->str);
+    }
+    if (find_struct(tag, stcs)) error_at(tag->str, "定義済みの構造体です");
+    Struct *stc = calloc(1, sizeof(Struct));
+    stc->name = tag->str;
+    stc->len = tag->len;
+    // メンバに同じ構造体型を持てるように構造体リストに先行登録
+    stc->next = *stcs;
+    *stcs = stc;
+
+    //メンバ初期化
+    Var *mems = calloc(1, sizeof(Var));
+    int ofst = 0;
+    while (!consume("}")) {
+        bool islocal = *stcs == local_structs;
+        Type *typ = base_type(islocal);
+        Token *tok = consume_ident();
+        // メンバ作成（メンバのノードは不要なので放置）
+        declaration_var(typ, tok, &mems);
+        expect(";");
+        int sz = size(mems->type);
+        ofst = set_offset(mems, ofst) + sz;
+    }
+
+    (*stcs)->mems = mems;
+    // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
+    Type *typ = calloc(1, sizeof(Type));
+    typ->ty = STRUCT;
+    typ->strct = *stcs;
+    (*stcs)->align = calc_align(typ);
+    (*stcs)->size = align(ofst, (*stcs)->align);
+    return typ;
+}
+
+Type *type_struct(Struct **stcs) {
+    Token *tag = consume_ident();
+    // struct型を新規定義して返す
+    Type *typ = def_struct(tag, stcs);
+    if (typ) return typ;
+    // 既存struct型を返す
+    if (!tag) error_at(token->str, "構造体タグがありません");
+    typ = calloc(1, sizeof(Type));
+    typ->ty = STRUCT;
+    bool islocal = *stcs == local_structs;
+    typ->strct = fit_struct(tag, islocal);
+    return typ;
+}
+
+// ( int, char,_Bool, struct (tag) ({}) ) **..
+Type *base_type(bool islocal) {
+    Token *tok = consume_type();
+    if (!tok) return NULL;
+    if (tok->kind == TK_STRUCT) {
+        Struct **stcs = islocal ? &local_structs : &global_structs;
+        return type_pointer(type_struct(stcs));
+    }
+
+    Type *typ = calloc(1, sizeof(Type));
+    for (int tk = 0; tk < LEN_TYPE_KIND; tk++) {
+        if (!strncmp(tok->str, type_words[tk], tok->len)) {
+            typ->ty = tk;
+            break;
+        }
+    }
+    return type_pointer(typ);
+}

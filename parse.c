@@ -1,5 +1,5 @@
 #include "9cc.h"
-
+enum { GLOBAL, LOCAL } IsLocal;
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -126,13 +126,22 @@ Func *find_func(Token *tok) {
 }
 
 // 構造体を名前で検索する。 見つからなかった場合はNULLを返す。
-Struct *find_struct(Token *tok) {
-    for (Struct *stc = structs; stc != NULL; stc = stc->next) {
+Struct *find_struct(Token *tok, Struct **structs) {
+    for (Struct *stc = *structs; stc != NULL; stc = stc->next) {
         if (stc->len == tok->len && !memcmp(stc->name, tok->str, tok->len)) {
             return stc;
         }
     }
     return NULL;
+}
+
+// スコープ内で定義済みの構造体を検索。なければエラー
+Struct *fit_struct(Token *tag, bool islocal) {
+    Struct *stc = NULL;
+    if (islocal) stc = find_struct(tag, &local_structs);
+    if (!stc) stc = find_struct(tag, &global_structs);
+    if (!stc) error_at(tag->str, "未定義の構造体です");
+    return stc;
 }
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
@@ -160,24 +169,17 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // 変数定義
-Node *new_node_defvar(Token *tok, Type *typ, Var **vars) {
-    Node *node;
-    if (*vars == locals) {
-        node = new_node(ND_DEFLOCAL, NULL, NULL);
-    } else {
-        node = new_node(ND_DEFGLOBAL, NULL, NULL);
-    }
-    Var *var = find_var(tok, vars);
+Node *new_node_defvar(Type *typ, Token *var_name, Var **vars) {
+    NodeKind kind = (*vars == locals ? ND_DEFLOCAL : ND_DEFGLOBAL);
+    Node *node = new_node(kind, NULL, NULL);
+    Var *var = find_var(var_name, vars);
+    if (var) error_at(var_name->str, "定義済みの変数です。");
 
-    if (var) {
-        // エラー 定義済み
-        error_at(tok->str, "定義済みの変数です。");
-    }
     var = calloc(1, sizeof(Var));
     var->next = *vars;
     (*vars)->prev = var;
-    var->name = tok->str;
-    var->len = tok->len;
+    var->name = var_name->str;
+    var->len = var_name->len;
     var->type = typ;
     node->var = var;
     node->type = var->type;
@@ -473,30 +475,7 @@ Node *assign() {
     return node;
 }
 
-Type *type(Token *tok) {
-    Type *typ = calloc(1, sizeof(Type));
-    for (int tk = 0; tk < LEN_TYPE_KIND; tk++) {
-        if (!strncmp(tok->str, type_words[tk], tok->len)) {
-            typ->ty = tk;
-            break;
-        }
-    }
-    if (typ->ty == STRUCT) {
-        tok = consume_ident();
-        typ->strct = find_struct(tok);
-        // if (!typ->strct) return NULL;
-        if (!typ->strct) error_at(tok->str, "未定義の構造体です");
-    }
-    while (consume("*")) {
-        Type *ptr = calloc(1, sizeof(Type));
-        ptr->ty = PTR;
-        ptr->ptr_to = typ;
-        typ = ptr;
-    }
-    return typ;
-}
-
-Node *declaration_after_ident(Type *typ, Token *tok, Var **vars) {
+Node *declaration_var(Type *typ, Token *tok, Var **vars) {
     Type head;
     Type *last = &head;
     while (consume("[")) {
@@ -507,7 +486,7 @@ Node *declaration_after_ident(Type *typ, Token *tok, Var **vars) {
         expect("]");
     }
     last->ptr_to = typ;
-    return new_node_defvar(tok, head.ptr_to, vars);
+    return new_node_defvar(head.ptr_to, tok, vars);
 }
 
 Node *expr() { return assign(); }
@@ -587,14 +566,16 @@ Node *stmt() {
         jmp_label_cnt++;
         return node;
     }
-    Token *tok = consume_type();
-    if (tok) {
-        Type *typ = type(tok);
-        tok = consume_ident();
-        node = declaration_after_ident(typ, tok, &locals);
-        if (consume("=")) {
-            node->lhs = new_node(ND_ASSIGN, new_node_var(tok), assign());
+    Type *typ = base_type(LOCAL);
+    if (typ) {  // 変数定義
+        Token *idt = consume_ident();
+        if (!idt) {
+            expect(";");
+            return NULL;
         }
+        node = declaration_var(typ, idt, &locals);
+        if (consume("="))
+            node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
         expect(";");
         return node;
     }
@@ -604,14 +585,15 @@ Node *stmt() {
 }
 
 // 関数定義ノード
-Node *func_after_leftparen(Type *typ, Token *func_name) {
-    if (!func_name) {
-        return NULL;  // エラー
-    }
+Node *func(Type *typ, Token *func_name) {
+    if (!consume("(")) return NULL;
+    if (!func_name) return NULL;
     Func *fn = calloc(1, sizeof(Func));
     fn->next = funcs;
     fn->type = typ;
 
+    //ローカルの構造体定義初期化
+    local_structs = calloc(1, sizeof(Struct));
     //ローカル変数初期化
     locals = calloc(1, sizeof(Var));
 
@@ -625,10 +607,9 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
-            Token *tok = consume_type();
-            typ = type(tok);
-            tok = consume_ident();
-            Node *ln = declaration_after_ident(typ, tok, &locals);
+            typ = base_type(LOCAL);
+            Token *tok = consume_ident();
+            Node *ln = declaration_var(typ, tok, &locals);
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -652,38 +633,6 @@ Node *func_after_leftparen(Type *typ, Token *func_name) {
     return node;
 }
 
-// 構造体定義ノード
-void struct_after_leftbrace(Token *tok) {
-    if (find_struct(tok)) error_at(tok->str, "構造体の定義が重複しています");
-    Struct *stc = calloc(1, sizeof(Struct));
-    stc->name = tok->str;
-    stc->len = tok->len;
-    // メンバに同じ構造体型を持てるように構造体リストに先行登録
-    stc->next = structs;
-    structs = stc;
-
-    //メンバ初期化
-    locals = calloc(1, sizeof(Var));
-    int ofst = 0;
-    while (!consume("}")) {
-        Type *typ = type(consume_type());
-        tok = consume_ident();
-        // メンバ作成（メンバのノードは不要なので放置）
-        declaration_after_ident(typ, tok, &locals);
-        expect(";");
-        int sz = size(locals->type);
-        ofst = set_offset(locals, ofst) + sz;
-    }
-    expect(";");
-    structs->mems = locals;
-    // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
-    Type typ;
-    typ.ty = STRUCT;
-    typ.strct = structs;
-    structs->align = calc_align(&typ);
-    structs->size = align(ofst, structs->align);
-}
-
 void program() {
     int i = 0;
     funcs = calloc(1, sizeof(Func));
@@ -691,25 +640,18 @@ void program() {
     strlits_end = strlits;
     globals = calloc(1, sizeof(Var));
     globals_end = globals;
-    structs = calloc(1, sizeof(Struct));
+    global_structs = calloc(1, sizeof(Struct));
     while (!at_eof()) {
-        Token *tok_typ = consume_type();
-        Token *tok_idt = consume_ident();
-        // 構造体定義
-        // TODO: tok_idt == NULL のパターンの定義( struct {~}..; )実装
-        if (tok_typ->kind == TK_STRUCT && tok_idt && consume("{")) {
-            struct_after_leftbrace(tok_idt);
+        Type *typ = base_type(GLOBAL);
+        // 関数定義 または グローバル変数宣言
+        Token *idt = consume_ident();
+        if (!idt) {
+            expect(";");
             continue;
         }
-        // 関数定義 または グローバル変数宣言
-        token = tok_typ->next;
-        Type *typ = type(tok_typ);
-        tok_idt = consume_ident();
-        Node *node;
-        if (consume("(")) {
-            node = func_after_leftparen(typ, tok_idt);
-        } else {
-            node = declaration_after_ident(typ, tok_idt, &globals);
+        Node *node = func(typ, idt);
+        if (!node) {
+            node = declaration_var(typ, idt, &globals);
             expect(";");
         }
         code[i] = node;
