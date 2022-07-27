@@ -1,23 +1,31 @@
 ### To Do
 
-### Essential To Do 使用中かつ代替不可能
-
+- [ ] enum (Tagname) {Valdef(, Valdef2..)}
+      Tagname 及び Val のスコープは変数同様グローバルとローカルがある
+      同一スコープで Val と同じ名前の変数があればエラー（逆も然り）
+  - [ ] enum Tagname {Vardef(, Vardef2..)}
+  - [ ] Tagname がない場合は無名で登録
+- [ ] typedef Type Typename;
+      enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
+- [ ] 文字リテラル 'a' ..
+- [ ] エスケープシーケンス '\0', '\n'..
+- [ ] continue, break
+- [ ] void
+
+### Essential To Do 使用中かつ代替不可能
+
 - [ ] #include <..>, #include ".."
 - [ ] #define
 - [ ] #ifdef, #endif, #ifndef
 
 ### Want To Do 使用中だが代替可能
 
+- [ ] switch(){case : default:}
 - [ ] do{ } while( );
 - [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 - [ ] {} 配列初期化
-- [ ] 文字リテラル 'a' ..
-- [ ] エスケープシーケンス '\0', '\n'..
-- [ ] typedef
-- [ ] continue, break
-- [ ] void
 - [ ] size_t
 - [ ] NULL
 - [ ] 三項演算子 ?:
@@ -43,7 +51,7 @@
 
 - [ ] 関数の返り値の型をコール時に確定させる
 
-  - [ ] 外部関数（やり方不明）
+  - [ ] 外部関数（#include などで extern 宣言を導入）
   - [x] 内部関数
 
 - [ ] find_struct, find_func, find_lvar を線形探索から二分探索に変更
@@ -51,12 +59,15 @@
 
 ### Completed
 
+- [x] struct (Tagname) {..}
+      Tagname のスコープは変数同様グローバルとローカルがある
+  - [x] struct Tagname {..}
+  - [x] Tagname がない場合は自動割当
 - [x] struct のアラインメントを可変にする（現在は 8 バイト固定、コピーも QWORD ごと）
       メンバのアラインメントの最大値に合わせる。
       8 バイトの例: long long がメンバにる。
       4 バイトの例: アラインメントが 4 の struct がメンバにいて、それが最大。
       1 バイトの例: \_Bool や char、及びそれらからなる struct や array のみがメンバ。
-- [x] struct
 - [x] 構造体メンバアクセス演算子 .
 - [x] アロー演算子 ->
 - [x] 否定 !
