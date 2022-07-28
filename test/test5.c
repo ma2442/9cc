@@ -125,6 +125,9 @@ int main_t4() {
         if (szts[i].stc.c2 != 20 + i) return 4;
         if (szts[i].a[10] != 30 + i) return 5;
     }
+    struct sizeint szin;
+    szin.c = 49;
+    if (szin.c != 49) return 6;
     return 0;
 }
 
@@ -151,11 +154,44 @@ int main_t5() {
         int local;
     } noname;
     noname.local = 2;
+    struct {
+        int local;
+    };
     if (noname.local != 2) return 2;
     globalls.val = 10;
     struct lst localls = globalls;
     localls = func_t5(localls);
     if (localls.val != 11) return 3;
+    return 0;
+}
+
+enum { A, B, C };
+enum { D = 3 };
+// 列挙体 タグ無し 定義、スコープ テスト
+int main_t6() {
+    if (A != 0) return 1;
+    if (B != 1) return 2;
+    if (C != 2) return 3;
+    if (D != 3) return 4;
+    enum { A = 10, B = B + A, C, D = C * 10 % 100 };
+    if (A != 10) return 4;
+    if (B != 11) return 5;
+    if (D != 20) return 6;
+    return 0;
+}
+
+enum enm1 { E, F, G } enm1;
+// 列挙体 タグあり 定義、スコープ 変数定義 テスト
+int main_t7() {
+    enm1 = E;
+    if (enm1 != E) return 1;
+    enm1 = 1000;
+    if (enm1 != 1000) return 2;
+    enm1 = G * (4 + ((F + 2) == 3));
+    if (enm1 != 10) return 3;
+    enum enm1 { E = 10, F, G } enm1 = E;
+    if (enm1 != E) return 4;
+    if (enm1 != 10) return 5;
     return 0;
 }
 
@@ -166,5 +202,7 @@ int main() {
     if (main_t3()) return 3;
     if (main_t4()) return 4;
     if (main_t5()) return 5;
+    if (main_t6()) return 6;
+    if (main_t7()) return 7;
     return 255;
 }

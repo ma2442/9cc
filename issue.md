@@ -1,10 +1,5 @@
 ### To Do
 
-- [ ] enum (Tagname) {Valdef(, Valdef2..)}
-      Tagname 及び Val のスコープは変数同様グローバルとローカルがある
-      同一スコープで Val と同じ名前の変数があればエラー（逆も然り）
-  - [ ] enum Tagname {Vardef(, Vardef2..)}
-  - [ ] Tagname がない場合は無名で登録
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
@@ -27,7 +22,6 @@
 - [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 - [ ] {} 配列初期化
 - [ ] size_t
-- [ ] NULL
 - [ ] 三項演算子 ?:
 - [ ] スタティックキャスト (int) x
 
@@ -43,7 +37,9 @@
 
 ### Issue
 
+- [ ] 変数,enum,struct スコープをブロックごとに変更
 - [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
+- [ ] 文字列リテラルの配置を.rodata に変更して不変値にする
 - [ ] 関数の引数の型をコール時に確定させる
 
   - 新 node が ND_FUNC_CALL_ARGS のとき、
@@ -59,6 +55,10 @@
 
 ### Completed
 
+- [x] enum (Tagname) {Valdef(, Valdef2..)}
+      Tagname 及び Val のスコープは変数同様グローバルとローカルがある
+      同一スコープで Val と同じ名前の変数があればエラー（逆も然り）
+- [x] NULL (<- stddef.h で #define されているので不要)
 - [x] struct (Tagname) {..}
       Tagname のスコープは変数同様グローバルとローカルがある
   - [x] struct Tagname {..}

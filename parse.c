@@ -101,48 +101,11 @@ Token *consume_str() { return consume_if_kind_is(TK_STR); }
 Token *consume_type() {
     Token *tok = consume_if_kind_is(TK_STRUCT);
     if (tok) return tok;
-    return consume_if_kind_is(TK_TYPE);
+    tok = consume_if_kind_is(TK_TYPE);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_ENUM);
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
-
-// 変数を名前で検索する。 見つからなかった場合はNULLを返す。
-Var *find_var(Token *tok, Var **vars) {
-    for (Var *var = *vars; var != NULL; var = var->next) {
-        if (var->len == tok->len && !memcmp(var->name, tok->str, tok->len)) {
-            return var;
-        }
-    }
-    return NULL;
-}
-
-// 関数を名前で検索する。 見つからなかった場合はNULLを返す。
-Func *find_func(Token *tok) {
-    for (Func *fn = funcs; fn != NULL; fn = fn->next) {
-        if (fn->len == tok->len && !memcmp(fn->name, tok->str, tok->len)) {
-            return fn;
-        }
-    }
-    return NULL;
-}
-
-// 構造体を名前で検索する。 見つからなかった場合はNULLを返す。
-Struct *find_struct(Token *tok, Struct **structs) {
-    for (Struct *stc = *structs; stc != NULL; stc = stc->next) {
-        if (stc->len == tok->len && !memcmp(stc->name, tok->str, tok->len)) {
-            return stc;
-        }
-    }
-    return NULL;
-}
-
-// スコープ内で定義済みの構造体を検索。なければエラー
-Struct *fit_struct(Token *tag, bool islocal) {
-    Struct *stc = NULL;
-    if (islocal) stc = find_struct(tag, &local_structs);
-    if (!stc) stc = find_struct(tag, &global_structs);
-    if (!stc) error_at(tag->str, "未定義の構造体です");
-    return stc;
-}
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
@@ -355,7 +318,10 @@ Node *primary() {
     if (!tok) return new_node_num(expect_number());
     // 関数名として識別
     if (consume("(")) return func_call(tok);
-    //関数でなければ変数
+    // 列挙体定数として識別
+    Symbol *sym = fit_symbol(tok, locals ? true : false);
+    if (sym->enumconst) return new_node_num(sym->enumconst->val);
+    //関数でも定数でもなければ変数
     return new_node_var(tok);
 }
 
@@ -571,7 +537,7 @@ Node *stmt() {
         Token *idt = consume_ident();
         if (!idt) {
             expect(";");
-            return NULL;
+            return new_node(ND_NO_EVAL, NULL, NULL);
         }
         node = declaration_var(typ, idt, &locals);
         if (consume("="))
@@ -630,6 +596,10 @@ Node *func(Type *typ, Token *func_name) {
     }
     // スタックサイズを8の倍数に揃える
     fn->stack_size = align(ofst, 8);
+
+    locals = NULL;
+    local_structs = NULL;
+    local_enums = NULL;
     return node;
 }
 

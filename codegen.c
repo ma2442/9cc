@@ -7,33 +7,35 @@ enum AsmWord { RAX, RDI, RCX, QWORD_PTR, MOVS, MOVZ };
 char* cnvword(AsmWord word, int byte) {
     switch (word) {
         case QWORD_PTR:
-            if (byte == 8) return "";
             if (byte == 4) return "dword ptr";
             if (byte == 2) return "word ptr";
             if (byte == 1) return "byte ptr";
+            return "";
         case RAX:
-            if (byte == 8) return "rax";
             if (byte == 4) return "eax";
             if (byte == 2) return "ax";
             if (byte == 1) return "al";
+            return "rax";
         case RDI:
-            if (byte == 8) return "rdi";
             if (byte == 4) return "edi";
             if (byte == 2) return "di";
             if (byte == 1) return "dil";
+            return "rdi";
         case RCX:
-            if (byte == 8) return "rcx";
             if (byte == 4) return "ecx";
             if (byte == 2) return "cx";
             if (byte == 1) return "cl";
+            return "rcx";
         case MOVS:  // 符号拡張 (byteはソースサイズ)
-            if (byte == 8) return "mov";     // mov    8 byte, 8 byte
             if (byte == 4) return "movsxd";  // movsxd 8 byte, 4 byte
-            return "movsx";                  // movsx  8 byte, 2/1 byte
+            if (byte == 2) return "movsx";   // movsx  8 byte, 2 byte
+            if (byte == 1) return "movsx";   // movsx  8 byte, 1 byte
+            return "mov";                    // mov    8 byte, 8 byte
         case MOVZ:  // ゼロ拡張 (byteはソースサイズ)
-            if (byte == 8) return "mov";  // mov   8 byte, 8 byte
-            if (byte == 4) return "mov";  // mov   8 byte, 4 byte (movzxも可)
-            return "movzx";               // movzx 8 byte, 2/1 byte
+            if (byte == 4) return "mov";    // mov 8 byte, 4 byte (movzxも可)
+            if (byte == 2) return "movzx";  // movzx 8 byte, 2 byte
+            if (byte == 1) return "movzx";  // movzx 8 byte, 1 byte
+            return "mov";                   // mov 8 byte, 8 byte
     }
 }
 
@@ -125,7 +127,7 @@ void swap_top() {
 }
 
 void gen(Node* node) {
-    if (!node) return;
+    if (!node || node->kind == ND_NO_EVAL) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
     switch (node->kind) {

@@ -1,4 +1,4 @@
-program = func*
+program = ( (func | strc | enm) ";" )*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
 stmt    =
     declaration ("=" assign)? ";"
@@ -9,9 +9,10 @@ stmt    =
     | "while" "(" expr ")" stmt
     | "for" "(" expr? ";" expr? ";" expr? ")" stmt
     | ...
-declaration = type ident ("[" num "]")*
-type = ("int" | "char" | stc ) "*"* 
-stc = "struct" ident "{" ( declaration ";" )* "}"
+declaration = type symbol ("[" num "]")*
+type = ("int" | "char" | stc | enm ) "*"* 
+stc = "struct" (tag)? "{" ( declaration ";" )* "}"
+enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
 expr    = assign
 assign  = bool_or ("=" assign)?
 bool_or = bool_and ("||" bool_and)*
@@ -21,13 +22,15 @@ relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"-") mul)*
 mul = unary (("*"|"/"|"%") unary)*
 unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
-regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->") ident) )*
+regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->") symbol) )*
 primary = strlit
     | "(" expr ")"
-    | ident "(" ( expr (","expr)* )? ")" // func call
-    | ident
+    | symbol "(" ( expr (","expr)* )? ")" // func call
+    | symbol
     | num 
 strlit = '"' [^"]* '"'  // 文字列リテラル
+tag = ident
+symbol = ident
 ident = ("_" | ALPHA | alpha) ("_" | ALPHA | alpha | ten)*
 
 ALPHA = "A" | "B" | ... | "Z"

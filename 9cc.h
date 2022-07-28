@@ -15,6 +15,7 @@
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
 #define STR_STRUCT "struct"
+#define STR_ENUM "enum"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -22,7 +23,11 @@ typedef struct Type Type;
 typedef struct Func Func;
 typedef struct Struct Struct;
 typedef struct StrLit StrLit;
+typedef struct Enum Enum;
+typedef struct EnumConst EnumConst;
 typedef struct Var Var;
+typedef struct Symbol Symbol;
+typedef struct Tag Tag;
 
 // トークンの種類
 typedef enum {
@@ -35,7 +40,8 @@ typedef enum {
     TK_RETURN,    // return
     TK_CTRL,      // if, else, while, for等 制御構文を表すトークン
     TK_STR,       // 文字列リテラルを表すトークン
-    TK_STRUCT
+    TK_STRUCT,
+    TK_ENUM
 } TokenKind;
 
 // トークン型
@@ -76,16 +82,28 @@ typedef enum {
     ND_DEFGLOBAL,        // global variable definition
     ND_GVAR,             // global variable, or x++, x--
     ND_DUMMY,            // x++,--x,複合代入等により省略された項
-    ND_MEMBER            // 構造体メンバへのアクセス
+    ND_MEMBER,           // 構造体メンバへのアクセス
+    ND_NO_EVAL           // 評価不要なノード
 } NodeKind;
 
-typedef enum { CHAR, INT, BOOL, STRUCT, PTR, ARRAY, LEN_TYPE_KIND } TypeKind;
+typedef enum {
+    CHAR,
+    INT,
+    BOOL,
+    STRUCT,
+    ENUM,
+    PTR,
+    ARRAY,
+    LEN_TYPE_KIND
+} TypeKind;
+
 // 型
 struct Type {
     TypeKind ty;
     Type *ptr_to;
     size_t array_size;
     Struct *strct;
+    Enum *enm;
 };
 
 // ローカル変数
@@ -126,6 +144,29 @@ struct Struct {
     int align;
 };
 
+struct Enum {
+    Enum *next;
+    char *name;
+    int len;
+    EnumConst *consts;
+};
+
+// 列挙体で定義された定数
+struct EnumConst {
+    EnumConst *next;  // 次の変数かNULL
+    char *name;       // 変数の名前
+    int len;          // 名前の長さ
+    int val;
+    Enum *enm;  // 属している列挙体
+};
+
+// シンボル
+struct Symbol {
+    Func *func;
+    Var *var;
+    EnumConst *enumconst;
+};
+
 // 抽象構文木のノード
 struct Node {
     NodeKind kind;   // ノードの種類
@@ -162,6 +203,9 @@ StrLit *strlits_end;
 // 構造体
 Struct *global_structs;
 Struct *local_structs;
+// 列挙体
+Enum *global_enums;
+Enum *local_enums;
 
 // 入力ファイル名
 char *filename;
@@ -188,8 +232,6 @@ extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 extern Token *tokenize(char *p);
 extern Node *code[CODE_LEN];
 extern Node *statement[STMT_LEN];
-extern Struct *find_struct(Token *tok, Struct **structs);
-extern Struct *fit_struct(Token *tag, bool islocal);
 extern Node *regex();
 extern Node *primary();
 extern Node *unary();
@@ -197,6 +239,7 @@ extern Node *mul();
 extern Node *add();
 extern Node *relational();
 extern Node *equality();
+extern Node *bool_or();
 extern Node *assign();
 extern Node *expr();
 extern Node *stmt();
@@ -216,3 +259,17 @@ extern int calc_align(Type *type);
 extern int set_offset(Var *var, int base);
 extern void typing(Node *node);
 extern Type *base_type(bool islocal);
+
+// find.c
+extern Var *find_var(Token *tok, Var **vars);
+extern Var *fit_var(Token *tok, bool islocal);
+extern Func *find_func(Token *tok);
+extern Struct *find_struct(Token *tok, Struct **structs);
+extern Struct *fit_struct(Token *tag, bool islocal);
+extern Enum *find_enum(Token *tok, Enum *enums);
+extern Enum *fit_enum(Token *tag, bool islocal);
+extern EnumConst *find_enumconst(Token *tok, Enum *enm);
+extern EnumConst *fit_enumconst(Token *tag, bool islocal);
+extern Symbol *fit_symbol(Token *tok, bool islocal);
+extern bool can_def_symbol(Token *sym, bool islocal);
+extern bool can_def_tag(Token *sym, bool islocal);

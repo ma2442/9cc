@@ -108,7 +108,8 @@ Token *tokenize(char *p) {
                                 {TK_CTRL, "while"},    {TK_CTRL, "for"},
                                 {TK_RETURN, "return"}, {TK_SIZEOF, "sizeof"},
                                 {TK_TYPE, STR_INT},    {TK_TYPE, STR_CHAR},
-                                {TK_TYPE, STR_BOOL},   {TK_STRUCT, STR_STRUCT}};
+                                {TK_TYPE, STR_BOOL},   {TK_STRUCT, STR_STRUCT},
+                                {TK_ENUM, STR_ENUM}};
         for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
             if (ident_len == strlen(kdwds[i].word) &&
                 !strncmp(p, kdwds[i].word, ident_len)) {
