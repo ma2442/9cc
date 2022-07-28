@@ -195,6 +195,43 @@ int main_t7() {
     return 0;
 }
 
+// for初期化式スコープ、ブロックスコープ テスト
+// (struct, enum, int について)
+int main_t8() {
+    int i = -1;
+    int j = -10;
+    struct lst {
+        int val;
+        struct lst *next;
+    } globalls;
+    enum enm1 { E, F, G } enm1;
+    globalls.val = 5;
+    enm1 = 6;
+
+    for (int i = 0; i < 10; i++) {
+        if (j != -10) return 1;
+        int j = i;
+        if (i != j) return 2;
+        int i = 20;
+        if (i != 20) return 3;
+        if (globalls.val != 5) return 4;
+        if (enm1 != 6) return 5;
+        struct lst {
+            int val;
+            struct lst *next;
+        } globalls;
+        enum enm1 { E, F, G } enm1;
+        globalls.val = 7;
+        enm1 = 8;
+        if (globalls.val != 7) return 6;
+        if (enm1 != 8) return 7;
+    }
+    if (i != -1) return 8;
+    if (globalls.val != 5) return 9;
+    if (enm1 != 6) return 10;
+    return 0;
+}
+
 int main() {
     if (main_t0()) return 0;
     if (main_t1()) return 1;
@@ -204,5 +241,6 @@ int main() {
     if (main_t5()) return 5;
     if (main_t6()) return 6;
     if (main_t7()) return 7;
+    if (main_t8()) return 8;
     return 255;
 }

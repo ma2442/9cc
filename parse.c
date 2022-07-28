@@ -499,6 +499,19 @@ Node *block() {
     return node;
 }
 
+// decla_and_assign = declaration ("=" assign)?
+Node *decla_and_assign() {
+    Type *typ = base_type();
+    if (!typ) return expr();
+    // 変数定義
+    Token *idt = consume_ident();
+    if (!idt) return new_node(ND_NO_EVAL, NULL, NULL);
+    Node *node = declaration_var(typ, idt);
+    if (consume("="))
+        node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
+    return node;
+}
+
 Node *stmt() {
     scope_in();
     Node *node = block();
@@ -536,12 +549,11 @@ Node *stmt() {
         return node;
     }
     if (consume("for")) {
+        scope_in();
         expect("(");
         Node *init = NULL;
         if (!consume(";")) {
-            scope_in();
-            init = expr();
-            scope_out();
+            init = decla_and_assign();
             expect(";");
         }
         Node *judge = NULL;
@@ -560,22 +572,10 @@ Node *stmt() {
         node->inc = inc;
         node->label_num = jmp_label_cnt;
         jmp_label_cnt++;
+        scope_out();
         return node;
     }
-    Type *typ = base_type();
-    if (typ) {  // 変数定義
-        Token *idt = consume_ident();
-        if (!idt) {
-            expect(";");
-            return new_node(ND_NO_EVAL, NULL, NULL);
-        }
-        node = declaration_var(typ, idt);
-        if (consume("="))
-            node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
-        expect(";");
-        return node;
-    }
-    node = expr();
+    node = decla_and_assign();
     expect(";");
     return node;
 }

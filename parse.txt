@@ -1,14 +1,15 @@
 program = ( (func | strc | enm) ";" )*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
 stmt    =
-    declaration ("=" assign)? ";"
+    | decla_and_assign  ";"
     | expr ";" 
     | "{" stmt* "}"
     | "return" expr ";" 
     | "if" "(" expr ")" stmt ("else" stmt )? 
     | "while" "(" expr ")" stmt
-    | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+    | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" stmt
     | ...
+decla_and_assign = declaration ("=" assign)?
 declaration = type symbol ("[" num "]")*
 type = ("int" | "char" | stc | enm ) "*"* 
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
