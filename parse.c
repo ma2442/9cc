@@ -132,45 +132,71 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // 変数定義
-Node *new_node_defvar(Type *typ, Token *var_name, Var **vars) {
-    NodeKind kind = (*vars == locals ? ND_DEFLOCAL : ND_DEFGLOBAL);
+Node *new_node_defvar(Type *typ, Token *var_name) {
+    if (find_var(var_name)) error_at(var_name->str, "定義済みの変数です。");
+    NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
-    Var *var = find_var(var_name, *vars);
-    if (var) error_at(var_name->str, "定義済みの変数です。");
-
-    var = calloc(1, sizeof(Var));
-    var->next = *vars;
-    (*vars)->prev = var;
+    Var *var = calloc(1, sizeof(Var));
+    var->next = def[nest]->vars;
     var->name = var_name->str;
     var->len = var_name->len;
+    var->islocal = nest;
     var->type = typ;
     node->var = var;
     node->type = var->type;
-    *vars = var;
+    if (def[nest]->vars) def[nest]->vars->prev = var;
+    def[nest]->vars = var;
     return node;
 }
 
 // 変数名として識別
 Node *new_node_var(Token *tok) {
-    // ローカル変数チェック
-    Var *var = find_var(tok, locals);
-    NodeKind kind = (var ? ND_LVAR : ND_GVAR);
-    // グローバル変数チェック
-    if (!var) var = find_var(tok, globals);
-    if (!var) {
-        error_at(tok->str, "未定義の変数です。");
-        return NULL;
-    }
+    Var *var = fit_var(tok);
+    NodeKind kind = (var->islocal ? ND_LVAR : ND_GVAR);
     Node *node = new_node(kind, NULL, NULL);
     node->var = var;
     node->type = var->type;
     return node;
 }
 
+// スコープに入る
+void scope_in() {
+    nest++;
+    def[nest] = calloc(1, sizeof(Def));
+    def[nest]->funcs = calloc(1, sizeof(Func));
+    def[nest]->vars = calloc(1, sizeof(Var));
+    def[nest]->vars_last = def[nest]->vars;
+    def[nest]->structs = calloc(1, sizeof(Struct));
+}
+
+// スコープから出る
+void scope_out() {
+    if (nest > 0 && def[nest]->vars_last) {
+        // 関数内ネストの変数はローカル変数に載せて行く
+        def[nest]->vars_last->next = fn->vars;
+        fn->vars = def[nest]->vars;
+    }
+    free(def[nest]);
+    def[nest] = NULL;
+    nest--;
+}
+
+// 構造体メンバのスコープに入る
+void member_in() { scope_in(); }
+
+// 構造体メンバのスコープから出る
+void member_out() {
+    free(def[nest]);
+    def[nest] = NULL;
+    nest--;
+}
+
 // メンバ変数として識別
 Node *new_node_mem(Node *nd_stc, Token *tok) {
-    // ローカル変数チェック
-    Var *var = find_var(tok, nd_stc->type->strct->mems);
+    member_in();
+    def[nest]->vars = nd_stc->type->strct->mems;
+    Var *var = find_var(tok);
+    member_out();
     if (!var) {
         error_at(tok->str, "未定義のメンバです。");
         return NULL;
@@ -225,7 +251,7 @@ Node *str_literal() {
 // 関数コールノード 引数は関数名
 Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
-    Func *fn = find_func(tok);
+    Func *fn = fit_func(tok);
     if (fn) {
         node->func = fn;
         node->type = fn->type;
@@ -319,7 +345,7 @@ Node *primary() {
     // 関数名として識別
     if (consume("(")) return func_call(tok);
     // 列挙体定数として識別
-    Symbol *sym = fit_symbol(tok, locals ? true : false);
+    Symbol *sym = fit_symbol(tok);
     if (sym->enumconst) return new_node_num(sym->enumconst->val);
     //関数でも定数でもなければ変数
     return new_node_var(tok);
@@ -441,7 +467,7 @@ Node *assign() {
     return node;
 }
 
-Node *declaration_var(Type *typ, Token *tok, Var **vars) {
+Node *declaration_var(Type *typ, Token *tok) {
     Type head;
     Type *last = &head;
     while (consume("[")) {
@@ -452,7 +478,7 @@ Node *declaration_var(Type *typ, Token *tok, Var **vars) {
         expect("]");
     }
     last->ptr_to = typ;
-    return new_node_defvar(head.ptr_to, tok, vars);
+    return new_node_defvar(head.ptr_to, tok);
 }
 
 Node *expr() { return assign(); }
@@ -474,7 +500,9 @@ Node *block() {
 }
 
 Node *stmt() {
+    scope_in();
     Node *node = block();
+    scope_out();
     if (node) {
         // block {} の場合
         return node;
@@ -511,7 +539,9 @@ Node *stmt() {
         expect("(");
         Node *init = NULL;
         if (!consume(";")) {
+            scope_in();
             init = expr();
+            scope_out();
             expect(";");
         }
         Node *judge = NULL;
@@ -532,14 +562,14 @@ Node *stmt() {
         jmp_label_cnt++;
         return node;
     }
-    Type *typ = base_type(LOCAL);
+    Type *typ = base_type();
     if (typ) {  // 変数定義
         Token *idt = consume_ident();
         if (!idt) {
             expect(";");
             return new_node(ND_NO_EVAL, NULL, NULL);
         }
-        node = declaration_var(typ, idt, &locals);
+        node = declaration_var(typ, idt);
         if (consume("="))
             node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
         expect(";");
@@ -554,14 +584,12 @@ Node *stmt() {
 Node *func(Type *typ, Token *func_name) {
     if (!consume("(")) return NULL;
     if (!func_name) return NULL;
-    Func *fn = calloc(1, sizeof(Func));
-    fn->next = funcs;
+    fn = calloc(1, sizeof(Func));
+    fn->next = def[nest]->funcs;
     fn->type = typ;
 
-    //ローカルの構造体定義初期化
-    local_structs = calloc(1, sizeof(Struct));
-    //ローカル変数初期化
-    locals = calloc(1, sizeof(Var));
+    // スコープ内変数等初期化
+    scope_in();
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
     fn->name = func_name->str;
@@ -573,9 +601,9 @@ Node *func(Type *typ, Token *func_name) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
-            typ = base_type(LOCAL);
+            typ = base_type();
             Token *tok = consume_ident();
-            Node *ln = declaration_var(typ, tok, &locals);
+            Node *ln = declaration_var(typ, tok);
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -584,35 +612,33 @@ Node *func(Type *typ, Token *func_name) {
         expect(")");
     }
     // 関数情報（仮引数含む）更新
-    fn->args = locals;
-    funcs = fn;
+    fn->args = def[nest]->vars;
     // 関数本文 "{" stmt* "}"
     node->rhs = block();
+    scope_out();
+    def[nest]->funcs = fn;
     // ローカル変数のオフセットを計算
     int ofst = 0;
-    for (Var *lcl = locals; lcl->next != NULL; lcl = lcl->next) {
+    for (Var *lcl = fn->vars; lcl != NULL; lcl = lcl->next) {
+        if (!lcl->type) continue;
         int sz = size(lcl->type);
         ofst = set_offset(lcl, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
     fn->stack_size = align(ofst, 8);
 
-    locals = NULL;
-    local_structs = NULL;
-    local_enums = NULL;
     return node;
 }
 
 void program() {
     int i = 0;
-    funcs = calloc(1, sizeof(Func));
+    nest = -1;
+    scope_in();
+    globals_end = def[nest]->vars;
     strlits = calloc(1, sizeof(StrLit));
     strlits_end = strlits;
-    globals = calloc(1, sizeof(Var));
-    globals_end = globals;
-    global_structs = calloc(1, sizeof(Struct));
     while (!at_eof()) {
-        Type *typ = base_type(GLOBAL);
+        Type *typ = base_type();
         // 関数定義 または グローバル変数宣言
         Token *idt = consume_ident();
         if (!idt) {
@@ -621,7 +647,7 @@ void program() {
         }
         Node *node = func(typ, idt);
         if (!node) {
-            node = declaration_var(typ, idt, &globals);
+            node = declaration_var(typ, idt);
             expect(";");
         }
         code[i] = node;

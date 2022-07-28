@@ -124,44 +124,46 @@ Type *type_pointer(Type *typ) {
 int tag_cnt = 0;
 
 // 構造体か列挙体のtagを生成･チェック
-Token *make_tag(Token *tag, bool islocal) {
+Token *make_tag(Token *tag) {
     if (!tag) {  // タグ自動生成
         tag = calloc(1, sizeof(Token));
         tag->str = calloc(32, sizeof(char));
         sprintf(tag->str, "__autogen__tag__%d__", tag_cnt++);
         tag->len = strlen(tag->str);
     }
-    if (!can_def_tag(tag, islocal)) return NULL;
+    if (!can_def_tag(tag)) return NULL;
     return tag;
 }
 
 // 構造体定義
-Type *def_struct(Token *tag, Struct **stcs) {
+Type *def_struct(Token *tag) {
     if (!consume("{")) return NULL;
-    bool islocal = *stcs == local_structs;
-    tag = make_tag(tag, islocal);
+    tag = make_tag(tag);
     if (!tag) return NULL;
     Struct *stc = calloc(1, sizeof(Struct));
     stc->name = tag->str;
     stc->len = tag->len;
     // メンバに同じ構造体型を持てるように構造体リストに先行登録
+    Struct **stcs = &def[nest]->structs;
     stc->next = *stcs;
     *stcs = stc;
 
     //メンバ初期化
-    Var *mems = calloc(1, sizeof(Var));
+    member_in();
+
     int ofst = 0;
     while (!consume("}")) {
-        Type *typ = base_type(islocal);
+        Type *typ = base_type();
         Token *tok = consume_ident();
         // メンバ作成（メンバのノードは不要なので放置）
-        declaration_var(typ, tok, &mems);
+        declaration_var(typ, tok);
         expect(";");
-        int sz = size(mems->type);
-        ofst = set_offset(mems, ofst) + sz;
+        int sz = size(def[nest]->vars->type);
+        ofst = set_offset(def[nest]->vars, ofst) + sz;
     }
 
-    (*stcs)->mems = mems;
+    (*stcs)->mems = def[nest]->vars;
+    member_out();
     // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
     Type *typ = calloc(1, sizeof(Type));
     typ->ty = STRUCT;
@@ -171,17 +173,16 @@ Type *def_struct(Token *tag, Struct **stcs) {
     return typ;
 }
 
-Type *type_struct(Struct **stcs) {
+Type *type_struct() {
     Token *tag = consume_ident();
     // struct型を新規定義して返す
-    Type *typ = def_struct(tag, stcs);
+    Type *typ = def_struct(tag);
     if (typ) return typ;
     // 既存struct型を返す
     if (!tag) error_at(token->str, "構造体タグがありません");
     typ = calloc(1, sizeof(Type));
     typ->ty = STRUCT;
-    bool islocal = *stcs == local_structs;
-    typ->strct = fit_struct(tag, islocal);
+    typ->strct = fit_struct(tag);
     return typ;
 }
 
@@ -215,15 +216,15 @@ int val(Node *node) {
 }
 
 // 列挙体定義
-Type *def_enum(Token *tag, Enum **enums) {
+Type *def_enum(Token *tag) {
     if (!consume("{")) return NULL;
-    bool islocal = *enums == local_enums;
-    tag = make_tag(tag, islocal);
+    tag = make_tag(tag);
     if (!tag) return NULL;
     Enum *enm = calloc(1, sizeof(Enum));
     enm->name = tag->str;
     enm->len = tag->len;
     // 定義中列挙体内の定数シンボルも検索が可能なように先行登録
+    Enum **enums = &def[nest]->enums;
     enm->next = *enums;
     *enums = enm;
 
@@ -234,7 +235,7 @@ Type *def_enum(Token *tag, Enum **enums) {
         EnumConst *cst = calloc(1, sizeof(EnumConst));
         cst->enm = (*enums);
         Token *tok = consume_ident();
-        if (!can_def_symbol(tok, islocal)) return NULL;
+        if (!can_def_symbol(tok)) return NULL;
         cst->name = tok->str;
         cst->len = tok->len;
         if (consume("=")) {
@@ -254,31 +255,28 @@ Type *def_enum(Token *tag, Enum **enums) {
     return typ;
 }
 
-Type *type_enum(Enum **enums) {
+Type *type_enum() {
     Token *tag = consume_ident();
     // enum型を新規定義して返す
-    Type *typ = def_enum(tag, enums);
+    Type *typ = def_enum(tag);
     if (typ) return typ;
     // 既存enum型を返す
     if (!tag) error_at(token->str, "列挙体タグがありません");
     typ = calloc(1, sizeof(Type));
     typ->ty = ENUM;
-    bool islocal = *enums == local_enums;
-    typ->enm = fit_enum(tag, islocal);
+    typ->enm = fit_enum(tag);
     return typ;
 }
 
 // ( int, char,_Bool, struct (tag) ({}) ) **..
-Type *base_type(bool islocal) {
+Type *base_type() {
     Token *tok = consume_type();
     if (!tok) return NULL;
     if (tok->kind == TK_STRUCT) {
-        Struct **stcs = islocal ? &local_structs : &global_structs;
-        return type_pointer(type_struct(stcs));
+        return type_pointer(type_struct());
     }
     if (tok->kind == TK_ENUM) {
-        Enum **enums = islocal ? &local_enums : &global_enums;
-        return type_pointer(type_enum(enums));
+        return type_pointer(type_enum());
     }
 
     Type *typ = calloc(1, sizeof(Type));

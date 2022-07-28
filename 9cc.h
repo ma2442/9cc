@@ -27,7 +27,7 @@ typedef struct Enum Enum;
 typedef struct EnumConst EnumConst;
 typedef struct Var Var;
 typedef struct Symbol Symbol;
-typedef struct Tag Tag;
+typedef struct Def Def;
 
 // トークンの種類
 typedef enum {
@@ -109,11 +109,12 @@ struct Type {
 // ローカル変数
 struct Var {
     Var *prev;
-    Var *next;   // 次の変数かNULL
-    char *name;  // 変数の名前
-    int len;     // 名前の長さ
-    int offset;  // RBPからのオフセット
-    Type *type;  // 型
+    Var *next;     // 次の変数かNULL
+    char *name;    // 変数の名前
+    int len;       // 名前の長さ
+    int offset;    // RBPからのオフセット
+    Type *type;    // 型
+    bool islocal;  // ローカル変数かどうか
 };
 
 // 関数名と引数情報
@@ -122,6 +123,7 @@ struct Func {
     char *name;
     int len;         // 名前の長さ
     Var *args;       // 引数情報
+    Var *vars;       // 変数情報(引数含む)
     int stack_size;  // 変数分の確保領域
     Type *type;
 };
@@ -167,6 +169,15 @@ struct Symbol {
     EnumConst *enumconst;
 };
 
+// 定義をまとめたもの(関数 変数, enum, struct)
+struct Def {
+    Func *funcs;
+    Var *vars;
+    Var *vars_last;  // ブロック内で最初に定義された変数
+    Enum *enums;
+    Struct *structs;
+};
+
 // 抽象構文木のノード
 struct Node {
     NodeKind kind;   // ノードの種類
@@ -190,22 +201,22 @@ struct Node {
 size_t sizes[LEN_TYPE_KIND];
 char *type_words[LEN_TYPE_KIND];
 
-// 関数
-Func *funcs;
+// 現在定義中の関数
+Func *fn;
 // グローバル変数
-Var *globals;
 Var *globals_end;
-// ローカル変数
-Var *locals;
 // 文字列リテラル
 StrLit *strlits;
 StrLit *strlits_end;
-// 構造体
-Struct *global_structs;
-Struct *local_structs;
-// 列挙体
-Enum *global_enums;
-Enum *local_enums;
+
+// def[0]: グローバル 関数, 変数, struct定義, enum定義
+// def[1]: 関数直下の ローカル 変数（引数含む）, struct定義, enum定義
+// (関数:NULL)。 以降スコープがネストするたびに添え字が一つ増える。
+// また、structメンバの定義･アクセスにも一時的に使用される。
+Def *def[100];
+
+// 現在のネストの深さ(0:global)
+int nest;
 
 // 入力ファイル名
 char *filename;
@@ -232,6 +243,10 @@ extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 extern Token *tokenize(char *p);
 extern Node *code[CODE_LEN];
 extern Node *statement[STMT_LEN];
+extern void scope_in();
+extern void scope_out();
+extern void member_in();
+extern void member_out();
 extern Node *regex();
 extern Node *primary();
 extern Node *unary();
@@ -243,7 +258,7 @@ extern Node *bool_or();
 extern Node *assign();
 extern Node *expr();
 extern Node *stmt();
-extern Node *declaration_var(Type *typ, Token *tok, Var **vars);
+extern Node *declaration_var(Type *typ, Token *tok);
 extern void program();
 
 extern void gen_lval(Node *node);
@@ -258,18 +273,19 @@ extern int align(int x, int aln);
 extern int calc_align(Type *type);
 extern int set_offset(Var *var, int base);
 extern void typing(Node *node);
-extern Type *base_type(bool islocal);
+extern Type *base_type();
 
 // find.c
-extern Var *find_var(Token *tok, Var *vars);
-extern Var *fit_var(Token *tok, bool islocal);
+extern Var *find_var(Token *tok);
 extern Func *find_func(Token *tok);
-extern Struct *find_struct(Token *tok, Struct *structs);
-extern Struct *fit_struct(Token *tag, bool islocal);
-extern Enum *find_enum(Token *tok, Enum *enums);
-extern Enum *fit_enum(Token *tag, bool islocal);
-extern EnumConst *find_enumconst(Token *tok, Enum *enm);
-extern EnumConst *fit_enumconst(Token *tag, bool islocal);
-extern Symbol *fit_symbol(Token *tok, bool islocal);
-extern bool can_def_symbol(Token *sym, bool islocal);
-extern bool can_def_tag(Token *sym, bool islocal);
+extern Struct *find_struct(Token *tok);
+extern EnumConst *find_enumconst(Token *tok);
+extern Enum *find_enum(Token *tok);
+extern Var *fit_var(Token *tok);
+extern Func *fit_func(Token *tok);
+extern Struct *fit_struct(Token *tag);
+extern Enum *fit_enum(Token *tag);
+extern EnumConst *fit_enumconst(Token *tag);
+extern Symbol *fit_symbol(Token *tok);
+extern bool can_def_symbol(Token *sym);
+extern bool can_def_tag(Token *sym);
