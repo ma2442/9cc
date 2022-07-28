@@ -8,15 +8,13 @@ int n_max;  // 1辺のマス数最大
 int n;      // 1辺のマス数
 
 int put(int r, int c, int b) {
-    ngRaw[r] = b;
-    ngCol[c] = b;
+    ngRaw[r] = ngCol[c] = b;
     ngDown[(n - 1) - r + c] = b;
     ngUp[2 * (n - 1) - r - c] = b;
     return 0;
 }
-int isNg(int r, int c) {
-    if (ngRaw[r]) return 1;
-    if (ngCol[c]) return 1;
+_Bool isNg(int r, int c) {
+    if (ngRaw[r] || ngCol[c]) return 1;
     if (ngDown[(n - 1) - r + c]) return 1;
     if (ngUp[2 * (n - 1) - r - c]) return 1;
     return 0;
