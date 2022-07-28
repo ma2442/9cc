@@ -261,10 +261,10 @@ extern void typing(Node *node);
 extern Type *base_type(bool islocal);
 
 // find.c
-extern Var *find_var(Token *tok, Var **vars);
+extern Var *find_var(Token *tok, Var *vars);
 extern Var *fit_var(Token *tok, bool islocal);
 extern Func *find_func(Token *tok);
-extern Struct *find_struct(Token *tok, Struct **structs);
+extern Struct *find_struct(Token *tok, Struct *structs);
 extern Struct *fit_struct(Token *tag, bool islocal);
 extern Enum *find_enum(Token *tok, Enum *enums);
 extern Enum *fit_enum(Token *tag, bool islocal);

@@ -135,7 +135,7 @@ bool at_eof() { return token->kind == TK_EOF; }
 Node *new_node_defvar(Type *typ, Token *var_name, Var **vars) {
     NodeKind kind = (*vars == locals ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
-    Var *var = find_var(var_name, vars);
+    Var *var = find_var(var_name, *vars);
     if (var) error_at(var_name->str, "定義済みの変数です。");
 
     var = calloc(1, sizeof(Var));
@@ -153,10 +153,10 @@ Node *new_node_defvar(Type *typ, Token *var_name, Var **vars) {
 // 変数名として識別
 Node *new_node_var(Token *tok) {
     // ローカル変数チェック
-    Var *var = find_var(tok, &locals);
+    Var *var = find_var(tok, locals);
     NodeKind kind = (var ? ND_LVAR : ND_GVAR);
     // グローバル変数チェック
-    if (!var) var = find_var(tok, &globals);
+    if (!var) var = find_var(tok, globals);
     if (!var) {
         error_at(tok->str, "未定義の変数です。");
         return NULL;
@@ -170,7 +170,7 @@ Node *new_node_var(Token *tok) {
 // メンバ変数として識別
 Node *new_node_mem(Node *nd_stc, Token *tok) {
     // ローカル変数チェック
-    Var *var = find_var(tok, &(nd_stc->type->strct->mems));
+    Var *var = find_var(tok, nd_stc->type->strct->mems);
     if (!var) {
         error_at(tok->str, "未定義のメンバです。");
         return NULL;
