@@ -24,11 +24,9 @@ void init_words() {
 int size(Type *typ) {
     if (typ == NULL) return -1;
     if (typ->ty == ARRAY) return size(typ->ptr_to) * typ->array_size;
-    if (typ->ty == STRUCT) return typ->strct->size;
+    if (typ->ty == STRUCT) return typ->strct->stc->size;
     return sizes[typ->ty];
 }
-
-// 型のアラインメントを計算する関数
 
 // デリファレンス可能な型を判別(ARRAY, PTR)
 bool can_deref(Type *typ) {
@@ -51,8 +49,9 @@ int calc_align(Type *type) {
         // メンバのアラインメントの最小公倍数がアラインメント境界
         // (0,)1,2,4,8のいずれかなので単に最大値でよい
         int lcm = 0;
-        for (Var *mem = type->strct->mems; mem->next != NULL; mem = mem->next) {
-            int mem_align = calc_align(mem->type);
+        for (Def *mem = type->strct->stc->mems; mem && mem->next;
+             mem = mem->next) {
+            int mem_align = calc_align(mem->var->type);
             if (lcm < mem_align) lcm = mem_align;
         }
         return lcm;
@@ -140,11 +139,10 @@ Type *def_struct(Token *tag) {
     if (!consume("{")) return NULL;
     tag = make_tag(tag);
     if (!tag) return NULL;
-    Struct *stc = calloc(1, sizeof(Struct));
-    stc->name = tag->str;
-    stc->len = tag->len;
+    Def *stc = calloc_def(DK_STRUCT);
+    stc->tok = tag;
     // メンバに同じ構造体型を持てるように構造体リストに先行登録
-    Struct **stcs = &def[nest]->structs;
+    Def **stcs = &def[nest]->structs;
     stc->next = *stcs;
     *stcs = stc;
 
@@ -158,18 +156,18 @@ Type *def_struct(Token *tag) {
         // メンバ作成（メンバのノードは不要なので放置）
         declaration_var(typ, tok);
         expect(";");
-        int sz = size(def[nest]->vars->type);
-        ofst = set_offset(def[nest]->vars, ofst) + sz;
+        int sz = size(def[nest]->vars->var->type);
+        ofst = set_offset(def[nest]->vars->var, ofst) + sz;
     }
 
-    (*stcs)->mems = def[nest]->vars;
+    (*stcs)->stc->mems = def[nest]->vars;
     member_out();
     // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
     Type *typ = calloc(1, sizeof(Type));
     typ->ty = STRUCT;
-    typ->strct = *stcs;
-    (*stcs)->align = calc_align(typ);
-    (*stcs)->size = align(ofst, (*stcs)->align);
+    typ->strct = def[nest]->structs;
+    (*stcs)->stc->align = calc_align(typ);
+    (*stcs)->stc->size = align(ofst, (*stcs)->stc->align);
     return typ;
 }
 
@@ -182,7 +180,7 @@ Type *type_struct() {
     if (!tag) error_at(token->str, "構造体タグがありません");
     typ = calloc(1, sizeof(Type));
     typ->ty = STRUCT;
-    typ->strct = fit_struct(tag);
+    typ->strct = fit_def(tag, DK_STRUCT);
     return typ;
 }
 
@@ -220,32 +218,30 @@ Type *def_enum(Token *tag) {
     if (!consume("{")) return NULL;
     tag = make_tag(tag);
     if (!tag) return NULL;
-    Enum *enm = calloc(1, sizeof(Enum));
-    enm->name = tag->str;
-    enm->len = tag->len;
+    Def *enm = calloc_def(DK_ENUM);
+    enm->tok = tag;
     // 定義中列挙体内の定数シンボルも検索が可能なように先行登録
-    Enum **enums = &def[nest]->enums;
+    Def **enums = &def[nest]->enums;
     enm->next = *enums;
     *enums = enm;
 
     // 列挙体定数初期化
-    (*enums)->consts = calloc(1, sizeof(EnumConst));
-    (*enums)->consts->val = -1;
+    (*enums)->enm->consts = calloc_def(DK_ENUMCONST);
+    (*enums)->enm->consts->cst->val = -1;
     do {
-        EnumConst *cst = calloc(1, sizeof(EnumConst));
-        cst->enm = (*enums);
+        Def *cst = calloc_def(DK_ENUMCONST);
+        cst->cst->enm = (*enums);
         Token *tok = consume_ident();
         if (!can_def_symbol(tok)) return NULL;
-        cst->name = tok->str;
-        cst->len = tok->len;
+        cst->tok = tok;
         if (consume("=")) {
             Node *node = bool_or();
-            cst->val = val(node);
+            cst->cst->val = val(node);
         } else {
-            cst->val = (*enums)->consts->val + 1;
+            cst->cst->val = (*enums)->enm->consts->cst->val + 1;
         }
-        cst->next = (*enums)->consts;
-        (*enums)->consts = cst;
+        cst->next = (*enums)->enm->consts;
+        (*enums)->enm->consts = cst;
     } while (consume(","));
     expect("}");
 
@@ -264,7 +260,7 @@ Type *type_enum() {
     if (!tag) error_at(token->str, "列挙体タグがありません");
     typ = calloc(1, sizeof(Type));
     typ->ty = ENUM;
-    typ->enm = fit_enum(tag);
+    typ->enm = fit_def(tag, DK_ENUM);
     return typ;
 }
 

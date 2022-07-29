@@ -1,4 +1,4 @@
-#include <assert.h>
+// #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -26,7 +26,7 @@ typedef struct StrLit StrLit;
 typedef struct Enum Enum;
 typedef struct EnumConst EnumConst;
 typedef struct Var Var;
-typedef struct Symbol Symbol;
+typedef struct Defs Defs;
 typedef struct Def Def;
 
 // トークンの種類
@@ -102,16 +102,12 @@ struct Type {
     TypeKind ty;
     Type *ptr_to;
     size_t array_size;
-    Struct *strct;
-    Enum *enm;
+    Def *strct;
+    Def *enm;
 };
 
 // ローカル変数
 struct Var {
-    Var *prev;
-    Var *next;     // 次の変数かNULL
-    char *name;    // 変数の名前
-    int len;       // 名前の長さ
     int offset;    // RBPからのオフセット
     Type *type;    // 型
     bool islocal;  // ローカル変数かどうか
@@ -119,101 +115,111 @@ struct Var {
 
 // 関数名と引数情報
 struct Func {
-    Func *next;
-    char *name;
-    int len;         // 名前の長さ
-    Var *args;       // 引数情報
-    Var *vars;       // 変数情報(引数含む)
+    Def *args;       // 引数情報
+    Def *vars;       // 変数情報(引数含む)
     int stack_size;  // 変数分の確保領域
     Type *type;
 };
 
 // 文字列リテラル
 struct StrLit {
-    StrLit *prev;
-    StrLit *next;
-    char *str;   // 文字列リテラル本体
-    int len;     // 本体の長さ
-    char *name;  // 名前(ラベル)
+    char *label;  // 名前(ラベル)
 };
 
 struct Struct {
-    Struct *next;
-    char *name;
-    int len;
-    Var *mems;
+    Def *mems;
     int size;
     int align;
 };
 
 struct Enum {
-    Enum *next;
-    char *name;
-    int len;
-    EnumConst *consts;
+    Def *consts;
 };
 
 // 列挙体で定義された定数
 struct EnumConst {
-    EnumConst *next;  // 次の変数かNULL
-    char *name;       // 変数の名前
-    int len;          // 名前の長さ
     int val;
-    Enum *enm;  // 属している列挙体
-};
-
-// シンボル
-struct Symbol {
-    Func *func;
-    Var *var;
-    EnumConst *enumconst;
+    Def *enm;  // 属している列挙体
 };
 
 // 定義をまとめたもの(関数 変数, enum, struct)
+struct Defs {
+    Def *funcs;
+    Def *vars;
+    Def *vars_last;  // ブロック内で最初に定義された変数
+    Def *enums;
+    Def *structs;
+};
+
+// 定義の種類
+typedef enum {
+    DK_VAR,
+    DK_FUNC,
+    DK_STRUCT,
+    DK_ENUM,
+    DK_ENUMCONST,
+    DK_STRLIT,
+    DK_LEN
+} DefKind;
+
+// 変数 関数 構造体 列挙体 列挙体定数 文字列リテラル の定義情報
 struct Def {
-    Func *funcs;
-    Var *vars;
-    Var *vars_last;  // ブロック内で最初に定義された変数
-    Enum *enums;
-    Struct *structs;
+    Def *next;  // 次の変数かNULL
+    Def *prev;
+    Token *tok;  // 名前
+    DefKind kind;
+    union {
+        Var *var;
+        Func *fn;
+        Struct *stc;
+        Enum *enm;
+        EnumConst *cst;
+        StrLit *strlit;
+    };
 };
 
 // 抽象構文木のノード
 struct Node {
-    NodeKind kind;   // ノードの種類
-    Node *lhs;       // 左辺, またはif,while,for等の内部statement
-    Node *rhs;       // 右辺, またはelseの内部statement
-    Var *var;        // 変数情報
-    Func *func;      // 関数情報
-    StrLit *strlit;  // 文字列リテラル情報
-    int val;         // kindがND_NUMの場合のみ使う
-    Type *type;      // int, int*などの型情報
-    int label_num;   // if,while,for等のラベル通し番号
-    Node *next_arg;  // kindがND_FUNC_* の場合に使う
-    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
-    Node *init;      // forの初期化式(_____; ; )
-    Node *judge;     // if,while,for等の条件式
-    Node *inc;       // forの後処理式( ; ;____)
-    Node **block;    // block {} 内のstatements
-    enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
+    NodeKind kind;  // ノードの種類
+    Node *lhs;      // 左辺, またはif,while,for等の内部statement
+    union {
+        Node *rhs;  // 右辺, またはelseの内部statement
+        Node *inc;  // forの後処理式( ; ;____)
+    };
+    union {
+        Node *next_arg;  // kindがND_FUNC_* の場合に使う
+        Node *judge;     // if,while,for等の条件式
+        Node **block;    // block {} 内のstatements
+    };
+    union {
+        Def *def;    // 変数情報 関数情報 文字列リテラル情報
+        Node *init;  // forの初期化式(_____; ; )
+    };
+    Type *type;  // int, int*などの型情報
+    union {
+        int val;        // kindがND_NUMの場合のみ使う
+        int label_num;  // if,while,for等のラベル通し番号
+        int arg_idx;    // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+        enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
+    };
 };
 
 size_t sizes[LEN_TYPE_KIND];
 char *type_words[LEN_TYPE_KIND];
 
 // 現在定義中の関数
-Func *fn;
+Def *fnc;
 // グローバル変数
-Var *globals_end;
+Def *globals_end;
 // 文字列リテラル
-StrLit *strlits;
-StrLit *strlits_end;
+Def *strlits;
+Def *strlits_end;
 
 // def[0]: グローバル 関数, 変数, struct定義, enum定義
 // def[1]: 関数直下の ローカル 変数（引数含む）, struct定義, enum定義
 // (関数:NULL)。 以降スコープがネストするたびに添え字が一つ増える。
 // また、structメンバの定義･アクセスにも一時的に使用される。
-Def *def[100];
+Defs *def[100];
 
 // 現在のネストの深さ(0:global)
 int nest;
@@ -224,6 +230,7 @@ char *filename;
 #endif  // HEADER_H
 extern int size(Type *typ);
 extern bool can_deref(Type *typ);
+extern Def *calloc_def(DefKind kind);
 extern Node *new_node();
 extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 extern Node *new_node_num(int val);
@@ -276,16 +283,8 @@ extern void typing(Node *node);
 extern Type *base_type();
 
 // find.c
-extern Var *find_var(Token *tok);
-extern Func *find_func(Token *tok);
-extern Struct *find_struct(Token *tok);
-extern EnumConst *find_enumconst(Token *tok);
-extern Enum *find_enum(Token *tok);
-extern Var *fit_var(Token *tok);
-extern Func *fit_func(Token *tok);
-extern Struct *fit_struct(Token *tag);
-extern Enum *fit_enum(Token *tag);
-extern EnumConst *fit_enumconst(Token *tag);
-extern Symbol *fit_symbol(Token *tok);
+extern Def *find_def(Token *tok, DefKind kind);
+extern Def *find_enumconst(Token *tok);
+extern Def *fit_def(Token *tok, DefKind kind);
 extern bool can_def_symbol(Token *sym);
 extern bool can_def_tag(Token *sym);

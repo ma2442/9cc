@@ -1,5 +1,24 @@
 #include "9cc.h"
 enum { GLOBAL, LOCAL } IsLocal;
+
+Def *calloc_def(DefKind kind) {
+    Def *d = calloc(1, sizeof(Def));
+    if (kind == DK_VAR)
+        d->var = calloc(1, sizeof(Var));
+    else if (kind == DK_FUNC)
+        d->fn = calloc(1, sizeof(Func));
+    else if (kind == DK_STRUCT)
+        d->stc = calloc(1, sizeof(Struct));
+    else if (kind == DK_ENUM)
+        d->enm = calloc(1, sizeof(Enum));
+    else if (kind == DK_ENUMCONST)
+        d->cst = calloc(1, sizeof(EnumConst));
+    else if (kind == DK_STRLIT)
+        d->strlit = calloc(1, sizeof(StrLit));
+    d->kind = kind;
+    return d;
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -133,17 +152,17 @@ bool at_eof() { return token->kind == TK_EOF; }
 
 // 変数定義
 Node *new_node_defvar(Type *typ, Token *var_name) {
-    if (find_var(var_name)) error_at(var_name->str, "定義済みの変数です。");
+    if (find_def(var_name, DK_VAR))
+        error_at(var_name->str, "定義済みの変数です。");
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
-    Var *var = calloc(1, sizeof(Var));
+    Def *var = calloc_def(DK_VAR);
     var->next = def[nest]->vars;
-    var->name = var_name->str;
-    var->len = var_name->len;
-    var->islocal = nest;
-    var->type = typ;
-    node->var = var;
-    node->type = var->type;
+    var->tok = var_name;
+    var->var->islocal = nest;
+    var->var->type = typ;
+    node->def = var;
+    node->type = var->var->type;
     if (def[nest]->vars) def[nest]->vars->prev = var;
     def[nest]->vars = var;
     return node;
@@ -151,30 +170,30 @@ Node *new_node_defvar(Type *typ, Token *var_name) {
 
 // 変数名として識別
 Node *new_node_var(Token *tok) {
-    Var *var = fit_var(tok);
-    NodeKind kind = (var->islocal ? ND_LVAR : ND_GVAR);
+    Def *var = fit_def(tok, DK_VAR);
+    NodeKind kind = (var->var->islocal ? ND_LVAR : ND_GVAR);
     Node *node = new_node(kind, NULL, NULL);
-    node->var = var;
-    node->type = var->type;
+    node->def = var;
+    node->type = var->var->type;
     return node;
 }
 
 // スコープに入る
 void scope_in() {
     nest++;
-    def[nest] = calloc(1, sizeof(Def));
-    def[nest]->funcs = calloc(1, sizeof(Func));
-    def[nest]->vars = calloc(1, sizeof(Var));
+    def[nest] = calloc(1, sizeof(Defs));
+    def[nest]->funcs = calloc_def(DK_FUNC);
+    def[nest]->vars = calloc_def(DK_VAR);
     def[nest]->vars_last = def[nest]->vars;
-    def[nest]->structs = calloc(1, sizeof(Struct));
+    def[nest]->structs = calloc_def(DK_STRUCT);
 }
 
 // スコープから出る
 void scope_out() {
     if (nest > 0 && def[nest]->vars_last) {
         // 関数内ネストの変数はローカル変数に載せて行く
-        def[nest]->vars_last->next = fn->vars;
-        fn->vars = def[nest]->vars;
+        def[nest]->vars_last->next = fnc->fn->vars;
+        fnc->fn->vars = def[nest]->vars;
     }
     free(def[nest]);
     def[nest] = NULL;
@@ -194,16 +213,16 @@ void member_out() {
 // メンバ変数として識別
 Node *new_node_mem(Node *nd_stc, Token *tok) {
     member_in();
-    def[nest]->vars = nd_stc->type->strct->mems;
-    Var *var = find_var(tok);
+    def[nest]->vars = nd_stc->type->strct->stc->mems;
+    Def *var = find_def(tok, DK_VAR);
     member_out();
     if (!var) {
         error_at(tok->str, "未定義のメンバです。");
         return NULL;
     }
     Node *node = new_node(ND_MEMBER, nd_stc, NULL);
-    node->var = var;
-    node->type = var->type;
+    node->def = var;
+    node->type = var->var->type;
     return node;
 }
 
@@ -234,14 +253,13 @@ Node *str_literal() {
     Node *node = new_node(ND_GVAR, NULL, NULL);
     node->type = array;
 
-    StrLit *strlit = calloc(1, sizeof(StrLit));
-    strlit->str = tok_str->str;
-    strlit->len = tok_str->len;
+    Def *strlit = calloc_def(DK_STRLIT);
+    strlit->tok = tok_str;
 
-    strlit->name = calloc(str_label_cnt + 4, sizeof(char));
-    sprintf(strlit->name, ".LC%d", str_label_cnt);
+    strlit->strlit->label = calloc(str_label_cnt + 4, sizeof(char));
+    sprintf(strlit->strlit->label, ".LC%d", str_label_cnt);
     str_label_cnt++;
-    node->strlit = strlit;
+    node->def = strlit;
     strlit->next = strlits;
     strlits->prev = strlit;
     strlits = strlit;
@@ -251,14 +269,13 @@ Node *str_literal() {
 // 関数コールノード 引数は関数名
 Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
-    Func *fn = fit_func(tok);
+    Def *fn = fit_def(tok, DK_FUNC);
     if (fn) {
-        node->func = fn;
-        node->type = fn->type;
+        node->def = fn;
+        node->type = fn->fn->type;
     } else {
-        node->func = calloc(1, sizeof(Func));
-        node->func->name = tok->str;
-        node->func->len = tok->len;
+        node->def = calloc_def(DK_FUNC);
+        node->def->tok = tok;
     }
 
     // 実引数処理
@@ -345,8 +362,8 @@ Node *primary() {
     // 関数名として識別
     if (consume("(")) return func_call(tok);
     // 列挙体定数として識別
-    Symbol *sym = fit_symbol(tok);
-    if (sym->enumconst) return new_node_num(sym->enumconst->val);
+    Def *sym = fit_def(tok, DK_ENUMCONST);
+    if (sym) return new_node_num(sym->cst->val);
     //関数でも定数でもなければ変数
     return new_node_var(tok);
 }
@@ -584,17 +601,16 @@ Node *stmt() {
 Node *func(Type *typ, Token *func_name) {
     if (!consume("(")) return NULL;
     if (!func_name) return NULL;
-    fn = calloc(1, sizeof(Func));
-    fn->next = def[nest]->funcs;
-    fn->type = typ;
+    fnc = calloc_def(DK_FUNC);
+    fnc->next = def[nest]->funcs;
+    fnc->fn->type = typ;
 
     // スコープ内変数等初期化
     scope_in();
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
-    fn->name = func_name->str;
-    fn->len = func_name->len;
-    node->func = fn;
+    fnc->tok = func_name;
+    node->def = fnc;
 
     // 仮引数処理
     if (!consume(")")) {
@@ -612,20 +628,20 @@ Node *func(Type *typ, Token *func_name) {
         expect(")");
     }
     // 関数情報（仮引数含む）更新
-    fn->args = def[nest]->vars;
+    fnc->fn->args = def[nest]->vars;
     // 関数本文 "{" stmt* "}"
     node->rhs = block();
     scope_out();
-    def[nest]->funcs = fn;
+    def[nest]->funcs = fnc;
     // ローカル変数のオフセットを計算
     int ofst = 0;
-    for (Var *lcl = fn->vars; lcl != NULL; lcl = lcl->next) {
-        if (!lcl->type) continue;
-        int sz = size(lcl->type);
-        ofst = set_offset(lcl, ofst + sz);
+    for (Def *lcl = fnc->fn->vars; lcl; lcl = lcl->next) {
+        if (!lcl->var->type) continue;
+        int sz = size(lcl->var->type);
+        ofst = set_offset(lcl->var, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
-    fn->stack_size = align(ofst, 8);
+    fnc->fn->stack_size = align(ofst, 8);
 
     return node;
 }
@@ -634,8 +650,9 @@ void program() {
     int i = 0;
     nest = -1;
     scope_in();
+    def[nest]->vars = calloc_def(DK_VAR);
     globals_end = def[nest]->vars;
-    strlits = calloc(1, sizeof(StrLit));
+    strlits = calloc_def(DK_STRLIT);
     strlits_end = strlits;
     while (!at_eof()) {
         Type *typ = base_type();

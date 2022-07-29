@@ -48,16 +48,16 @@ int main(int argc, char **argv) {
 
     // 文字列リテラル部のコード生成
     printf(".data\n");
-    Var *glb = globals_end->prev;
+    Def *glb = globals_end->prev;
     while (glb) {
-        printf("%.*s:\n", glb->len, glb->name);
-        printf("  .zero %d\n", size(glb->type));
+        printf("%.*s:\n", glb->tok->len, glb->tok->str);
+        printf("  .zero %d\n", size(glb->var->type));
         glb = glb->prev;
     }
-    StrLit *strl = strlits_end->prev;
+    Def *strl = strlits_end->prev;
     while (strl) {
-        printf("%s:\n", strl->name);
-        printf("  .string %.*s\n", strl->len, strl->str);
+        printf("%s:\n", strl->strlit->label);
+        printf("  .string %.*s\n", strl->tok->len, strl->tok->str);
         strl = strl->prev;
     }
 

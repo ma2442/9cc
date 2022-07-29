@@ -1,51 +1,46 @@
 #include "9cc.h"
 
-// 変数を名前で検索する。 見つからなかった場合はNULLを返す。
-Var *find_var(Token *tok) {
-    for (Var *var = def[nest]->vars; var != NULL; var = var->next) {
-        if (var->len == tok->len && !memcmp(var->name, tok->str, tok->len)) {
-            return var;
-        }
-    }
-    return NULL;
+void error_undef(Token *tok, DefKind kind) {
+    if (kind == DK_VAR)
+        error_at(tok->str, "未定義の変数です");
+    else if (kind == DK_STRUCT)
+        error_at(tok->str, "未定義の構造体です");
+    else if (kind == DK_ENUM)
+        error_at(tok->str, "未定義の列挙体です");
+    // else if (kind == DK_ENUMCONST)
+    //     error_at(tok->str, "未定義の定数です");
+    // else if (kind == DK_FUNC)
+    // error_at(tok->str, "未定義の関数です");
 }
 
-// 関数を名前で検索する。 見つからなかった場合はNULLを返す。
-Func *find_func(Token *tok) {
-    for (Func *fn = def[nest]->funcs; fn != NULL; fn = fn->next) {
-        if (fn->len == tok->len && !memcmp(fn->name, tok->str, tok->len)) {
-            return fn;
-        }
-    }
-    return NULL;
-}
-
-// 構造体を名前で検索する。 見つからなかった場合はNULLを返す。
-Struct *find_struct(Token *tok) {
-    for (Struct *stc = def[nest]->structs; stc != NULL; stc = stc->next) {
-        if (stc->len == tok->len && !memcmp(stc->name, tok->str, tok->len)) {
-            return stc;
-        }
-    }
-    return NULL;
-}
-
-// 列挙体を名前で検索する。 見つからなかった場合はNULLを返す。
-Enum *find_enum(Token *tok) {
-    for (Enum *enm = def[nest]->enums; enm != NULL; enm = enm->next) {
-        if (enm->len == tok->len && !memcmp(enm->name, tok->str, tok->len)) {
-            return enm;
+// 変数･関数･構造体･列挙体のいずれかを名前で検索する。
+// 見つからなかった場合はNULLを返す。
+Def *find_def(Token *tok, DefKind kind) {
+    if (kind == DK_ENUMCONST) return find_enumconst(tok);
+    Def *d = NULL;
+    if (kind == DK_VAR)
+        d = def[nest]->vars;
+    else if (kind == DK_FUNC)
+        d = def[nest]->funcs;
+    else if (kind == DK_STRUCT)
+        d = def[nest]->structs;
+    else if (kind == DK_ENUM)
+        d = def[nest]->enums;
+    for (; d && d->tok; d = d->next) {
+        if (d->tok->len == tok->len &&
+            !memcmp(d->tok->str, tok->str, tok->len)) {
+            return d;
         }
     }
     return NULL;
 }
 
 // 列挙体定数を名前で検索する。 見つからなかった場合はNULLを返す。
-EnumConst *find_enumconst(Token *tok) {
-    for (Enum *enm = def[nest]->enums; enm != NULL; enm = enm->next) {
-        for (EnumConst *cst = enm->consts; cst != NULL; cst = cst->next) {
-            if (cst->len == tok->len &&
-                !memcmp(cst->name, tok->str, tok->len)) {
+Def *find_enumconst(Token *tok) {
+    for (Def *d = def[nest]->enums; d; d = d->next) {
+        for (Def *cst = d->enm->consts; cst && cst->tok; cst = cst->next) {
+            if (cst->tok->len == tok->len &&
+                !memcmp(cst->tok->str, tok->str, tok->len)) {
                 return cst;
             }
         }
@@ -54,113 +49,33 @@ EnumConst *find_enumconst(Token *tok) {
 }
 
 // スコープ内で定義済みの変数を検索。なければエラー
-Var *fit_var(Token *tok) {
+Def *fit_def(Token *tok, DefKind kind) {
     int store = nest;
     while (nest >= 0) {
-        Var *var = find_var(tok);
-        if (var) {
+        Def *d = find_def(tok, kind);
+        if (d) {
             nest = store;
-            return var;
+            return d;
         }
         nest--;
     }
-    error_at(tok->str, "未定義の変数です");
-    return NULL;
-}
-
-// スコープ内で定義済みの関数を検索。なければエラー
-Func *fit_func(Token *tok) {
-    int store = nest;
-    while (nest >= 0) {
-        Func *fn = find_func(tok);
-        if (fn) {
-            nest = store;
-            return fn;
-        }
-        nest--;
-    }
-    // error_at(tok->str, "未定義の関数です");
     nest = store;
-    return NULL;
-}
-
-// スコープ内で定義済みの構造体を検索。なければエラー
-Struct *fit_struct(Token *tag) {
-    int store = nest;
-    while (nest >= 0) {
-        Struct *stc = find_struct(tag);
-        if (stc) {
-            nest = store;
-            return stc;
-        }
-        nest--;
-    }
-    error_at(tag->str, "未定義の構造体です");
-    return NULL;
-}
-
-// スコープ内で定義済みの列挙体を検索。なければエラー
-Enum *fit_enum(Token *tag) {
-    int store = nest;
-    while (nest >= 0) {
-        Enum *enm = find_enum(tag);
-        if (enm) {
-            nest = store;
-            return enm;
-        }
-        nest--;
-    }
-    error_at(tag->str, "未定義の列挙体です");
-    return NULL;
-}
-
-// スコープ内で定義済みの列挙体定数を検索。なければNULLを返す。
-EnumConst *fit_enumconst(Token *tag) {
-    int store = nest;
-    while (nest >= 0) {
-        EnumConst *cst = find_enumconst(tag);
-        if (cst) {
-            nest = store;
-            return cst;
-        }
-        nest--;
-    }
-    error_at(tag->str, "未定義の定数です");
-    return NULL;
-}
-
-// スコープ内で定義済みのシンボルを検索。なければエラー
-Symbol *fit_symbol(Token *tok) {
-    Symbol *sym = calloc(1, sizeof(Symbol));
-    int store = nest;
-    while (nest >= 0) {
-        sym->enumconst = find_enumconst(tok);
-        if (sym->enumconst) break;
-        sym->var = find_var(tok);
-        if (sym->var) break;
-        sym->func = find_func(tok);
-        if (sym->func) break;
-        nest--;
-    }
-    if (nest >= 0) {
-        nest = store;
-        return sym;
-    }
-    free(sym);
-    error_at(tok->str, "未定義のシンボルです");
+    error_undef(tok, kind);
     return NULL;
 }
 
 // 関数、変数、定数の名前が定義可能か
 bool can_def_symbol(Token *sym) {
-    if (!find_var(sym) && !find_enumconst(sym) && !find_func(sym)) return true;
+    if (!find_def(sym, DK_VAR) && !find_def(sym, DK_ENUMCONST) &&
+        !find_def(sym, DK_FUNC))
+        return true;
     error_at(sym->str, "定義済みのシンボルです");
     return false;
 }
 
 // 構造体、列挙体のタグが定義可能か
 bool can_def_tag(Token *tag) {
-    if (!find_enum(tag) && !find_struct(tag)) return true;
+    if (!find_def(tag, DK_ENUM) && !find_def(tag, DK_STRUCT)) return true;
     error_at(tag->str, "定義済みのタグです");
     return false;
 }

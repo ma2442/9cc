@@ -42,19 +42,19 @@ char* cnvword(AsmWord word, int byte) {
 void gen_lval(Node* node) {
     switch (node->kind) {
         case ND_LVAR:  // local var
-            printf("  lea rax, [rbp-%d]\n", node->var->offset);
+            printf("  lea rax, [rbp-%d]\n", node->def->var->offset);
             break;
         case ND_GVAR:
-            if (node->strlit)  // str literal
-                printf("  lea rax, %s[rip]\n", node->strlit->name);
+            if (node->def && node->def->kind == DK_STRLIT)  // str literal
+                printf("  lea rax, %s[rip]\n", node->def->strlit->label);
             else  // gloval var
-                printf("  lea rax, %.*s[rip]\n", node->var->len,
-                       node->var->name);
+                printf("  lea rax, %.*s[rip]\n", node->def->tok->len,
+                       node->def->tok->str);
             break;
         case ND_MEMBER:  // struct member
             gen_lval(node->lhs);
             printf("  pop rax\n");
-            printf("  add rax, %d\n", node->var->offset);
+            printf("  add rax, %d\n", node->def->var->offset);
             break;
         case ND_DEREF:  // *p = ..
             gen(node->lhs);
@@ -86,7 +86,7 @@ void gen_store(Type* type) {
     printf("  pop rax\n");
     int dst_size = size(type);  // 書き込み先のサイズ
     if (type->ty == STRUCT) {
-        for (int i = 0; i < dst_size; i += type->strct->align) {
+        for (int i = 0; i < dst_size; i += type->strct->stc->align) {
             printf("  mov rdi, [rcx+%d]\n", i);
             // 8バイト境界から8バイト先までコピーの必要があるなら
             // QWORD コピーが望ましい
@@ -96,8 +96,8 @@ void gen_store(Type* type) {
             }
             // QWORD未満のコピーはアラインサイズごとにする
             printf("  mov %s[rax+%d], %s\n",
-                   cnvword(QWORD_PTR, type->strct->align), i,
-                   cnvword(RDI, type->strct->align));
+                   cnvword(QWORD_PTR, type->strct->stc->align), i,
+                   cnvword(RDI, type->strct->stc->align));
         }
         return;
     }
@@ -200,7 +200,7 @@ void gen(Node* node) {
             // 可変長引数関数に渡す浮動小数 = 0個
             printf("  mov al, 0\n");
             // 関数呼び出し
-            printf("  call %.*s\n", node->func->len, node->func->name);
+            printf("  call %.*s\n", node->def->tok->len, node->def->tok->str);
 
             // rspを16バイト境界揃えから元に戻す
             printf("  pop rbx\n");
@@ -222,13 +222,13 @@ void gen(Node* node) {
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
-            printf("%.*s:\n", node->func->len, node->func->name);
+            printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             // プロローグ
             // 変数分の領域を確保する
             printf("  push rbp\n");
             printf("  mov rbp, rsp\n");
-            if (node->func->stack_size > 0)
-                printf("  sub rsp, %d\n", node->func->stack_size);
+            if (node->def->fn->stack_size > 0)
+                printf("  sub rsp, %d\n", node->def->fn->stack_size);
             // 仮引数
             gen(node->next_arg);
             // 関数本文  "{" stmt* "}"
