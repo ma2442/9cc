@@ -126,6 +126,12 @@ void swap_top() {
     printf("  push rdi\n");
 }
 
+void loop_judge_result(int num) {
+    printf("  pop rax\n");
+    printf("  cmp rax, 0\n");
+    printf("  je .Lend%d\n", num);
+}
+
 void gen(Node* node) {
     if (!node || node->kind == ND_NO_EVAL) return;
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -149,12 +155,18 @@ void gen(Node* node) {
             gen(node->rhs);
             printf(".Lend%d:\n", node->label_num);
             return;
+        case ND_DO:
+            printf(".Lbegin%d:\n", node->label_num);
+            gen(node->lhs);
+            gen(node->judge);
+            loop_judge_result(node->label_num);
+            printf("  jmp .Lbegin%d\n", node->label_num);
+            printf(".Lend%d:\n", node->label_num);
+            return;
         case ND_WHILE:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->judge);
-            printf("  pop rax\n");
-            printf("  cmp rax, 0\n");
-            printf("  je .Lend%d\n", node->label_num);
+            loop_judge_result(node->label_num);
             gen(node->lhs);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
@@ -164,9 +176,7 @@ void gen(Node* node) {
             printf(".Lbegin%d:\n", node->label_num);
             if (node->judge) {
                 gen(node->judge);
-                printf("  pop rax\n");
-                printf("  cmp rax, 0\n");
-                printf("  je .Lend%d\n", node->label_num);
+                loop_judge_result(node->label_num);
             }
             gen(node->lhs);
             gen(node->inc);

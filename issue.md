@@ -1,11 +1,17 @@
 ### To Do
 
+- [ ] 三項演算子 ?:
+- [ ] switch(){case : default:}
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
 - [ ] continue, break
 - [ ] void
+- [ ] long long, long, short
+- [ ] unsigned
+- [ ] static
+- [ ] const
 
 ### Essential To Do 使用中かつ代替不可能
 
@@ -16,11 +22,8 @@
 
 ### Want To Do 使用中だが代替可能
 
-- [ ] switch(){case : default:}
-- [ ] do{ } while( );
 - [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 - [ ] {} 配列初期化
-- [ ] 三項演算子 ?:
 - [ ] スタティックキャスト (int) x
 
 ### Optional To Do 未使用
@@ -51,6 +54,7 @@
 
 ### Completed
 
+- [x] do{ } while( );
 - [x] (不要) size_t : (stddef.h で #define)
 - [x] 文字リテラル 'a' ..
 - [x] エスケープシーケンス '\0', '\n'..

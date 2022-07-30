@@ -159,6 +159,21 @@ char main_t9() {
     return 0;
 }
 
+// do 
+int main_t10() {
+    int i = 0;
+    do i++;
+    while (i < 0);
+    if (i != 1) return 1;
+    int j = 10;
+    do {
+        i++;
+        j += 10;
+    } while (i < 100);
+    if (j != 1000) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -170,5 +185,6 @@ int main() {
     if (!main_t7()) return 7;
     if (main_t8()) return 8;
     if (main_t9()) return 9;
+    if (main_t10()) return 10;
     return 255;
 }

@@ -133,8 +133,8 @@ Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
-    if (token->kind != TK_RESERVED || strlen(op) != token->len ||
-        memcmp(token->str, op, token->len)) {
+    if ((token->kind != TK_RESERVED && token->kind != TK_CTRL) ||
+        strlen(op) != token->len || memcmp(token->str, op, token->len)) {
         error_at(token->str, "'%s'ではありません", op);
     }
     token = token->next;
@@ -560,6 +560,18 @@ Node *stmt() {
         if (consume("else")) {
             node->rhs = stmt();
         }
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
+        return node;
+    }
+    if (consume("do")) {
+        node = new_node(ND_DO, stmt(), NULL);
+        expect("while");
+        expect("(");
+        Node *judge = expr();
+        expect(")");
+        expect(";");
+        node->judge = judge;
         node->label_num = jmp_label_cnt;
         jmp_label_cnt++;
         return node;

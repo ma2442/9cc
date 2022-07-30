@@ -78,6 +78,7 @@ typedef enum {
     ND_RETURN,           // return
     ND_IF_ELSE,          // if (judge) lhs else rhs
     ND_WHILE,            // while (judge) lhs
+    ND_DO,               // do lhs while (judge)
     ND_FOR,              // for (init; judge; inc) lhs
     ND_BLOCK,            // block { }
     ND_DEFGLOBAL,        // global variable definition
