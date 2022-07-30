@@ -184,7 +184,7 @@ Type *type_struct() {
     return typ;
 }
 
-// 列挙体定数定義計算用
+// 列挙子定義計算用
 int val(Node *node) {
     if (node->kind == ND_NUM) return node->val;
     if (node->kind == ND_IF_ELSE)
@@ -220,12 +220,12 @@ Type *def_enum(Token *tag) {
     if (!tag) return NULL;
     Def *enm = calloc_def(DK_ENUM);
     enm->tok = tag;
-    // 定義中列挙体内の定数シンボルも検索が可能なように先行登録
+    // 定義中列挙子も検索が可能なように先行登録
     Def **enums = &def[nest]->enums;
     enm->next = *enums;
     *enums = enm;
 
-    // 列挙体定数初期化
+    // 列挙子初期化
     (*enums)->enm->consts = calloc_def(DK_ENUMCONST);
     (*enums)->enm->consts->cst->val = -1;
     do {
