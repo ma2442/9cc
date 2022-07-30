@@ -4,8 +4,6 @@
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
-- [ ] 文字リテラル 'a' ..
-- [ ] エスケープシーケンス '\0', '\n'..
 - [ ] continue, break
 - [ ] void
 
@@ -14,6 +12,7 @@
 - [ ] #include <..>, #include ".."
 - [ ] #define
 - [ ] #ifdef, #endif, #ifndef
+- [ ] 共用体
 
 ### Want To Do 使用中だが代替可能
 
@@ -21,7 +20,6 @@
 - [ ] do{ } while( );
 - [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 - [ ] {} 配列初期化
-- [ ] size_t
 - [ ] 三項演算子 ?:
 - [ ] スタティックキャスト (int) x
 
@@ -33,7 +31,6 @@
 - [ ] static
 - [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
 - [ ] (int\* p)[10] のような入れ子になっている型定義
-- [ ] 共用体
 
 ### Issue
 
@@ -54,11 +51,14 @@
 
 ### Completed
 
+- [x] (不要) size_t : (stddef.h で #define)
+- [x] 文字リテラル 'a' ..
+- [x] エスケープシーケンス '\0', '\n'..
 - [x] 変数,enum,struct スコープをブロックごとに変更
 - [x] enum (Tagname) {Valdef(, Valdef2..)}
       Tagname 及び Val のスコープは変数同様グローバルとローカルがある
       同一スコープで Val と同じ名前の変数があればエラー（逆も然り）
-- [x] NULL (<- stddef.h で #define されているので不要)
+- [x] (不要) NULL (stddef.h で #define)
 - [x] struct (Tagname) {..}
       Tagname のスコープは変数同様グローバルとローカルがある
   - [x] struct Tagname {..}

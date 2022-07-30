@@ -115,7 +115,11 @@ Token *consume_if_kind_is(TokenKind tk) {
     token = token->next;
     return this;
 }
-
+Token *consume_numeric() {
+    Token *tok = consume_if_kind_is(TK_CHAR);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_NUM);
+}
 Token *consume_str() { return consume_if_kind_is(TK_STR); }
 Token *consume_type() {
     Token *tok = consume_if_kind_is(TK_STRUCT);
@@ -139,8 +143,8 @@ void expect(char *op) {
 
 // 次のトークンが数値の場合、トークンを1つ読み進めてその数値を返す。
 // それ以外の場合にはエラーを報告する。
-int expect_number() {
-    if (token->kind != TK_NUM) {
+int expect_numeric() {
+    if (token->kind != TK_NUM && token->kind != TK_CHAR) {
         error_at(token->str, "数ではありません");
     }
     int val = token->val;
@@ -358,10 +362,15 @@ Node *primary() {
     // 変数名,関数名の識別
     Token *tok = consume_ident();
     // 識別子がなければ数値
-    if (!tok) return new_node_num(expect_number());
+    if (!tok) {
+        Token *num = consume_numeric();
+        node = new_node_num(num->val);
+        if (num->kind == TK_CHAR) node->type->ty = CHAR;
+        return node;
+    }
     // 関数名として識別
     if (consume("(")) return func_call(tok);
-    // 列挙体定数として識別
+    // 列挙子として識別
     Def *sym = fit_def(tok, DK_ENUMCONST);
     if (sym) return new_node_num(sym->cst->val);
     //関数でも定数でもなければ変数
@@ -490,7 +499,7 @@ Node *declaration_var(Type *typ, Token *tok) {
     while (consume("[")) {
         last->ptr_to = calloc(1, sizeof(Type));
         last = last->ptr_to;
-        last->array_size = expect_number();
+        last->array_size = expect_numeric();
         last->ty = ARRAY;
         expect("]");
     }

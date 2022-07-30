@@ -123,6 +123,42 @@ int main_t7() {
     return !!1;
 }
 
+// 文字リテラル
+int main_t8() {
+    if (' ' != 32) return 1;
+    if ('0' != 48) return 2;
+    if ('@' != 64) return 3;
+    if ('A' != 65) return 4;
+    if ('a' != 97) return 5;
+    if ('[' != 91) return 6;
+    if ('~' != 126) return 7;
+    if ('"' != 34) return 8;
+    if ('?' != 63) return 9;
+    if ('\"' != 34) return 10;
+    if ('\'' != 39) return 11;
+    if ('\?' != 63) return 12;
+    if ('\\' != 92) return 13;
+    if ('\0' != 0) return 14;
+    if ('\a' != 7) return 15;
+    if ('\b' != 8) return 16;
+    if ('\t' != 9) return 17;
+    if ('\n' != 10) return 18;
+    if ('\r' != 13) return 19;
+    return 0;
+}
+
+char func_t9(char c) { return c + 1; }
+
+char main_t9() {
+    if (func_t9(('0' + 1) * 2) != 99) return 1;
+    if (sizeof('0') != 1) return 2;
+    int a['['];
+    a['\0'] = ' ';
+    if (sizeof(a) != 91 * 4) return 3;
+    if (a[0] != 32) return 4;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -132,5 +168,7 @@ int main() {
     if (main_t5()) return 5;
     if (main_t6()) return 6;
     if (!main_t7()) return 7;
+    if (main_t8()) return 8;
+    if (main_t9()) return 9;
     return 255;
 }

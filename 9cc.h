@@ -35,6 +35,7 @@ typedef enum {
     TK_TYPE,      // 型
     TK_IDENT,     // 識別子
     TK_NUM,       // 整数トークン
+    TK_CHAR,      // 文字型トークン
     TK_EOF,       // 入力の終わりを表すトークン
     TK_SIZEOF,    // sizeof
     TK_RETURN,    // return
@@ -136,7 +137,7 @@ struct Enum {
     Def *consts;
 };
 
-// 列挙体で定義された定数
+// 列挙子
 struct EnumConst {
     int val;
     Def *enm;  // 属している列挙体
@@ -162,7 +163,7 @@ typedef enum {
     DK_LEN
 } DefKind;
 
-// 変数 関数 構造体 列挙体 列挙体定数 文字列リテラル の定義情報
+// 変数 関数 構造体 列挙体 列挙子 文字列リテラル の定義情報
 struct Def {
     Def *next;  // 次の変数かNULL
     Def *prev;

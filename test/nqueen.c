@@ -22,14 +22,14 @@ _Bool isNg(int r, int c) {
 int solve(int r, int c) {
     if (isNg(r, c)) return 0;
     if (c == n - 1) {
-        grid[r][c] = 81;  // 'Q'
+        grid[r][c] = 'Q';
         cnt = cnt + 1;
         return 0;
     }
     put(r, c, 1);
     for (int i = 0; i < n; i++) {
         if (solve(i, c + 1)) {
-            grid[r][c] = 81;  // 'Q'
+            grid[r][c] = 'Q';
             return 1;
         }
     }
@@ -42,7 +42,7 @@ int main() {
         cnt = 0;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
-                grid[i][j] = 46;  // '.'
+                grid[i][j] = '.';
             }
         for (int i = 0; i < n; i++)
             if (solve(i, 0)) {
