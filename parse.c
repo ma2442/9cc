@@ -42,6 +42,15 @@ Node *new_node_num(int val) {
 int jmp_label_cnt = 0;
 int str_label_cnt = 0;
 
+// break対象ラベル
+int break_label_cnt = -1;
+// continue対象ラベル
+int continue_label_cnt = -1;
+
+// switch対象ノード
+Node *sw[100];
+int swcnt = -1;
+
 // エラーの起きた場所を報告するための関数
 // 下のようなフォーマットでエラーメッセージを表示する
 //
@@ -538,7 +547,7 @@ Node *block() {
         if (consume("}")) {
             break;
         }
-        node->block[i] = stmt();
+        node->block[i] = labeled();
     }
     return node;
 }
@@ -573,17 +582,34 @@ Node *stmt() {
         expect("(");
         Node *judge = expr();
         expect(")");
-        node = new_node(ND_IF_ELSE, stmt(), NULL);
+        node = new_node(ND_IF_ELSE, labeled(), NULL);
         node->judge = judge;
         if (consume("else")) {
-            node->rhs = stmt();
+            node->rhs = labeled();
         }
         node->label_num = jmp_label_cnt;
         jmp_label_cnt++;
         return node;
     }
+    if (consume("switch")) {
+        expect("(");
+        Node *judge = expr();
+        expect(")");
+        node = new_node(ND_SWITCH, NULL, NULL);
+        node->case_cnt = 0;
+        node->cases = calloc(CASE_LEN, sizeof(Node *));
+        swcnt++;
+        sw[swcnt] = node;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
+        node->lhs = labeled();
+        node->judge = judge;
+        sw[swcnt] = NULL;
+        swcnt--;
+        return node;
+    }
     if (consume("do")) {
-        node = new_node(ND_DO, stmt(), NULL);
+        node = new_node(ND_DO, labeled(), NULL);
         expect("while");
         expect("(");
         Node *judge = expr();
@@ -598,7 +624,7 @@ Node *stmt() {
         expect("(");
         Node *judge = expr();
         expect(")");
-        node = new_node(ND_WHILE, stmt(), NULL);
+        node = new_node(ND_WHILE, labeled(), NULL);
         node->judge = judge;
         node->label_num = jmp_label_cnt;
         jmp_label_cnt++;
@@ -622,7 +648,7 @@ Node *stmt() {
             inc = expr();
             expect(")");
         }
-        node = new_node(ND_FOR, stmt(), NULL);
+        node = new_node(ND_FOR, labeled(), NULL);
         node->init = init;
         node->judge = judge;
         node->inc = inc;
@@ -631,8 +657,44 @@ Node *stmt() {
         scope_out();
         return node;
     }
+    if (consume(";")) return new_node(ND_NO_EVAL, NULL, NULL);
     node = decla_and_assign();
     expect(";");
+    return node;
+}
+
+// labeled = label ":" labeled | stmt
+Node *labeled() {
+    Node *node = NULL;
+    if (swcnt >= 0) {
+        if (consume("case")) {
+            node = new_node(ND_CASE, NULL, NULL);
+            node->val = val(expr());
+            node->label_num = sw[swcnt]->case_cnt;
+            node->break_label_num = sw[swcnt]->label_num;
+            sw[swcnt]->cases[node->label_num] = node;
+            sw[swcnt]->case_cnt++;
+            expect(":");
+            node->lhs = labeled();
+            return node;
+        }
+        if (consume("default")) {
+            node = new_node(ND_DEFAULT, NULL, NULL);
+            node->break_label_num = sw[swcnt]->label_num;
+            sw[swcnt]->exists_default = true;
+            expect(":");
+            node->lhs = labeled();
+            return node;
+        }
+    }
+    Token *tok = consume_ident();
+    if (!tok) return stmt();
+    if (!consume(":")) {
+        token = tok;
+        return stmt();
+    }
+    node = new_node(ND_LABEL, labeled(), NULL);
+    node->label = tok;
     return node;
 }
 
@@ -668,7 +730,7 @@ Node *func(Type *typ, Token *func_name) {
     }
     // 関数情報（仮引数含む）更新
     fnc->fn->args = def[nest]->vars;
-    // 関数本文 "{" stmt* "}"
+    // 関数本文 "{" labeled* "}"
     node->rhs = block();
     scope_out();
     def[nest]->funcs = fnc;

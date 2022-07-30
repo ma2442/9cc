@@ -9,6 +9,7 @@
 #ifndef HEADER_H
 #define HEADER_H
 #define BLOCK_LEN 128
+#define CASE_LEN 128
 #define CODE_LEN 100
 #define STMT_LEN 100
 #define STR_INT "int"
@@ -77,16 +78,20 @@ typedef enum {
     ND_NUM,              // 整数
     ND_RETURN,           // return
     ND_IF_ELSE,          // if (judge) lhs else rhs
-    ND_COND_EMPTY,       // a?(empty):b 三項演算子コロン前が空のとき、aを返す
-    ND_WHILE,            // while (judge) lhs
-    ND_DO,               // do lhs while (judge)
-    ND_FOR,              // for (init; judge; inc) lhs
-    ND_BLOCK,            // block { }
-    ND_DEFGLOBAL,        // global variable definition
-    ND_GVAR,             // global variable, or x++, x--
-    ND_DUMMY,            // x++,--x,複合代入等により省略された項
-    ND_MEMBER,           // 構造体メンバへのアクセス
-    ND_NO_EVAL           // 評価不要なノード
+    ND_COND_EMPTY,  // a?(empty):b 三項演算子コロン前が空のとき、aを返す
+    ND_SWITCH,     // switch (judge) lhs
+    ND_CASE,       // case _:
+    ND_DEFAULT,    // default:
+    ND_LABEL,      // label(goto):
+    ND_WHILE,      // while (judge) lhs
+    ND_DO,         // do lhs while (judge)
+    ND_FOR,        // for (init; judge; inc) lhs
+    ND_BLOCK,      // block { }
+    ND_DEFGLOBAL,  // global variable definition
+    ND_GVAR,       // global variable, or x++, x--
+    ND_DUMMY,      // x++,--x,複合代入等により省略された項
+    ND_MEMBER,     // 構造体メンバへのアクセス
+    ND_NO_EVAL     // 評価不要なノード
 } NodeKind;
 
 typedef enum {
@@ -192,19 +197,28 @@ struct Node {
     union {
         Node *next_arg;  // kindがND_FUNC_* の場合に使う
         Node *judge;     // if,while,for等の条件式
-        Node **block;    // block {} 内のstatements
+    };
+    union {
+        Node **block;  // block {} 内のstatements
+        Node **cases;  // switch{} 内のcases
     };
     union {
         Def *def;    // 変数情報 関数情報 文字列リテラル情報
         Node *init;  // forの初期化式(_____; ; )
     };
-    Type *type;  // int, int*などの型情報
     union {
-        int val;        // kindがND_NUMの場合のみ使う
-        int label_num;  // if,while,for等のラベル通し番号
-        int arg_idx;    // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+        Token *label;  // jump label
+        Type *type;    // int, int*などの型情報
+    };
+    union {
+        int val;      // kindがND_NUMの場合のみ使う
+        int arg_idx;  // ND_FUNC_*_ARGの場合の引数番号(0始まり)
         enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
     };
+    int label_num;        // if,while,for,switch等のラベル通し番号
+    int break_label_num;  // break対象となるラベル番号
+    int case_cnt;         // switch内のcaseの数
+    bool exists_default;  // switch内にdefaultがあるか
 };
 
 size_t sizes[LEN_TYPE_KIND];
@@ -265,9 +279,11 @@ extern Node *add();
 extern Node *relational();
 extern Node *equality();
 extern Node *bool_or();
+extern Node *condition();
 extern Node *assign();
 extern Node *expr();
 extern Node *stmt();
+extern Node *labeled();
 extern Node *declaration_var(Type *typ, Token *tok);
 extern void program();
 
@@ -277,6 +293,7 @@ extern void gen(Node *node);
 // type.c
 extern void init_sizes();
 extern void init_words();
+extern int val(Node *node);  // 定数計算
 extern int size(Type *typ);
 extern bool can_deref(Type *typ);
 extern int align(int x, int aln);

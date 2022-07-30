@@ -158,6 +158,29 @@ void gen(Node* node) {
         case ND_COND_EMPTY:
             printf("  push rax\n");
             return;
+        case ND_SWITCH:
+            gen(node->judge);
+            printf("  pop rax\n");
+            for (int i = 0; i < node->case_cnt; i++) {
+                printf("  cmp rax, %d\n", node->cases[i]->val);
+                printf("  je .Lsw%dcase%d\n", node->label_num,
+                       node->cases[i]->label_num);
+            }
+            if (node->exists_default)
+                printf("  jmp .Ldefault%d\n", node->label_num);
+            else
+                printf("  jmp .Lend%d\n", node->label_num);
+            gen(node->lhs);
+            printf(".Lend%d:\n", node->label_num);
+            return;
+        case ND_CASE:
+            printf(".Lsw%dcase%d:\n", node->break_label_num, node->label_num);
+            gen(node->lhs);
+            return;
+        case ND_DEFAULT:
+            printf(".Ldefault%d:\n", node->break_label_num);
+            gen(node->lhs);
+            return;
         case ND_DO:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);

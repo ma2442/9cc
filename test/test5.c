@@ -177,6 +177,9 @@ int main_t6() {
     if (A != 10) return 4;
     if (B != 11) return 5;
     if (D != 20) return 6;
+    enum { E = 1 ? 2 : 3, F = 0 ? 2 : 3 };
+    if (E != 2) return 7;
+    if (F != 3) return 8;
     return 0;
 }
 

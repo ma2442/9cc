@@ -1,14 +1,16 @@
 program = ( (func | strc | enm) ";" )*
-func = declaration "(" (declaration ("," declaration)* )? ")" "{" stmt* "}"
-stmt    =
+func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
+labeled = label ":" labeled | stmt
+stmt =
     | decla_and_assign  ";"
-    | expr ";" 
-    | "{" stmt* "}"
+    |  expr ";" 
+    | "{" labeled* "}"
     | "return" expr ";" 
-    | "if" "(" expr ")" stmt ("else" stmt )? 
-    | "do" stmt "while" "(" expr ")" ";"
-    | "while" "(" expr ")" stmt
-    | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" stmt
+    | "if" "(" expr ")" labeled ("else" labeled )? 
+    | "switch" "(" expr ")" labeled 
+    | "do" labeled "while" "(" expr ")" ";"
+    | "while" "(" expr ")" labeled
+    | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" labeled
     | ...
 decla_and_assign = declaration ("=" assign)?
 declaration = type symbol ("[" num "]")*
@@ -32,6 +34,7 @@ primary = strlit
     | symbol
     | num 
 strlit = '"' [^"]* '"'  // 文字列リテラル
+label = ident | "case" const | "default"
 tag = ident
 symbol = ident
 ident = ("_" | ALPHA | alpha) ("_" | ALPHA | alpha | ten)*

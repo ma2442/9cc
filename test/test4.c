@@ -189,6 +189,161 @@ int main_t11() {
     return 0;
 }
 
+// switch case 文
+int main_t12() {
+    int i = 1;
+    int x = 0;
+    switch (i) {
+        x++;
+        case 1:
+            x += 10;
+        case 2:
+        case 3:
+            x += 100;
+    }
+    if (x != 110) return 1;
+    i = 2;
+    x = 0;
+    switch (i) {
+        x++;
+        case 1:
+            x += 10;
+        case 2:
+        case 3:
+            x += 100;
+    }
+    if (x != 100) return 2;
+}
+
+int main_t13() {
+    int i = -100;
+    int x = 0;
+    switch (i) {
+        x++;
+        case 1:
+            x += 10;
+        case 2:
+        case 3:
+            x += 100;
+    }
+    if (x != 0) return 3;
+    i = 0;
+    x = 0;
+    switch (i)
+    case 0:
+        x = 10;
+    if (x != 10) return 4;
+    return 0;
+}
+
+// default 文
+int main_t14() {
+    int i = 1;
+    int x = 0;
+    switch (i) {
+        case 1:
+            x += 1;
+            x++;
+        default:
+            x += 10;
+            x += 10;
+    }
+    if (x != 22) return 1;
+    i = 2;
+    x = 0;
+    switch (i) {
+        case 1:
+            x += 1;
+            x++;
+        default:
+            x += 10;
+            x += 10;
+    }
+    if (x != 20) return 2;
+    return 0;
+}
+
+int main_t15() {
+    int i = -100;
+    int x = 0;
+    switch (i) {
+        default:
+        case 1:
+            x += 1;
+            x++;
+            x += 10;
+            x += 10;
+    }
+    if (x != 22) return 1;
+    return 0;
+}
+
+int main_t16() {
+    int i = 120;
+    enum { A = 5 };
+    int x = 0;
+    switch (i / 2) {
+        x += 1;
+        case 0 ?:
+            A * 12 : x++;
+        default:
+            x += 10;
+    }
+    if (x != 11) return 1;
+    return 0;
+}
+
+// switch{while}
+int main_t17() {
+    int i = 0;
+    int x = 0;
+    switch (i) {
+        case 0:
+            while (0) {
+                case 2:
+                    x += 10;
+            }
+    }
+    if (x != 0) return 1;
+    i = 2;
+    x = 0;
+    switch (i) {
+        case 0:
+            while (0) {
+                case 2:
+                    x += 10;
+            }
+    }
+    if (x != 10) return 2;
+    return 0;
+}
+
+// switch{switch}
+int main_t18() {
+    int x = 0;
+    switch (2) {
+        case 0:
+            switch (0) {
+                case 2:
+                    x += 10;
+            }
+    }
+    if (x != 0) return 1;
+    x = 0;
+    switch (0) {
+        case 0:
+            switch (2) {
+                case 0:
+                    x++;
+                case 2:
+                    x += 10;
+            }
+        case 2:;
+    }
+    if (x != 10) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -202,5 +357,12 @@ int main() {
     if (main_t9()) return 9;
     if (main_t10()) return 10;
     if (main_t11()) return 11;
+    if (main_t12()) return 12;
+    if (main_t13()) return 13;
+    if (main_t14()) return 14;
+    if (main_t15()) return 15;
+    if (main_t16()) return 16;
+    if (main_t17()) return 17;
+    if (main_t18()) return 18;
     return 255;
 }

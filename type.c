@@ -210,6 +210,8 @@ int val(Node *node) {
             return l / r;
         case ND_MOD:
             return l % r;
+        default:
+            error("定数ではありません");
     }
 }
 
@@ -235,7 +237,7 @@ Type *def_enum(Token *tag) {
         if (!can_def_symbol(tok)) return NULL;
         cst->tok = tok;
         if (consume("=")) {
-            Node *node = bool_or();
+            Node *node = condition();
             cst->cst->val = val(node);
         } else {
             cst->cst->val = (*enums)->enm->consts->cst->val + 1;
