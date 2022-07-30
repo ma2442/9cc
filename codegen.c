@@ -155,6 +155,9 @@ void gen(Node* node) {
             gen(node->rhs);
             printf(".Lend%d:\n", node->label_num);
             return;
+        case ND_COND_EMPTY:
+            printf("  push rax\n");
+            return;
         case ND_DO:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);

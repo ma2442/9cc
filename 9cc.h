@@ -77,6 +77,7 @@ typedef enum {
     ND_NUM,              // 整数
     ND_RETURN,           // return
     ND_IF_ELSE,          // if (judge) lhs else rhs
+    ND_COND_EMPTY,       // a?(empty):b 三項演算子コロン前が空のとき、aを返す
     ND_WHILE,            // while (judge) lhs
     ND_DO,               // do lhs while (judge)
     ND_FOR,              // for (init; judge; inc) lhs

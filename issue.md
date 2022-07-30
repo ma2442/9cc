@@ -1,6 +1,5 @@
 ### To Do
 
-- [ ] 三項演算子 ?:
 - [ ] switch(){case : default:}
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
@@ -28,6 +27,7 @@
 
 ### Optional To Do 未使用
 
+- [ ] goto label:
 - [ ] ,
 - [ ] & | ^ ~ >> <<
 - [ ] &= ^= |= <<= >>=
@@ -54,6 +54,7 @@
 
 ### Completed
 
+- [x] 三項演算子 ?:
 - [x] do{ } while( );
 - [x] (不要) size_t : (stddef.h で #define)
 - [x] 文字リテラル 'a' ..

@@ -477,8 +477,26 @@ Node *bool_or() {
     return node;
 }
 
+// 条件演算子（三項演算子） ? :
+Node *condition() {
+    Node *judge = bool_or();
+    if (consume("?")) {
+        Node *node = new_node(ND_COND_EMPTY, NULL, NULL);
+        if (!consume(":")) {
+            node = expr();
+            expect(":");
+        }
+        node = new_node(ND_IF_ELSE, node, condition());
+        node->judge = judge;
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
+        return node;
+    }
+    return judge;
+}
+
 Node *assign() {
-    Node *node = bool_or();
+    Node *node = condition();
     if (consume("=")) return new_node(ND_ASSIGN, node, assign());
     // 複合代入演算子 += -= *= /=
     int kind = consume_compo_assign();

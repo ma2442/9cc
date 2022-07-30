@@ -159,7 +159,7 @@ char main_t9() {
     return 0;
 }
 
-// do 
+// do
 int main_t10() {
     int i = 0;
     do i++;
@@ -171,6 +171,21 @@ int main_t10() {
         j += 10;
     } while (i < 100);
     if (j != 1000) return 2;
+    return 0;
+}
+
+// 三項演算子
+int main_t11() {
+    if ((1 ? 2 : 3) != 2) return 1;
+    if ((0 ? 2 : 3) != 3) return 2;
+    if ((1 ?: 3) != 1) return 3;
+    if ((0 ?: 3) != 3) return 4;
+    char c = 2 * 3 + 0 ? 'a' : 1 ? 'b' : 'c';
+    if (c != 'a') return 5;
+    char c2 = 0;
+    c = '0' ? 0 ? c2 = '1' : '2' : '3';
+    if (c != '2') return 6;
+    if (c2 != '\0') return 7;
     return 0;
 }
 
@@ -186,5 +201,6 @@ int main() {
     if (main_t8()) return 8;
     if (main_t9()) return 9;
     if (main_t10()) return 10;
+    if (main_t11()) return 11;
     return 255;
 }
