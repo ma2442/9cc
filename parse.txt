@@ -6,6 +6,7 @@ stmt    =
     | "{" stmt* "}"
     | "return" expr ";" 
     | "if" "(" expr ")" stmt ("else" stmt )? 
+    | "do" stmt "while" "(" expr ")" ";"
     | "while" "(" expr ")" stmt
     | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" stmt
     | ...
@@ -15,7 +16,8 @@ type = ("int" | "char" | stc | enm ) "*"*
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
 enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
 expr    = assign
-assign  = bool_or ("=" assign)?
+assign  = cond ("=" assign)?
+cond = bool_or "?" (expr) ":" cond
 bool_or = bool_and ("||" bool_and)*
 bool_and = equality ("&&" equality)*
 equality    = relational (("=="|"!=") relational)*
