@@ -12,6 +12,8 @@
 #define CASE_LEN 128
 #define CODE_LEN 100
 #define STMT_LEN 100
+#define DIGIT_LEN 16  // ラベル番号の最大桁数
+#define NEST_MAX 128
 #define STR_INT "int"
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
@@ -83,6 +85,7 @@ typedef enum {
     ND_CASE,       // case _:
     ND_DEFAULT,    // default:
     ND_LABEL,      // label(goto):
+    ND_GOTO,       // jmp
     ND_WHILE,      // while (judge) lhs
     ND_DO,         // do lhs while (judge)
     ND_FOR,        // for (init; judge; inc) lhs
@@ -211,14 +214,19 @@ struct Node {
         Type *type;    // int, int*などの型情報
     };
     union {
-        int val;      // kindがND_NUMの場合のみ使う
+        int val;      // 評価値が定数になる場合の数値
         int arg_idx;  // ND_FUNC_*_ARGの場合の引数番号(0始まり)
         enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
+        bool exists_default;  // switch内にdefaultがあるか
     };
-    int label_num;        // if,while,for,switch等のラベル通し番号
-    int break_label_num;  // break対象となるラベル番号
-    int case_cnt;         // switch内のcaseの数
-    bool exists_default;  // switch内にdefaultがあるか
+    union {
+        int label_num;  // if,while,do-while,for,switchのラベル通し番号
+        int case_num;   // switch内caseラベル番号
+    };
+    union {
+        int sw_num;    // caseの親switchラベル番号
+        int case_cnt;  // switch内のcaseの数
+    };
 };
 
 size_t sizes[LEN_TYPE_KIND];
@@ -236,7 +244,7 @@ Def *strlits_end;
 // def[1]: 関数直下の ローカル 変数（引数含む）, struct定義, enum定義
 // (関数:NULL)。 以降スコープがネストするたびに添え字が一つ増える。
 // また、structメンバの定義･アクセスにも一時的に使用される。
-Defs *def[100];
+Defs *def[NEST_MAX];
 
 // 現在のネストの深さ(0:global)
 int nest;

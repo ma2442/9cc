@@ -163,7 +163,7 @@ void gen(Node* node) {
             printf("  pop rax\n");
             for (int i = 0; i < node->case_cnt; i++) {
                 printf("  cmp rax, %d\n", node->cases[i]->val);
-                printf("  je .Lsw%dcase%d\n", node->label_num,
+                printf("  je .L%dcase%d\n", node->label_num,
                        node->cases[i]->label_num);
             }
             if (node->exists_default)
@@ -174,16 +174,17 @@ void gen(Node* node) {
             printf(".Lend%d:\n", node->label_num);
             return;
         case ND_CASE:
-            printf(".Lsw%dcase%d:\n", node->break_label_num, node->label_num);
+            printf(".L%dcase%d:\n", node->sw_num, node->label_num);
             gen(node->lhs);
             return;
         case ND_DEFAULT:
-            printf(".Ldefault%d:\n", node->break_label_num);
+            printf(".Ldefault%d:\n", node->sw_num);
             gen(node->lhs);
             return;
         case ND_DO:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);
+            printf(".Lcontinue%d:\n", node->label_num);
             gen(node->judge);
             loop_judge_result(node->label_num);
             printf("  jmp .Lbegin%d\n", node->label_num);
@@ -191,6 +192,7 @@ void gen(Node* node) {
             return;
         case ND_WHILE:
             printf(".Lbegin%d:\n", node->label_num);
+            printf(".Lcontinue%d:\n", node->label_num);
             gen(node->judge);
             loop_judge_result(node->label_num);
             gen(node->lhs);
@@ -205,10 +207,13 @@ void gen(Node* node) {
                 loop_judge_result(node->label_num);
             }
             gen(node->lhs);
+            printf(".Lcontinue%d:\n", node->label_num);
             gen(node->inc);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
             return;
+        case ND_GOTO:
+            printf("  jmp %s\n", node->label->str);
         case ND_NUM:
             printf("  push %d\n", node->val);
             return;

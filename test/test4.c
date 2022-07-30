@@ -344,6 +344,177 @@ int main_t18() {
     return 0;
 }
 
+// switch break
+int main_t19() {
+    int x = 0;
+    switch (0) {
+        case 0:
+            x++;
+        case 1:
+            x += 10;
+            break;
+        case 2:
+            x += 100;
+    }
+    if (x != 11) return 1;
+    x = 0;
+    switch (1) {
+        default:
+            x++;
+        case 1:
+            x += 10;
+            break;
+        case 2:
+            x += 100;
+    }
+    if (x != 10) return 2;
+    return 0;
+}
+
+// break loop
+int main_t20() {
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        if (i == 5) break;
+    }
+    if (i != 5) return 1;
+    i = 0;
+    while (i++ < 100) {
+        if (i == 7) break;
+    }
+    if (i != 7) return 2;
+    i = 0;
+    do {
+        if (i == 9) break;
+    } while (i++ < 100);
+    if (i != 9) return 3;
+    return 0;
+}
+
+// continue loop
+int main_t21() {
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < 100; i++) {
+        if (i < 5) continue;
+        j++;
+        if (i >= 10) break;
+    }
+    if (i != 10) return 3;
+    if (j != 6) return 4;
+    i = 0;
+    j = 0;
+    while (i++ < 100) {
+        if (i < 5) continue;
+        j++;
+        if (i >= 10) break;
+    }
+    if (i != 10) return 5;
+    if (j != 6) return 6;
+    i = 0;
+    j = 0;
+    do {
+        if (i < 5) continue;
+        j++;
+        if (i >= 10) break;
+    } while (i++ < 100);
+    if (i != 10) return 5;
+    if (j != 6) return 6;
+    return 0;
+}
+
+// switch for break continue
+int main_t22() {
+    int x = 0;
+    int a[4];
+    switch (0) {
+        case 0:
+            for (int i = 0; i < 4; i++) a[i] = 0;
+            x++;
+        case 1:
+            for (int i = 0; i < 4; i++) {
+                switch (1) {
+                    default:
+                        x++;
+                    case 1:
+                        x += 10;
+                        break;
+                    case 2:
+                        x += 100;
+                }
+                if (i % 2) continue;
+                a[i] = i + 10;
+            }
+            x++;
+            break;
+        case 2:
+            x += 100;
+    }
+    if (a[0] != 10) return 1;
+    if (a[1] != 0) return 2;
+    if (a[2] != 12) return 3;
+    if (a[3] != 0) return 4;
+    if (x != 42) return 2;
+    return 0;
+}
+
+// for break continue 2
+int main_t23() {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            if (j == 1) continue;
+            if (j == 1) return 1;
+            if (j == 3) break;
+            if (j >= 3) return 2;
+        }
+        if (i == 2) continue;
+        if (i == 2) return 3;
+        if (i == 4) break;
+        if (i >= 4) return 4;
+    }
+    return 0;
+}
+
+// while break continue 2
+int main_t24() {
+    int i = -1;
+    int j;
+    while (i++ < 5) {
+        j = -1;
+        while (j++ < 5) {
+            if (j == 1) continue;
+            if (j == 1) return 1;
+            if (j == 3) break;
+            if (j >= 3) return 2;
+        }
+        if (i == 2) continue;
+        if (i == 2) return 3;
+        if (i == 4) break;
+        if (i >= 4) return 4;
+    }
+    return 0;
+}
+
+// do-while break continue 2
+int main_t25() {
+    int i = -1;
+    int j;
+    do {
+        j = -1;
+        do {
+            if (j == 1) continue;
+            if (j == 1) return 1;
+            if (j == 3) break;
+            if (j >= 3) return 2;
+        } while (j++ < 5);
+        if (i == 2) continue;
+        if (i == 2) return 3;
+        if (i == 4) break;
+        if (i >= 4) return 4;
+    } while (i++ < 5);
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -364,5 +535,12 @@ int main() {
     if (main_t16()) return 16;
     if (main_t17()) return 17;
     if (main_t18()) return 18;
+    if (main_t19()) return 19;
+    if (main_t20()) return 20;
+    if (main_t21()) return 21;
+    if (main_t22()) return 22;
+    if (main_t23()) return 23;
+    if (main_t24()) return 24;
+    if (main_t25()) return 25;
     return 255;
 }

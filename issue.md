@@ -1,11 +1,9 @@
 ### To Do
 
-- [ ] switch(){case : default:}
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
-- [ ] continue, break
 - [ ] void
 - [ ] long long, long, short
 - [ ] unsigned
@@ -54,6 +52,8 @@
 
 ### Completed
 
+- [x] switch(){case : default:}
+- [x] continue, break
 - [x] 三項演算子 ?:
 - [x] do{ } while( );
 - [x] (不要) size_t : (stddef.h で #define)

@@ -42,13 +42,15 @@ Node *new_node_num(int val) {
 int jmp_label_cnt = 0;
 int str_label_cnt = 0;
 
-// break対象ラベル
-int break_label_cnt = -1;
-// continue対象ラベル
-int continue_label_cnt = -1;
+// break対象ラベル番号とbreakネスト数
+int breaklcnt[NEST_MAX];
+int breaknest = -1;
+// continue対象ラベル番号とネスト数
+int contilcnt[NEST_MAX];
+int continest = -1;
 
 // switch対象ノード
-Node *sw[100];
+Node *sw[NEST_MAX];
 int swcnt = -1;
 
 // エラーの起きた場所を報告するための関数
@@ -248,6 +250,31 @@ Node *new_node_bool(Node *node, Node *lhs, Node *rhs) {
     return node;
 }
 
+// for, while, do-while スコープに入る際のbreak, continueラベル同期処理
+void loop_in() {
+    breaknest++;
+    continest++;
+    breaklcnt[breaknest] = jmp_label_cnt;
+    contilcnt[continest] = jmp_label_cnt;
+    jmp_label_cnt++;
+}
+
+// for, while, do-while スコープから出る際のbreak, continueラベル同期処理
+void loop_out() {
+    breaknest--;
+    continest--;
+}
+
+// switch スコープに入る際ののbreakラベル同期処理
+void switch_in() {
+    breaknest++;
+    breaklcnt[breaknest] = jmp_label_cnt;
+    jmp_label_cnt++;
+}
+
+// switch スコープから出る際のbreakラベル同期処理
+void switch_out() { breaknest--; }
+
 Node *code[CODE_LEN];
 Node *statement[STMT_LEN];
 
@@ -269,7 +296,7 @@ Node *str_literal() {
     Def *strlit = calloc_def(DK_STRLIT);
     strlit->tok = tok_str;
 
-    strlit->strlit->label = calloc(str_label_cnt + 4, sizeof(char));
+    strlit->strlit->label = calloc(DIGIT_LEN + 4, sizeof(char));
     sprintf(strlit->strlit->label, ".LC%d", str_label_cnt);
     str_label_cnt++;
     node->def = strlit;
@@ -578,83 +605,102 @@ Node *stmt() {
         expect(";");
         return node;
     }
+    if (consume("break")) {
+        if (breaknest == -1)
+            error_at(token->str, "breakがswitch, while, forの外側にあります");
+        node = new_node(ND_GOTO, NULL, NULL);
+        node->label = calloc(1, sizeof(Token));
+        node->label->str = calloc(DIGIT_LEN + strlen(".Lend"), sizeof(char));
+        sprintf(node->label->str, ".Lend%d", breaklcnt[breaknest]);
+        node->label->len = strlen(node->label->str);
+        return node;
+    }
+    if (consume("continue")) {
+        if (continest == -1)
+            error_at(token->str, "continueがwhile, forの外側にあります");
+        node = new_node(ND_GOTO, NULL, NULL);
+        node->label = calloc(1, sizeof(Token));
+        node->label->str =
+            calloc(DIGIT_LEN + strlen(".Lcontinue"), sizeof(char));
+        sprintf(node->label->str, ".Lcontinue%d", contilcnt[continest]);
+        node->label->len = strlen(node->label->str);
+        return node;
+    }
     if (consume("if")) {
+        node = new_node(ND_IF_ELSE, NULL, NULL);
+        node->label_num = jmp_label_cnt;
+        jmp_label_cnt++;
         expect("(");
-        Node *judge = expr();
+        node->judge = expr();
         expect(")");
-        node = new_node(ND_IF_ELSE, labeled(), NULL);
-        node->judge = judge;
+        node->lhs = labeled();
         if (consume("else")) {
             node->rhs = labeled();
         }
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
         return node;
     }
     if (consume("switch")) {
-        expect("(");
-        Node *judge = expr();
-        expect(")");
         node = new_node(ND_SWITCH, NULL, NULL);
+        switch_in();
+        node->label_num = breaklcnt[breaknest];
+        expect("(");
+        node->judge = expr();
+        expect(")");
         node->case_cnt = 0;
         node->cases = calloc(CASE_LEN, sizeof(Node *));
         swcnt++;
         sw[swcnt] = node;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
         node->lhs = labeled();
-        node->judge = judge;
         sw[swcnt] = NULL;
         swcnt--;
+        switch_out();
         return node;
     }
     if (consume("do")) {
-        node = new_node(ND_DO, labeled(), NULL);
+        node = new_node(ND_DO, NULL, NULL);
+        loop_in();
+        node->label_num = breaklcnt[breaknest];
+        node->lhs = labeled();
         expect("while");
         expect("(");
-        Node *judge = expr();
+        node->judge = expr();
         expect(")");
         expect(";");
-        node->judge = judge;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
+        loop_out();
         return node;
     }
     if (consume("while")) {
+        node = new_node(ND_WHILE, NULL, NULL);
+        loop_in();
+        node->label_num = breaklcnt[breaknest];
         expect("(");
-        Node *judge = expr();
+        node->judge = expr();
         expect(")");
-        node = new_node(ND_WHILE, labeled(), NULL);
-        node->judge = judge;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
+        node->lhs = labeled();
+        loop_out();
         return node;
     }
     if (consume("for")) {
+        node = new_node(ND_FOR, NULL, NULL);
+        loop_in();
+        node->label_num = breaklcnt[breaknest];
         scope_in();
         expect("(");
-        Node *init = NULL;
         if (!consume(";")) {
-            init = decla_and_assign();
+            node->init = decla_and_assign();
             expect(";");
         }
-        Node *judge = NULL;
         if (!consume(";")) {
-            judge = expr();
+            node->judge = expr();
             expect(";");
         }
-        Node *inc = NULL;
         if (!consume(")")) {
-            inc = expr();
+            node->inc = expr();
             expect(")");
         }
-        node = new_node(ND_FOR, labeled(), NULL);
-        node->init = init;
-        node->judge = judge;
-        node->inc = inc;
-        node->label_num = jmp_label_cnt;
-        jmp_label_cnt++;
+        node->lhs = labeled();
         scope_out();
+        loop_out();
         return node;
     }
     if (consume(";")) return new_node(ND_NO_EVAL, NULL, NULL);
@@ -670,8 +716,8 @@ Node *labeled() {
         if (consume("case")) {
             node = new_node(ND_CASE, NULL, NULL);
             node->val = val(expr());
-            node->label_num = sw[swcnt]->case_cnt;
-            node->break_label_num = sw[swcnt]->label_num;
+            node->case_num = sw[swcnt]->case_cnt;
+            node->sw_num = sw[swcnt]->label_num;
             sw[swcnt]->cases[node->label_num] = node;
             sw[swcnt]->case_cnt++;
             expect(":");
@@ -680,7 +726,7 @@ Node *labeled() {
         }
         if (consume("default")) {
             node = new_node(ND_DEFAULT, NULL, NULL);
-            node->break_label_num = sw[swcnt]->label_num;
+            node->sw_num = sw[swcnt]->label_num;
             sw[swcnt]->exists_default = true;
             expect(":");
             node->lhs = labeled();

@@ -2,8 +2,8 @@ program = ( (func | strc | enm) ";" )*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
 labeled = label ":" labeled | stmt
 stmt =
-    | decla_and_assign  ";"
-    |  expr ";" 
+    | (decla_and_assign) ";" 
+    | ("break" | "continue") ";"
     | "{" labeled* "}"
     | "return" expr ";" 
     | "if" "(" expr ")" labeled ("else" labeled )? 
@@ -12,7 +12,7 @@ stmt =
     | "while" "(" expr ")" labeled
     | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" labeled
     | ...
-decla_and_assign = declaration ("=" assign)?
+decla_and_assign = (declaration | expr) ("=" assign)?
 declaration = type symbol ("[" num "]")*
 type = ("int" | "char" | stc | enm ) "*"* 
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
