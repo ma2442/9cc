@@ -181,6 +181,11 @@ void gen(Node* node) {
             printf(".Ldefault%d:\n", node->sw_num);
             gen(node->lhs);
             return;
+        case ND_LABEL:
+            printf(".L%d.%.*s:\n", node->fn_num, node->label->len,
+                   node->label->str);
+            gen(node->lhs);
+            return;
         case ND_DO:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);
@@ -213,7 +218,12 @@ void gen(Node* node) {
             printf(".Lend%d:\n", node->label_num);
             return;
         case ND_GOTO:
-            printf("  jmp %s\n", node->label->str);
+            if (node->label->str[0] != '.')
+                printf("  jmp .L%d.%.*s\n", node->fn_num, node->label->len,
+                       node->label->str);
+            else
+                printf("  jmp %.*s\n", node->label->len, node->label->str);
+            return;
         case ND_NUM:
             printf("  push %d\n", node->val);
             return;

@@ -53,6 +53,9 @@ int continest = -1;
 Node *sw[NEST_MAX];
 int swcnt = -1;
 
+// 関数通し番号(goto label 用)
+int fncnt = -1;
+
 // エラーの起きた場所を報告するための関数
 // 下のようなフォーマットでエラーメッセージを表示する
 //
@@ -626,6 +629,12 @@ Node *stmt() {
         node->label->len = strlen(node->label->str);
         return node;
     }
+    if (consume("goto")) {
+        node = new_node(ND_GOTO, NULL, NULL);
+        node->label = consume_ident();
+        node->fn_num = fncnt;
+        return node;
+    }
     if (consume("if")) {
         node = new_node(ND_IF_ELSE, NULL, NULL);
         node->label_num = jmp_label_cnt;
@@ -741,6 +750,7 @@ Node *labeled() {
     }
     node = new_node(ND_LABEL, labeled(), NULL);
     node->label = tok;
+    node->fn_num = fncnt;
     return node;
 }
 
@@ -751,6 +761,7 @@ Node *func(Type *typ, Token *func_name) {
     fnc = calloc_def(DK_FUNC);
     fnc->next = def[nest]->funcs;
     fnc->fn->type = typ;
+    fncnt++;
 
     // スコープ内変数等初期化
     scope_in();

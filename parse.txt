@@ -11,6 +11,7 @@ stmt =
     | "do" labeled "while" "(" expr ")" ";"
     | "while" "(" expr ")" labeled
     | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" labeled
+    | "goto" label ";"
     | ...
 decla_and_assign = (declaration | expr) ("=" assign)?
 declaration = type symbol ("[" num "]")*

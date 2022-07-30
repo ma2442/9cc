@@ -222,6 +222,7 @@ struct Node {
     union {
         int label_num;  // if,while,do-while,for,switchのラベル通し番号
         int case_num;   // switch内caseラベル番号
+        int fn_num;     // gotoラベルのprefix 関数番号
     };
     union {
         int sw_num;    // caseの親switchラベル番号

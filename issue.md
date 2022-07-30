@@ -1,10 +1,10 @@
 ### To Do
 
+- [ ] void
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
-- [ ] void
 - [ ] long long, long, short
 - [ ] unsigned
 - [ ] static
@@ -25,7 +25,6 @@
 
 ### Optional To Do 未使用
 
-- [ ] goto label:
 - [ ] ,
 - [ ] & | ^ ~ >> <<
 - [ ] &= ^= |= <<= >>=
@@ -38,6 +37,7 @@
 - [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
 - [ ] 文字列リテラルの配置を.rodata に変更して不変値にする
 - [ ] 関数の引数の型をコール時に確定させる
+- [ ] goto に対応する label が存在するかどうか関数内で判定
 
   - 新 node が ND_FUNC_CALL_ARGS のとき、
     node->type に グローバル変数 funcs より型を設定
@@ -52,6 +52,7 @@
 
 ### Completed
 
+- [x] goto label:
 - [x] switch(){case : default:}
 - [x] continue, break
 - [x] 三項演算子 ?:

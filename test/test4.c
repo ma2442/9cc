@@ -515,6 +515,30 @@ int main_t25() {
     return 0;
 }
 
+// goto
+int main_t26() {
+    int i = 0;
+    goto abc;
+    i -= 3;
+BEGIN:
+    i += 30;
+    goto LABEL;
+    do {
+        return 1;
+    } while (1);
+    if (0) {
+    abc:
+        i += 20;
+        goto BEGIN;
+        i -= 3;
+    }
+    i -= 3;
+LABEL:
+    i += 100;
+    if(i != 150) return 1;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -542,5 +566,6 @@ int main() {
     if (main_t23()) return 23;
     if (main_t24()) return 24;
     if (main_t25()) return 25;
+    if (main_t26()) return 26;
     return 255;
 }
