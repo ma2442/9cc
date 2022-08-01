@@ -213,6 +213,7 @@ int main_t12() {
             x += 100;
     }
     if (x != 100) return 2;
+    return 0;
 }
 
 int main_t13() {

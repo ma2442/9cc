@@ -73,10 +73,10 @@ void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
     printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
 }
 
-void gen_load(Node* node) {
-    if (node->type->ty == ARRAY || node->type->ty == STRUCT) return;
+void gen_load(Type* type) {
+    if (type->ty == ARRAY || type->ty == STRUCT) return;
     printf("  pop rax\n");
-    int sz = size(node->type);
+    int sz = size(type);
     printf("  %s rcx, %s[rax]\n", cnvword(MOVS, sz), cnvword(QWORD_PTR, sz));
     printf("  push rcx\n");
 }
@@ -113,7 +113,7 @@ void gen_tochar() {
     printf("  push rcx\n");
 }
 
-void replicate_top() {
+void copy_top() {
     printf("  pop rax\n");
     printf("  push rax\n");
     printf("  push rax\n");
@@ -132,10 +132,7 @@ void loop_judge_result(int num) {
     printf("  je .Lend%d\n", num);
 }
 
-void gen(Node* node) {
-    if (!node || node->kind == ND_NO_EVAL) return;
-    char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-
+bool gen_ctrl(Node* node) {
     switch (node->kind) {
         case ND_RETURN:
             gen(node->lhs);
@@ -143,7 +140,7 @@ void gen(Node* node) {
             printf("  mov rsp, rbp\n");
             printf("  pop rbp\n");
             printf("  ret\n");
-            return;
+            return true;
         case ND_IF_ELSE:
             gen(node->judge);
             printf("  pop rax\n");
@@ -154,10 +151,10 @@ void gen(Node* node) {
             printf(".Lelse%d:\n", node->label_num);
             gen(node->rhs);
             printf(".Lend%d:\n", node->label_num);
-            return;
+            return true;
         case ND_COND_EMPTY:
             printf("  push rax\n");
-            return;
+            return true;
         case ND_SWITCH:
             gen(node->judge);
             printf("  pop rax\n");
@@ -172,20 +169,27 @@ void gen(Node* node) {
                 printf("  jmp .Lend%d\n", node->label_num);
             gen(node->lhs);
             printf(".Lend%d:\n", node->label_num);
-            return;
+            return true;
         case ND_CASE:
             printf(".L%dcase%d:\n", node->sw_num, node->label_num);
             gen(node->lhs);
-            return;
+            return true;
         case ND_DEFAULT:
             printf(".Ldefault%d:\n", node->sw_num);
             gen(node->lhs);
-            return;
+            return true;
+        case ND_GOTO:
+            if (node->label->str[0] != '.')
+                printf("  jmp .L%d.%.*s\n", node->fn_num, node->label->len,
+                       node->label->str);
+            else
+                printf("  jmp %.*s\n", node->label->len, node->label->str);
+            return true;
         case ND_LABEL:
             printf(".L%d.%.*s:\n", node->fn_num, node->label->len,
                    node->label->str);
             gen(node->lhs);
-            return;
+            return true;
         case ND_DO:
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);
@@ -194,7 +198,7 @@ void gen(Node* node) {
             loop_judge_result(node->label_num);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
-            return;
+            return true;
         case ND_WHILE:
             printf(".Lbegin%d:\n", node->label_num);
             printf(".Lcontinue%d:\n", node->label_num);
@@ -203,7 +207,7 @@ void gen(Node* node) {
             gen(node->lhs);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
-            return;
+            return true;
         case ND_FOR:
             gen(node->init);
             printf(".Lbegin%d:\n", node->label_num);
@@ -216,30 +220,21 @@ void gen(Node* node) {
             gen(node->inc);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
-            return;
-        case ND_GOTO:
-            if (node->label->str[0] != '.')
-                printf("  jmp .L%d.%.*s\n", node->fn_num, node->label->len,
-                       node->label->str);
-            else
-                printf("  jmp %.*s\n", node->label->len, node->label->str);
-            return;
-        case ND_NUM:
-            printf("  push %d\n", node->val);
-            return;
-        case ND_LVAR:
-        case ND_GVAR:
-        case ND_MEMBER:
-            gen_lval(node);
-            gen_load(node);
-            return;
-        case ND_ADDR:
-            gen_lval(node->lhs);
-            return;
-        case ND_DEREF:
-            gen(node->lhs);
-            gen_load(node);
-            return;
+            return true;
+        case ND_BLOCK:
+            for (int i = 0; i <= BLOCK_LEN; i++) {
+                if (!node->block[i]) return true;
+                gen(node->block[i]);
+            }
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool gen_func(Node* node) {
+    char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    switch (node->kind) {
         case ND_FUNC_CALL:
             gen(node->next_arg);  //実引数計算
             // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
@@ -262,14 +257,14 @@ void gen(Node* node) {
             if (size(node->type) == 1) {
                 gen_tochar();
             }
-            return;
+            return true;
         case ND_FUNC_CALL_ARG:
             gen(node->rhs);       // value of this arg
             gen(node->next_arg);  // next arg
             if (arg_storage[node->arg_idx][0] != '\0') {
                 printf("  pop %s\n", arg_storage[node->arg_idx]);
             }
-            return;
+            return true;
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
@@ -289,70 +284,105 @@ void gen(Node* node) {
             printf("  mov rsp, rbp\n");
             printf("  pop rbp\n");
             printf("  ret\n");
-            return;
+            return true;
         case ND_FUNC_DEFINE_ARG:
             gen_lval(node->lhs);
             printf("  push %s\n", arg_storage[node->arg_idx]);
             gen(node->next_arg);
             gen_store(node->lhs->type);
             // printf("  push rdi\n");
-            return;
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool gen_assign(Node* node) {
+    switch (node->kind) {
         case ND_ASSIGN:
+        case ND_ASSIGN_COMPOSITE:
+            // 前置インクリメントと複合代入  ND_ASSIGN_COMPOSITE
+            // ASSIGN L,  ADD L
+            // addr,      addr =STACK TOP
             gen_lval(node->lhs);
-            if (node->assign_kind == ASN_POST_INCDEC) {
-                // 後置インクリメント
-                // POST INCDEC EVAL,   ASSIGN L,  ADD L
-                // [addr],              addr,     addr =STACK TOP
-                replicate_top();
-                gen_load(node->lhs);
-                swap_top();
-                replicate_top();
-            } else if (node->assign_kind == ASN_COMPOSITE) {
-                // 前置インクリメントと複合代入
-                // ASSIGN L,  ADD L
-                // addr,      addr =STACK TOP
-                replicate_top();
-            }
+            if (node->kind == ND_ASSIGN_COMPOSITE) copy_top();
             gen(node->rhs);
             gen_store(node->lhs->type);
-            if (node->assign_kind != ASN_POST_INCDEC) printf("  push rcx\n");
-            return;
-        case ND_BLOCK:
-            for (int i = 0; i <= 128; i++) {
-                if (!node->block[i]) {
-                    return;
-                }
-                gen(node->block[i]);
-            }
-            return;
+            printf("  push rcx\n");
+            return true;
+        case ND_ASSIGN_POST_INCDEC:
+            // 後置インクリメント
+            // POST INCDEC EVAL,   ASSIGN L,  ADD L
+            // [addr],              addr,     addr =STACK TOP
+            gen_lval(node->lhs);
+            copy_top();
+            gen_load(node->lhs->type);
+            swap_top();
+            copy_top();
+            gen(node->rhs);
+            gen_store(node->lhs->type);
+            return true;
         case ND_DEFGLOBAL:
         case ND_DEFLOCAL:
             if (node->lhs) gen(node->lhs);
-            return;
+            return true;
+        default:
+            return false;
     }
+}
+
+bool gen_unary(Node* node) {
+    switch (node->kind) {
+        case ND_LVAR:
+        case ND_GVAR:
+        case ND_MEMBER:
+            gen_lval(node);
+            gen_load(node->type);
+            return true;
+        case ND_NUM:
+            printf("  push %d\n", node->val);
+            return true;
+        case ND_ADDR:
+            gen_lval(node->lhs);
+            return true;
+        case ND_DEREF:
+            gen(node->lhs);
+            gen_load(node->type);
+            return true;
+        default:
+            return false;
+    }
+}
+
+// ポインタ加減算時のサイズ調整
+void gen_addsub_sizing(Type* l, Type* r) {
+    if (can_deref(l)) {
+        printf("  imul rdi, %d\n", size(l->ptr_to));
+    } else if (can_deref(r)) {
+        printf("  imul rax, %d\n", size(r->ptr_to));
+    }
+}
+
+void gen(Node* node) {
+    if (!node || node->kind == ND_NO_EVAL) return;
+    if (gen_ctrl(node)) return;
+    if (gen_assign(node)) return;
+    if (gen_func(node)) return;
+    if (gen_unary(node)) return;
 
     // インクリメント･デクリメント･複合代入の場合は省略項の評価を遅らせる。
-    if (node->lhs->kind == ND_DUMMY) {
+    if (node->lhs->kind == ND_OMITTED_TERM) {
         gen(node->rhs);
         swap_top();
-        gen_load(node);
-        printf("  pop rax\n");
-        printf("  pop rdi\n");
+        gen_load(node->type);
+        swap_top();
     } else {
         gen(node->lhs);
         gen(node->rhs);
-        printf("  pop rdi\n");
-        printf("  pop rax\n");
     }
 
-    // ポインタの加減算
-    if (node->kind == ND_ADD || node->kind == ND_SUB) {
-        if (can_deref(node->lhs->type)) {
-            printf("  imul rdi, %d\n", size(node->lhs->type->ptr_to));
-        } else if (can_deref(node->rhs->type)) {
-            printf("  imul rax, %d\n", size(node->rhs->type->ptr_to));
-        }
-    }
+    printf("  pop rdi\n");
+    printf("  pop rax\n");
 
     switch (node->kind) {
         case ND_EQUAL:
@@ -368,24 +398,24 @@ void gen(Node* node) {
             gen_cmp(RAX, "rdi", "setle", RAX);
             break;
         case ND_ADD:
+            gen_addsub_sizing(node->lhs->type, node->rhs->type);
             printf("  add rax, rdi\n");
             break;
         case ND_SUB:
+            gen_addsub_sizing(node->lhs->type, node->rhs->type);
             printf("  sub rax, rdi\n");
             break;
         case ND_MUL:
             printf("  imul rax, rdi\n");
             break;
         case ND_DIV:
-            printf("  cqo\n");
-            printf("  idiv rdi\n");
-            break;
         case ND_MOD:
             printf("  cqo\n");
             printf("  idiv rdi\n");
             break;
+        default:
+            return;
     }
-
     if (node->kind == ND_MOD)
         printf("  push rdx\n");
     else

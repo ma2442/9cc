@@ -96,6 +96,8 @@ void typing(Node *node) {
         case ND_DIV:
         case ND_MOD:
         case ND_ASSIGN:
+        case ND_ASSIGN_POST_INCDEC:
+        case ND_ASSIGN_COMPOSITE:
             node->type = node->lhs->type;
             break;
         case ND_IF_ELSE:

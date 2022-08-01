@@ -344,19 +344,25 @@ int consume_incdec() {
 // node==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
 // 前置インクリメントは複合代入と同じ処理
 Node *incdec(Node *node) {
-    int kind = consume_incdec();
-    if (kind == -1) return NULL;
-    int asn_kind = ASN_COMPOSITE;
-    if (!node) {
-        node = unary();
+    int kind_addsub = consume_incdec();
+    if (kind_addsub == -1) return NULL;
+    // if (node) {
+    //     asn_kind = ASN_POST_INCDEC;
+
+    // } else {
+    //     node = unary();
+    //     asn_kind = ASN_COMPOSITE;
+    // }
+    // node = new_node(ND_ASSIGN, node, NULL);
+    // node->assign_kind = asn_kind;
+    if (node) {
+        node = new_node(ND_ASSIGN_POST_INCDEC, node, NULL);
     } else {
-        asn_kind = ASN_POST_INCDEC;
+        node = new_node(ND_ASSIGN_COMPOSITE, unary(), NULL);
     }
-    node = new_node(ND_ASSIGN, node, NULL);
-    node->assign_kind = asn_kind;
-    Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
-    nd_typ->type = node->lhs->type;
-    node->rhs = new_node(kind, nd_typ, new_node_num(1));
+    Node *nd_omit = new_node(ND_OMITTED_TERM, NULL, NULL);
+    nd_omit->type = node->lhs->type;
+    node->rhs = new_node(kind_addsub, nd_omit, new_node_num(1));
     return node;
 }
 
@@ -540,11 +546,10 @@ Node *assign() {
     // 複合代入演算子 += -= *= /=
     int kind = consume_compo_assign();
     if (kind != -1) {
-        Node *nd_assign = new_node(ND_ASSIGN, node, NULL);
-        nd_assign->assign_kind = ASN_COMPOSITE;
-        Node *nd_typ = new_node(ND_DUMMY, NULL, NULL);
-        nd_typ->type = nd_assign->lhs->type;
-        nd_assign->rhs = new_node(kind, nd_typ, assign());
+        Node *nd_assign = new_node(ND_ASSIGN_COMPOSITE, node, NULL);
+        Node *nd_omit = new_node(ND_OMITTED_TERM, NULL, NULL);
+        nd_omit->type = nd_assign->lhs->type;
+        nd_assign->rhs = new_node(kind, nd_omit, assign());
         return nd_assign;
     }
     return node;
@@ -725,7 +730,7 @@ Node *labeled() {
         if (consume("case")) {
             node = new_node(ND_CASE, NULL, NULL);
             node->val = val(expr());
-            node->case_num = sw[swcnt]->case_cnt;
+            node->label_num = sw[swcnt]->case_cnt;
             node->sw_num = sw[swcnt]->label_num;
             sw[swcnt]->cases[node->label_num] = node;
             sw[swcnt]->case_cnt++;

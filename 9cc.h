@@ -59,42 +59,44 @@ struct Token {
 
 // 抽象構文木のノードの種類
 typedef enum {
-    ND_EQUAL,            // ==
-    ND_NOT_EQUAL,        // !=
-    ND_LESS_THAN,        // <
-    ND_LESS_OR_EQUAL,    // <=
-    ND_ADD,              // +
-    ND_SUB,              // -
-    ND_MUL,              // *
-    ND_DIV,              // /
-    ND_MOD,              // %
-    ND_ASSIGN,           // =
-    ND_DEFLOCAL,         // local variable definition
-    ND_LVAR,             // local variable, or x++, x--
-    ND_ADDR,             // pointer &
-    ND_DEREF,            // pointer *
-    ND_FUNC_CALL,        // 関数呼び出し
-    ND_FUNC_CALL_ARG,    // 関数の実引数
-    ND_FUNC_DEFINE,      // 関数定義
-    ND_FUNC_DEFINE_ARG,  // 関数の仮引数
-    ND_NUM,              // 整数
-    ND_RETURN,           // return
-    ND_IF_ELSE,          // if (judge) lhs else rhs
+    ND_NO_EVAL,  // 評価不要なノード
+    ND_RETURN,   // return
+    ND_IF_ELSE,  // if (judge) lhs else rhs
     ND_COND_EMPTY,  // a?(empty):b 三項演算子コロン前が空のとき、aを返す
-    ND_SWITCH,     // switch (judge) lhs
-    ND_CASE,       // case _:
-    ND_DEFAULT,    // default:
-    ND_LABEL,      // label(goto):
-    ND_GOTO,       // jmp
-    ND_WHILE,      // while (judge) lhs
-    ND_DO,         // do lhs while (judge)
-    ND_FOR,        // for (init; judge; inc) lhs
-    ND_BLOCK,      // block { }
-    ND_DEFGLOBAL,  // global variable definition
-    ND_GVAR,       // global variable, or x++, x--
-    ND_DUMMY,      // x++,--x,複合代入等により省略された項
-    ND_MEMBER,     // 構造体メンバへのアクセス
-    ND_NO_EVAL     // 評価不要なノード
+    ND_SWITCH,              // switch (judge) lhs
+    ND_CASE,                // case _:
+    ND_DEFAULT,             // default:
+    ND_GOTO,                // jmp
+    ND_LABEL,               // label(goto):
+    ND_WHILE,               // while (judge) lhs
+    ND_DO,                  // do lhs while (judge)
+    ND_FOR,                 // for (init; judge; inc) lhs
+    ND_BLOCK,               // block { }
+    ND_FUNC_CALL,           // 関数呼び出し
+    ND_FUNC_CALL_ARG,       // 関数の実引数
+    ND_FUNC_DEFINE,         // 関数定義
+    ND_FUNC_DEFINE_ARG,     // 関数の仮引数
+    ND_ASSIGN,              // =
+    ND_ASSIGN_COMPOSITE,    // += -= *= /= %=
+    ND_ASSIGN_POST_INCDEC,  // x=x+1 x=x-1 of x++ x--
+    ND_DEFLOCAL,            // local variable definition
+    ND_DEFGLOBAL,           // global variable definition
+    ND_ADDR,                // pointer &
+    ND_DEREF,               // pointer *
+    ND_LVAR,                // local variable, evaluation of x++ x--
+    ND_GVAR,                // global variable, or x++, x--
+    ND_MEMBER,              // 構造体メンバへのアクセス
+    ND_NUM,                 // 整数
+    ND_OMITTED_TERM,   // x++,--x,複合代入等により省略された項
+    ND_EQUAL,          // ==
+    ND_NOT_EQUAL,      // !=
+    ND_LESS_THAN,      // <
+    ND_LESS_OR_EQUAL,  // <=
+    ND_ADD,            // +
+    ND_SUB,            // -
+    ND_MUL,            // *
+    ND_DIV,            // /
+    ND_MOD             // %
 } NodeKind;
 
 typedef enum {
@@ -191,43 +193,26 @@ struct Def {
 
 // 抽象構文木のノード
 struct Node {
-    NodeKind kind;  // ノードの種類
-    Node *lhs;      // 左辺, またはif,while,for等の内部statement
-    union {
-        Node *rhs;  // 右辺, またはelseの内部statement
-        Node *inc;  // forの後処理式( ; ;____)
-    };
-    union {
-        Node *next_arg;  // kindがND_FUNC_* の場合に使う
-        Node *judge;     // if,while,for等の条件式
-    };
-    union {
-        Node **block;  // block {} 内のstatements
-        Node **cases;  // switch{} 内のcases
-    };
-    union {
-        Def *def;    // 変数情報 関数情報 文字列リテラル情報
-        Node *init;  // forの初期化式(_____; ; )
-    };
-    union {
-        Token *label;  // jump label
-        Type *type;    // int, int*などの型情報
-    };
-    union {
-        int val;      // 評価値が定数になる場合の数値
-        int arg_idx;  // ND_FUNC_*_ARGの場合の引数番号(0始まり)
-        enum { ASN_NORMAL, ASN_POST_INCDEC, ASN_COMPOSITE } assign_kind;
-        bool exists_default;  // switch内にdefaultがあるか
-    };
-    union {
-        int label_num;  // if,while,do-while,for,switchのラベル通し番号
-        int case_num;   // switch内caseラベル番号
-        int fn_num;     // gotoラベルのprefix 関数番号
-    };
-    union {
-        int sw_num;    // caseの親switchラベル番号
-        int case_cnt;  // switch内のcaseの数
-    };
+    NodeKind kind;   // ノードの種類
+    Node *lhs;       // 左辺, またはif,while,for等の内部statement
+    Node *rhs;       // 右辺, またはelseの内部statement
+    Node *init;      // forの初期化式(_____; ; )
+    Node *judge;     // if,while,for等の条件式
+    Node *inc;       // forの後処理式( ; ;____)
+    Node *next_arg;  // kindがND_FUNC_* の場合に使う
+    Node **block;    // block {} 内のstatements
+    Node **cases;    // switch{} 内のcases
+    Def *def;        // 変数情報 関数情報 文字列リテラル情報
+    Token *label;    // jump label
+    Type *type;      // int, int*などの型情報
+    int val;         // 評価値が定数になる場合の数値
+    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+    bool exists_default;  // switch内にdefaultがあるか
+    int label_num;  // if,while,do-while,for,switchのラベル通し番号
+                    // switch内caseラベル番号
+    int fn_num;     // gotoラベルのprefix 関数番号
+    int sw_num;     // caseの親switchラベル番号
+    int case_cnt;   // switch内のcaseの数
 };
 
 size_t sizes[LEN_TYPE_KIND];
