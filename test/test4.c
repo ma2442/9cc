@@ -536,7 +536,36 @@ BEGIN:
     i -= 3;
 LABEL:
     i += 100;
-    if(i != 150) return 1;
+    if (i != 150) return 1;
+    return 0;
+}
+
+int x_t27;
+void func_t27() { x_t27++; };
+void func2_t27() {
+    if (x_t27 == 10) return;
+    x_t27++;
+    return;
+};
+
+// void function
+int main_t27() {
+    x_t27 = 0;
+    func_t27();
+    if (x_t27 != 1) return 1;
+    for (int i = 0; i < 20; i++) func2_t27();
+    if (x_t27 != 10) return 2;
+    return 0;
+}
+
+// void pointer
+int main_t28() {
+    void *v;
+    char a[10];
+    v = a;
+    for (int i = 0; i < sizeof(a) / sizeof(*a); i++) a[i] = i + 10;
+    for (int i = 0; i < 10; i++)
+        if (v[i] != i + 10) return 1;
     return 0;
 }
 
@@ -568,5 +597,7 @@ int main() {
     if (main_t24()) return 24;
     if (main_t25()) return 25;
     if (main_t26()) return 26;
+    if (main_t27()) return 27;
+    if (main_t28()) return 28;
     return 255;
 }

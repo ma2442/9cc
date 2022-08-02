@@ -136,7 +136,7 @@ bool gen_ctrl(Node* node) {
     switch (node->kind) {
         case ND_RETURN:
             gen(node->lhs);
-            printf("  pop rax\n");
+            if (node->lhs) printf("  pop rax\n");
             printf("  mov rsp, rbp\n");
             printf("  pop rbp\n");
             printf("  ret\n");
@@ -253,7 +253,7 @@ bool gen_func(Node* node) {
             printf("  add rsp, rbx\n");
 
             // 返り値をスタックに保存
-            printf("  push rax\n");
+            if (node->type->ty != VOID) printf("  push rax\n");
             if (size(node->type) == 1) {
                 gen_tochar();
             }

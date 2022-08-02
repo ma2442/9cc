@@ -17,6 +17,7 @@
 #define STR_INT "int"
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
+#define STR_VOID "void"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -98,6 +99,7 @@ typedef enum {
 } NodeKind;
 
 typedef enum {
+    VOID,
     CHAR,
     INT,
     BOOL,
@@ -219,6 +221,7 @@ char *type_words[LEN_TYPE_KIND];
 char *filename;    // 入力ファイル名
 char *user_input;  // 入力ソース
 Token *token;
+Token *tok_type;  // 型チェック用トークン
 Node *code[CODE_LEN];
 Node *statement[STMT_LEN];
 
@@ -288,6 +291,7 @@ int calc_align(Type *type);
 int set_offset(Var *var, int base);
 void typing(Node *node);
 Type *base_type();
+void voidcheck(Type *typ, char *pos);
 
 // consume.c
 bool consume(char *op);

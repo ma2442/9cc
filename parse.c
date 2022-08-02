@@ -58,6 +58,7 @@ Node *new_node_defvar(Type *typ, Token *var_name) {
 // 変数名として識別
 Node *new_node_var(Token *tok) {
     Def *var = fit_def(tok, DK_VAR);
+    if (!var) return NULL;
     NodeKind kind = (var->var->islocal ? ND_LVAR : ND_GVAR);
     Node *node = new_node(kind, NULL, NULL);
     node->def = var;
@@ -126,6 +127,10 @@ Node *func_call(Token *tok) {
     } else {
         node->def = calloc_def(DK_FUNC);
         node->def->tok = tok;
+        // 関数が見つからなければ関数返却型をintと想定
+        // (関数宣言未実装時点の処置)
+        node->type = calloc(1, sizeof(Type));
+        node->type->ty = INT;
     }
 
     // 実引数処理
@@ -147,15 +152,6 @@ Node *func_call(Token *tok) {
 Node *incdec(Node *node) {
     int kind_addsub = consume_incdec();
     if (kind_addsub == -1) return NULL;
-    // if (node) {
-    //     asn_kind = ASN_POST_INCDEC;
-
-    // } else {
-    //     node = unary();
-    //     asn_kind = ASN_COMPOSITE;
-    // }
-    // node = new_node(ND_ASSIGN, node, NULL);
-    // node->assign_kind = asn_kind;
     if (node) {
         node = new_node(ND_ASSIGN_POST_INCDEC, node, NULL);
     } else {
@@ -210,12 +206,18 @@ Node *primary() {
     // 識別子がなければ数値
     if (!tok) {
         Token *num = consume_numeric();
+        if (!num) return NULL;
         node = new_node_num(num->val);
         if (num->kind == TK_CHAR) node->type->ty = CHAR;
         return node;
     }
     // 関数名として識別
-    if (consume("(")) return func_call(tok);
+    if (consume("(")) {
+        node = func_call(tok);
+        if (node->type->ty == VOID)
+            error_at(tok->str, "void型は評価できません");
+        return node;
+    }
     // 列挙子として識別
     Def *sym = fit_def(tok, DK_ENUMCONST);
     if (sym) return new_node_num(sym->cst->val);
@@ -385,6 +387,7 @@ Node *decla_and_assign() {
     // 変数定義
     Token *idt = consume_ident();
     if (!idt) return new_node(ND_NO_EVAL, NULL, NULL);
+    voidcheck(typ, tok_type->str);
     Node *node = declaration_var(typ, idt);
     if (consume("="))
         node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
@@ -400,7 +403,11 @@ Node *stmt() {
         return node;
     }
     if (consume("return")) {
-        node = new_node(ND_RETURN, expr(), NULL);
+        if (fnc->fn->type->ty != VOID) {
+            node = expr();
+            if (!node) error_at(token->str, "返却値がありません");
+        }
+        node = new_node(ND_RETURN, node, NULL);
         expect(";");
         return node;
     }
@@ -509,6 +516,15 @@ Node *stmt() {
         return node;
     }
     if (consume(";")) return new_node(ND_NO_EVAL, NULL, NULL);
+    // 関数の実行のみの行(void型を許容)
+    Token *save = token;
+    Token *idt = consume_ident();
+    if (idt && consume("(")) {
+        node = func_call(idt);
+        if (consume(";")) return node;
+    }
+    token = save;
+
     node = decla_and_assign();
     expect(";");
     return node;
@@ -572,6 +588,7 @@ Node *func(Type *typ, Token *func_name) {
         Node *arg = node;
         do {
             typ = base_type();
+            voidcheck(typ, tok_type->str);
             Token *tok = consume_ident();
             Node *ln = declaration_var(typ, tok);
             ln->kind = ND_LVAR;
@@ -617,6 +634,7 @@ void program() {
         }
         Node *node = func(typ, idt);
         if (!node) {
+            voidcheck(typ, tok_type->str);
             node = declaration_var(typ, idt);
             expect(";");
         }

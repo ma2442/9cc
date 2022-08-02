@@ -2,6 +2,7 @@
 
 void init_sizes() {
     sizes[CHAR] = 1;
+    sizes[VOID] = sizes[CHAR];
     sizes[BOOL] = 1;
     sizes[INT] = 4;
     sizes[ENUM] = 4;
@@ -11,9 +12,10 @@ void init_sizes() {
 }
 
 void init_words() {
-    type_words[INT] = STR_INT;
-    type_words[CHAR] = STR_CHAR;
+    type_words[VOID] = STR_VOID;
     type_words[BOOL] = STR_BOOL;
+    type_words[CHAR] = STR_CHAR;
+    type_words[INT] = STR_INT;
     type_words[STRUCT] = "";
     type_words[ENUM] = "";
     type_words[PTR] = "";
@@ -154,6 +156,7 @@ Type *def_struct(Token *tag) {
     int ofst = 0;
     while (!consume("}")) {
         Type *typ = base_type();
+        voidcheck(typ, tok_type->str);
         Token *tok = consume_ident();
         // メンバ作成（メンバのノードは不要なので放置）
         declaration_var(typ, tok);
@@ -268,7 +271,7 @@ Type *type_enum() {
     return typ;
 }
 
-// ( int, char,_Bool, struct (tag) ({}) ) **..
+// ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..
 Type *base_type() {
     Token *tok = consume_type();
     if (!tok) return NULL;
@@ -287,4 +290,8 @@ Type *base_type() {
         }
     }
     return type_pointer(typ);
+}
+
+void voidcheck(Type *typ, char *pos) {
+    if (typ->ty == VOID) error_at(pos, "void型は定義できません");
 }

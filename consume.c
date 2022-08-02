@@ -35,11 +35,12 @@ Token *consume_numeric() {
 }
 Token *consume_str() { return consume_if_kind_is(TK_STR); }
 Token *consume_type() {
-    Token *tok = consume_if_kind_is(TK_STRUCT);
-    if (tok) return tok;
-    tok = consume_if_kind_is(TK_TYPE);
-    if (tok) return tok;
-    return consume_if_kind_is(TK_ENUM);
+    tok_type = consume_if_kind_is(TK_STRUCT);
+    if (tok_type) return tok_type;
+    tok_type = consume_if_kind_is(TK_TYPE);
+    if (tok_type) return tok_type;
+    tok_type = consume_if_kind_is(TK_ENUM);
+    return tok_type;
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 
