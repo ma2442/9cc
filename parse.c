@@ -240,8 +240,7 @@ Node *unary() {
     if (consume("-")) return new_node(ND_SUB, new_node_num(0), unary());
     if (consume("&")) return new_node(ND_ADDR, unary(), NULL);
     if (consume("*")) return new_node(ND_DEREF, unary(), NULL);
-    if (consume("!"))
-        return new_node_bool(unary(), new_node_num(0), new_node_num(1));
+    if (consume("!")) return new_node(ND_EQUAL, unary(), new_node_num(0));
     return regex();
 }
 
@@ -305,13 +304,19 @@ Node *equality() {
 
 Node *bool_and() {
     Node *node = equality();
-    if (consume("&&")) node = new_node_bool(node, bool_and(), new_node_num(1));
+    if (consume("&&")) {
+        Node *lhs = new_node(ND_NOT_EQUAL, bool_and(), new_node_num(0));
+        node = new_node_bool(node, lhs, new_node_num(0));
+    }
     return node;
 }
 
 Node *bool_or() {
     Node *node = bool_and();
-    if (consume("||")) node = new_node_bool(node, new_node_num(1), bool_or());
+    if (consume("||")) {
+        Node *rhs = new_node(ND_NOT_EQUAL, bool_or(), new_node_num(0));
+        node = new_node_bool(node, new_node_num(1), rhs);
+    }
     return node;
 }
 

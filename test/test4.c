@@ -104,23 +104,27 @@ _Bool main_t5() {
 // && ||
 int main_t6() {
     int x;
-    if ((1 && 1) == 0) return 1;
+    if (0 && 0) return 1;
     if (1 && 0) return 2;
-    if ((1 || 0) == 0) return 3;
-    if (0 || 0) return 4;
-    if ((1 == 1 && 1 + 1) == 0) return 1;
-    if (((x = 0) || (x = 1)) == 0) return 2;
-    if ((0 || 2 && 3) == 0) return 3;
-    if ((0 && 1 || 2) == 0) return 4;
+    if (0 && 1) return 3;
+    if ((1 && 1) != 1) return 4;
+    if (0 || 0) return 5;
+    if ((1 || 0) != 1) return 6;
+    if ((0 || 1) != 1) return 7;
+    if ((1 || 1) != 1) return 8;
+    if ((1 == 1 && 1 + 1) != 1) return 9;
+    if (((x = 0) || (x = 1)) != 1) return 10;
+    if ((0 || 2 && 3) != 1) return 11;
+    if ((0 && 1 || 2) != 1) return 12;
     return 0;
 }
 // !x 否定 NOT
 int main_t7() {
-    if (!1) return 1;
-    if (!2) return 2;
-    if (!!0) return 3;
-    if (!((1 == 1 && 1 + 1) == 0)) return 4;
-    return !!1;
+    if (!2) return 1;
+    if (!!0) return 2;
+    if (!!999 != 1) return 3;
+    if (!((1 == 1 && 1 + 1) == !0)) return 4;
+    return 0;
 }
 
 // 文字リテラル
@@ -577,7 +581,7 @@ int main() {
     if (main_t4()) return 4;
     if (main_t5()) return 5;
     if (main_t6()) return 6;
-    if (!main_t7()) return 7;
+    if (main_t7()) return 7;
     if (main_t8()) return 8;
     if (main_t9()) return 9;
     if (main_t10()) return 10;
