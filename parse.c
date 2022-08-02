@@ -1,5 +1,4 @@
 #include "9cc.h"
-enum { GLOBAL, LOCAL } IsLocal;
 
 Def *calloc_def(DefKind kind) {
     Def *d = calloc(1, sizeof(Def));
@@ -38,136 +37,6 @@ Node *new_node_num(int val) {
     return node;
 }
 
-// ラベル通し番号
-int jmp_label_cnt = 0;
-int str_label_cnt = 0;
-
-// break対象ラベル番号とbreakネスト数
-int breaklcnt[NEST_MAX];
-int breaknest = -1;
-// continue対象ラベル番号とネスト数
-int contilcnt[NEST_MAX];
-int continest = -1;
-
-// switch対象ノード
-Node *sw[NEST_MAX];
-int swcnt = -1;
-
-// 関数通し番号(goto label 用)
-int fncnt = -1;
-
-// エラーの起きた場所を報告するための関数
-// 下のようなフォーマットでエラーメッセージを表示する
-//
-// foo.c:10: x = y + + 5;
-//                   ^ 式ではありません
-void error_at(char *loc, char *fmt, ...) {
-    // locが含まれている行の開始地点と終了地点を取得
-    char *line = loc;
-    while (user_input < line && line[-1] != '\n') line--;
-
-    char *end = loc;
-    while (*end != '\n') end++;
-
-    // 見つかった行が全体の何行目なのかを調べる
-    int line_num = 1;
-    for (char *p = user_input; p < line; p++)
-        if (*p == '\n') line_num++;
-
-    // 見つかった行を、ファイル名と行番号と一緒に表示
-    int indent = fprintf(stderr, "%s:%d: ", filename, line_num);
-    fprintf(stderr, "%.*s\n", (int)(end - line), line);
-
-    // エラー箇所を"^"で指し示して、エラーメッセージを表示
-    int pos = loc - line + indent;
-    fprintf(stderr, "%*s", pos, "");  // pos個の空白を出力
-    fprintf(stderr, "^ ");
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-    exit(1);
-}
-
-// エラーを報告するための関数
-// printfと同じ引数を取る
-void error(char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    va_end(ap);
-    exit(1);
-}
-
-// 次のトークンが期待している記号のときには、トークンを1つ読み進めて
-// 真を返す。それ以外の場合には偽を返す。
-bool consume(char *op) {
-    switch (token->kind) {
-        case TK_RESERVED:
-        case TK_SIZEOF:
-        case TK_RETURN:
-        case TK_CTRL:
-        case TK_STRUCT:
-            break;
-        default:
-            return false;
-    }
-    if (strlen(op) != token->len || memcmp(token->str, op, token->len)) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-Token *consume_if_kind_is(TokenKind tk) {
-    if (token->kind != tk) {
-        return NULL;
-    }
-    Token *this = token;
-    token = token->next;
-    return this;
-}
-Token *consume_numeric() {
-    Token *tok = consume_if_kind_is(TK_CHAR);
-    if (tok) return tok;
-    return consume_if_kind_is(TK_NUM);
-}
-Token *consume_str() { return consume_if_kind_is(TK_STR); }
-Token *consume_type() {
-    Token *tok = consume_if_kind_is(TK_STRUCT);
-    if (tok) return tok;
-    tok = consume_if_kind_is(TK_TYPE);
-    if (tok) return tok;
-    return consume_if_kind_is(TK_ENUM);
-}
-Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
-
-// 次のトークンが期待している記号のときには、トークンを1つ読み進める。
-// それ以外の場合にはエラーを報告する。
-void expect(char *op) {
-    if ((token->kind != TK_RESERVED && token->kind != TK_CTRL) ||
-        strlen(op) != token->len || memcmp(token->str, op, token->len)) {
-        error_at(token->str, "'%s'ではありません", op);
-    }
-    token = token->next;
-    return;
-}
-
-// 次のトークンが数値の場合、トークンを1つ読み進めてその数値を返す。
-// それ以外の場合にはエラーを報告する。
-int expect_numeric() {
-    if (token->kind != TK_NUM && token->kind != TK_CHAR) {
-        error_at(token->str, "数ではありません");
-    }
-    int val = token->val;
-    token = token->next;
-    return val;
-}
-
-bool at_eof() { return token->kind == TK_EOF; }
-
 // 変数定義
 Node *new_node_defvar(Type *typ, Token *var_name) {
     if (find_def(var_name, DK_VAR))
@@ -196,38 +65,6 @@ Node *new_node_var(Token *tok) {
     return node;
 }
 
-// スコープに入る
-void scope_in() {
-    nest++;
-    def[nest] = calloc(1, sizeof(Defs));
-    def[nest]->funcs = calloc_def(DK_FUNC);
-    def[nest]->vars = calloc_def(DK_VAR);
-    def[nest]->vars_last = def[nest]->vars;
-    def[nest]->structs = calloc_def(DK_STRUCT);
-}
-
-// スコープから出る
-void scope_out() {
-    if (nest > 0 && def[nest]->vars_last) {
-        // 関数内ネストの変数はローカル変数に載せて行く
-        def[nest]->vars_last->next = fnc->fn->vars;
-        fnc->fn->vars = def[nest]->vars;
-    }
-    free(def[nest]);
-    def[nest] = NULL;
-    nest--;
-}
-
-// 構造体メンバのスコープに入る
-void member_in() { scope_in(); }
-
-// 構造体メンバのスコープから出る
-void member_out() {
-    free(def[nest]);
-    def[nest] = NULL;
-    nest--;
-}
-
 // メンバ変数として識別
 Node *new_node_mem(Node *nd_stc, Token *tok) {
     member_in();
@@ -252,36 +89,6 @@ Node *new_node_bool(Node *node, Node *lhs, Node *rhs) {
     jmp_label_cnt++;
     return node;
 }
-
-// for, while, do-while スコープに入る際のbreak, continueラベル同期処理
-void loop_in() {
-    breaknest++;
-    continest++;
-    breaklcnt[breaknest] = jmp_label_cnt;
-    contilcnt[continest] = jmp_label_cnt;
-    jmp_label_cnt++;
-}
-
-// for, while, do-while スコープから出る際のbreak, continueラベル同期処理
-void loop_out() {
-    breaknest--;
-    continest--;
-}
-
-// switch スコープに入る際ののbreakラベル同期処理
-void switch_in() {
-    breaknest++;
-    breaklcnt[breaknest] = jmp_label_cnt;
-    jmp_label_cnt++;
-}
-
-// switch スコープから出る際のbreakラベル同期処理
-void switch_out() { breaknest--; }
-
-Node *code[CODE_LEN];
-Node *statement[STMT_LEN];
-
-Node *expr();
 
 // 文字列リテラル
 Node *str_literal() {
@@ -333,12 +140,6 @@ Node *func_call(Token *tok) {
         expect(")");
     }
     return node;
-}
-
-int consume_incdec() {
-    if (consume("++")) return ND_ADD;
-    if (consume("--")) return ND_SUB;
-    return -1;
 }
 
 // node==NULL: ++x or --x, else: x++ or x-- (++*p, p[0]++ 等もありうる)
@@ -420,16 +221,6 @@ Node *primary() {
     if (sym) return new_node_num(sym->cst->val);
     //関数でも定数でもなければ変数
     return new_node_var(tok);
-}
-
-//複合代入
-int consume_compo_assign() {
-    if (consume("+=")) return ND_ADD;
-    if (consume("-=")) return ND_SUB;
-    if (consume("*=")) return ND_MUL;
-    if (consume("/=")) return ND_DIV;
-    if (consume("%=")) return ND_MOD;
-    return -1;
 }
 
 // 単項 unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
@@ -662,11 +453,11 @@ Node *stmt() {
         expect(")");
         node->case_cnt = 0;
         node->cases = calloc(CASE_LEN, sizeof(Node *));
-        swcnt++;
-        sw[swcnt] = node;
+        swnest++;
+        sw[swnest] = node;
         node->lhs = labeled();
-        sw[swcnt] = NULL;
-        swcnt--;
+        sw[swnest] = NULL;
+        swnest--;
         switch_out();
         return node;
     }
@@ -726,22 +517,22 @@ Node *stmt() {
 // labeled = label ":" labeled | stmt
 Node *labeled() {
     Node *node = NULL;
-    if (swcnt >= 0) {
+    if (swnest >= 0) {
         if (consume("case")) {
             node = new_node(ND_CASE, NULL, NULL);
             node->val = val(expr());
-            node->label_num = sw[swcnt]->case_cnt;
-            node->sw_num = sw[swcnt]->label_num;
-            sw[swcnt]->cases[node->label_num] = node;
-            sw[swcnt]->case_cnt++;
+            node->label_num = sw[swnest]->case_cnt;
+            node->sw_num = sw[swnest]->label_num;
+            sw[swnest]->cases[node->label_num] = node;
+            sw[swnest]->case_cnt++;
             expect(":");
             node->lhs = labeled();
             return node;
         }
         if (consume("default")) {
             node = new_node(ND_DEFAULT, NULL, NULL);
-            node->sw_num = sw[swcnt]->label_num;
-            sw[swcnt]->exists_default = true;
+            node->sw_num = sw[swnest]->label_num;
+            sw[swnest]->exists_default = true;
             expect(":");
             node->lhs = labeled();
             return node;
@@ -811,7 +602,6 @@ Node *func(Type *typ, Token *func_name) {
 
 void program() {
     int i = 0;
-    nest = -1;
     scope_in();
     def[nest]->vars = calloc_def(DK_VAR);
     globals_end = def[nest]->vars;

@@ -133,7 +133,7 @@ bool read_controls(char **pp, Token **tokp, int len) {
         {TK_CTRL, "continue"}, {TK_CTRL, "goto"},       {TK_CTRL, "while"},
         {TK_CTRL, "do"},       {TK_CTRL, "for"},        {TK_RETURN, "return"},
         {TK_SIZEOF, "sizeof"}, {TK_TYPE, STR_INT},      {TK_TYPE, STR_CHAR},
-        {TK_TYPE, STR_BOOL},   {TK_STRUCT, STR_STRUCT}, {TK_ENUM, STR_ENUM}};
+        {TK_TYPE, STR_BOOL},   {TK_STRUCT, "struct"}, {TK_ENUM, "enum"}};
     for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
         if (len == strlen(kdwds[i].word) && !strncmp(*pp, kdwds[i].word, len)) {
             *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, len);

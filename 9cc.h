@@ -17,8 +17,6 @@
 #define STR_INT "int"
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
-#define STR_STRUCT "struct"
-#define STR_ENUM "enum"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -218,13 +216,11 @@ struct Node {
 size_t sizes[LEN_TYPE_KIND];
 char *type_words[LEN_TYPE_KIND];
 
-// 現在定義中の関数
-Def *fnc;
-// グローバル変数
-Def *globals_end;
-// 文字列リテラル
-Def *strlits;
-Def *strlits_end;
+char *filename;    // 入力ファイル名
+char *user_input;  // 入力ソース
+Token *token;
+Node *code[CODE_LEN];
+Node *statement[STMT_LEN];
 
 // def[0]: グローバル 関数, 変数, struct定義, enum定義
 // def[1]: 関数直下の ローカル 変数（引数含む）, struct定義, enum定義
@@ -232,73 +228,92 @@ Def *strlits_end;
 // また、structメンバの定義･アクセスにも一時的に使用される。
 Defs *def[NEST_MAX];
 
-// 現在のネストの深さ(0:global)
-int nest;
-
-// 入力ファイル名
-char *filename;
+Def *fnc;                 // 現在定義中の関数
+Def *globals_end;         // グローバル変数(出現順)
+Def *strlits;             // 文字列リテラル(出現逆順)
+Def *strlits_end;         // 文字列リテラル(出現順)
+int jmp_label_cnt;        // jmpラベル通し番号
+int str_label_cnt;        // 文字列リテラル ラベル通し番号
+int nest;                 // 現在のネストの深さ(0:global)
+int breaklcnt[NEST_MAX];  // break対象ラベル番号
+int breaknest;            // breakネスト数
+int contilcnt[NEST_MAX];  // continue対象ラベル番号
+int continest;            // continueネスト数
+Node *sw[NEST_MAX];       // switch対象ノード
+int swnest;               // switchネスト数
+int fncnt;                // 関数通し番号(goto label 用)
 
 #endif  // HEADER_H
-extern int size(Type *typ);
-extern bool can_deref(Type *typ);
-extern Def *calloc_def(DefKind kind);
-extern Node *new_node();
-extern Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-extern Node *new_node_num(int val);
-extern Token *token;
+int size(Type *typ);
+bool can_deref(Type *typ);
+Def *calloc_def(DefKind kind);
+Node *new_node();
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
+Node *new_node_num(int val);
 
-extern char *user_input;
-extern int jmp_label_cnt;
-extern void error_at(char *loc, char *fmt, ...);
-extern void error(char *fmt, ...);
-extern bool consume(char *op);
-extern Token *consume_ident();
-extern Token *consume_type();
-extern void expect(char *op);
-extern int expect_number();
-extern bool at_eof();
-extern Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-extern Token *tokenize(char *p);
-extern Node *code[CODE_LEN];
-extern Node *statement[STMT_LEN];
-extern void scope_in();
-extern void scope_out();
-extern void member_in();
-extern void member_out();
-extern Node *regex();
-extern Node *primary();
-extern Node *unary();
-extern Node *mul();
-extern Node *add();
-extern Node *relational();
-extern Node *equality();
-extern Node *bool_or();
-extern Node *condition();
-extern Node *assign();
-extern Node *expr();
-extern Node *stmt();
-extern Node *labeled();
-extern Node *declaration_var(Type *typ, Token *tok);
-extern void program();
+// error.c
+void error_at(char *loc, char *fmt, ...);
+void error(char *fmt, ...);
 
-extern void gen_lval(Node *node);
-extern void gen(Node *node);
+// parse.c
+Token *new_token(TokenKind kind, Token *cur, char *str, int len);
+Token *tokenize(char *p);
+Node *regex();
+Node *primary();
+Node *unary();
+Node *mul();
+Node *add();
+Node *relational();
+Node *equality();
+Node *bool_or();
+Node *condition();
+Node *assign();
+Node *expr();
+Node *stmt();
+Node *labeled();
+Node *declaration_var(Type *typ, Token *tok);
+void program();
+
+// codegen.c
+void gen(Node *node);
 
 // type.c
-extern void init_sizes();
-extern void init_words();
-extern int val(Node *node);  // 定数計算
-extern int size(Type *typ);
-extern bool can_deref(Type *typ);
-extern int align(int x, int aln);
-extern int calc_align(Type *type);
-extern int set_offset(Var *var, int base);
-extern void typing(Node *node);
-extern Type *base_type();
+void init_sizes();
+void init_words();
+int val(Node *node);  // 定数計算
+int size(Type *typ);
+bool can_deref(Type *typ);
+int align(int x, int aln);
+int calc_align(Type *type);
+int set_offset(Var *var, int base);
+void typing(Node *node);
+Type *base_type();
+
+// consume.c
+bool consume(char *op);
+Token *consume_numeric();
+Token *consume_str();
+Token *consume_type();
+Token *consume_ident();
+int consume_incdec();
+int consume_compo_assign();
+void expect(char *op);
+int expect_numeric();
+bool at_eof();
 
 // find.c
-extern Def *find_def(Token *tok, DefKind kind);
-extern Def *find_enumconst(Token *tok);
-extern Def *fit_def(Token *tok, DefKind kind);
-extern bool can_def_symbol(Token *sym);
-extern bool can_def_tag(Token *sym);
+Def *find_def(Token *tok, DefKind kind);
+Def *find_enumconst(Token *tok);
+Def *fit_def(Token *tok, DefKind kind);
+bool can_def_symbol(Token *sym);
+bool can_def_tag(Token *sym);
+
+// scope.c
+void scope_in();
+void scope_out();
+void member_in();
+void member_out();
+void loop_in();
+void loop_out();
+void switch_in();
+void switch_out();

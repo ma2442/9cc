@@ -14,8 +14,8 @@ void init_words() {
     type_words[INT] = STR_INT;
     type_words[CHAR] = STR_CHAR;
     type_words[BOOL] = STR_BOOL;
-    type_words[STRUCT] = STR_STRUCT;
-    type_words[ENUM] = STR_ENUM;
+    type_words[STRUCT] = "";
+    type_words[ENUM] = "";
     type_words[PTR] = "";
     type_words[ARRAY] = "";
 }
