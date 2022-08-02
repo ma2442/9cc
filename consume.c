@@ -52,6 +52,11 @@ int consume_incdec() {
 
 //複合代入
 int consume_compo_assign() {
+    if (consume("<<=")) return ND_BIT_SHIFT_L;
+    if (consume(">>=")) return ND_BIT_SHIFT_R;
+    if (consume("|=")) return ND_BIT_OR;
+    if (consume("^=")) return ND_BIT_XOR;
+    if (consume("&=")) return ND_BIT_AND;
     if (consume("+=")) return ND_ADD;
     if (consume("-=")) return ND_SUB;
     if (consume("*=")) return ND_MUL;

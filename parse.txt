@@ -1,11 +1,10 @@
 program = ( (func | strc | enm) ";" )*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
 labeled = label ":" labeled | stmt
-stmt =
-    | (decla_and_assign) ";" 
-    | ("break" | "continue") ";"
+stmt 
+    = (decla_and_assign | "break" | "continue") ";"
     | "{" labeled* "}"
-    | "return" expr ";" 
+    | "return" (expr) ";" 
     | "if" "(" expr ")" labeled ("else" labeled )? 
     | "switch" "(" expr ")" labeled 
     | "do" labeled "while" "(" expr ")" ";"
@@ -13,13 +12,17 @@ stmt =
     | "for" "(" decla_and_assign? ";" expr? ";" expr? ")" labeled
     | "goto" label ";"
     | ...
-decla_and_assign = (declaration | expr) ("=" assign)?
+decla_and_assign = declaration ("=" assign)? | expr
+assign  = cond ("=" assign)?
 declaration = type symbol ("[" num "]")*
 type = ("int" | "char" | stc | enm ) "*"* 
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
 enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
-expr    = assign
-assign  = cond ("=" assign)?
+expr    = compo_assign 
+compo_assign 
+    = cond ( ( "<<=" | ">>=" | "|=" | "^=" | "&="
+              | "+=" | "-=" | "*=" | "/=" | "%=" | "="
+    ) compo_assign )?
 cond = bool_or "?" (expr) ":" cond
 bool_or = bool_and ("||" bool_and)*
 bool_and = or ("&&" or)*

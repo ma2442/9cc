@@ -104,6 +104,8 @@ void typing(Node *node) {
         case ND_BIT_XOR:
         case ND_BIT_AND:
         case ND_BIT_NOT:
+        case ND_BIT_SHIFT_L:
+        case ND_BIT_SHIFT_R:
             node->type = node->lhs->type;
             break;
         case ND_IF_ELSE:

@@ -373,7 +373,7 @@ Node *condition() {
 Node *assign() {
     Node *node = condition();
     if (consume("=")) return new_node(ND_ASSIGN, node, assign());
-    // 複合代入演算子 += -= *= /=
+    // 複合代入演算子 <<= >>= |= ^= &= += -= *= /=
     int kind = consume_compo_assign();
     if (kind != -1) {
         Node *nd_assign = new_node(ND_ASSIGN_COMPOSITE, node, NULL);

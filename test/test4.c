@@ -608,6 +608,23 @@ int main_t30() {
     return 0;
 }
 
+// 複合代入 <<= >>= |= ^= &=
+int main_t31() {
+    int x = 1;
+    // x <<= 3;
+    x <<= x <<= 1;
+    if (x != 8) return 1;
+    x >>= 1;
+    if (x != 4) return 2;
+    x |= 1 + 2;
+    if (x != 1 + 2 + 4) return 3;
+    x &= 1 + 2;
+    if (x != 1 + 2) return 4;
+    x ^= 4 + 1;
+    if (x != 4 + 2) return 5;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -640,5 +657,6 @@ int main() {
     if (main_t28()) return 28;
     if (main_t29()) return 29;
     if (main_t30()) return 30;
+    if (main_t31()) return main_t31();
     return 255;
 }
