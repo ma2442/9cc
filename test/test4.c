@@ -573,16 +573,38 @@ int main_t28() {
     return 0;
 }
 
+// bit and xor or not
 int main_t29() {
     if ((3 | 9) != 11) return 1;
     if ((3 & 9) != 1) return 2;
     if ((3 ^ 9) != 10) return 3;
+    if ((2 + 4 + 8 & 1 + 2 + 8 ^ 2 | 1) != 8 + 1) return 4;
+    if ((1 | 2 == 1) != 1) return 5;
+    if ((1 & 2 == 1) != 0) return 6;
+    if ((1 ^ 2 == 1) != 1) return 7;
     char c = 84;
     char notc = -85;
-    if (~c != -85) return 4;
-    if (~c != notc) return 5; // 符号拡張されているか
+    if (~c != -85) return 8;
+    if (~c != notc) return 9;  // 符号拡張されているか
     _Bool b = 10;
-    if ( ~b != -2) return 6;
+    if (~b != -2) return 10;
+    return 0;
+}
+
+// shift L R << >>
+int main_t30() {
+    if (16 + 4 + 2 + 1 >> 2 != (16 + 4) / 4) return 11;
+    if (8 + 1 << 3 != (8 + 1) * 8) return 12;
+    if (-8 >> 1 != -4) return 13;  // 符号ビット埋め確認
+    char c = -8;
+    c = c >> 1;
+    if (c != -4) return 14;
+    int x = 1 << 33;
+    if (x != 0) return 15;
+    if (1 << 33 != 0) return 16;  // 4byte以上は桁溢れ
+    c = 1;
+    if (1 << 16 == 0) return 17;
+    if (c << 16 != 1 << 16) return 18;  // 4byte以下型は4byteまで伸長
     return 0;
 }
 
@@ -617,5 +639,6 @@ int main() {
     if (main_t27()) return 27;
     if (main_t28()) return 28;
     if (main_t29()) return 29;
+    if (main_t30()) return 30;
     return 255;
 }

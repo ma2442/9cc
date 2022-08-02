@@ -25,7 +25,6 @@
 ### Optional To Do 未使用
 
 - [ ] ,
-- [ ] & | ^ ~ >> <<
 - [ ] &= ^= |= <<= >>=
 - [ ] static
 - [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
@@ -51,6 +50,7 @@
 
 ### Completed
 
+- [x] & | ^ ~ >> <<
 - [x] void
 - [x] goto label:
 - [x] switch(){case : default:}

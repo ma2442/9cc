@@ -95,6 +95,8 @@ typedef enum {
     ND_NOT_EQUAL,      // !=
     ND_LESS_THAN,      // <
     ND_LESS_OR_EQUAL,  // <=
+    ND_BIT_SHIFT_L,    // <<
+    ND_BIT_SHIFT_R,    // >>
     ND_ADD,            // +
     ND_SUB,            // -
     ND_MUL,            // *

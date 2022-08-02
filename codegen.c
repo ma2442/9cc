@@ -77,8 +77,8 @@ void gen_load(Type* type) {
     if (type->ty == ARRAY || type->ty == STRUCT) return;
     printf("  pop rax\n");
     int sz = size(type);
-    printf("  %s rcx, %s[rax]\n", cnvword(MOVS, sz), cnvword(QWORD_PTR, sz));
-    printf("  push rcx\n");
+    printf("  %s rax, %s[rax]\n", cnvword(MOVS, sz), cnvword(QWORD_PTR, sz));
+    printf("  push rax\n");
 }
 
 void gen_store(Type* type) {
@@ -109,8 +109,8 @@ void gen_store(Type* type) {
 
 void gen_tochar() {
     printf("  pop rax\n");
-    printf("  movsx rcx, al\n");
-    printf("  push rcx\n");
+    printf("  movsx rax, al\n");
+    printf("  push rax\n");
 }
 
 void copy_top() {
@@ -121,9 +121,9 @@ void copy_top() {
 
 void swap_top() {
     printf("  pop rax\n");
-    printf("  pop rdi\n");
+    printf("  pop rcx\n");
     printf("  push rax\n");
-    printf("  push rdi\n");
+    printf("  push rcx\n");
 }
 
 void loop_judge_result(int num) {
@@ -290,7 +290,7 @@ bool gen_func(Node* node) {
             printf("  push %s\n", arg_storage[node->arg_idx]);
             gen(node->next_arg);
             gen_store(node->lhs->type);
-            // printf("  push rdi\n");
+            // printf("  push rcx\n");
             return true;
         default:
             return false;
@@ -363,7 +363,7 @@ bool gen_unary(Node* node) {
 // ポインタ加減算時のサイズ調整
 void gen_addsub_sizing(Type* l, Type* r) {
     if (can_deref(l)) {
-        printf("  imul rdi, %d\n", size(l->ptr_to));
+        printf("  imul rcx, %d\n", size(l->ptr_to));
     } else if (can_deref(r)) {
         printf("  imul rax, %d\n", size(r->ptr_to));
     }
@@ -387,46 +387,56 @@ void gen(Node* node) {
         gen(node->rhs);
     }
 
-    printf("  pop rdi\n");
+    printf("  pop rcx\n");
     printf("  pop rax\n");
 
     switch (node->kind) {
         case ND_BIT_OR:
-            printf("  or rax, rdi\n");
+            printf("  or rax, rcx\n");
             break;
         case ND_BIT_XOR:
-            printf("  xor rax, rdi\n");
+            printf("  xor rax, rcx\n");
             break;
         case ND_BIT_AND:
-            printf("  and rax, rdi\n");
+            printf("  and rax, rcx\n");
             break;
         case ND_EQUAL:
-            gen_cmp(RAX, "rdi", "sete", RAX);
+            gen_cmp(RAX, "rcx", "sete", RAX);
             break;
         case ND_NOT_EQUAL:
-            gen_cmp(RAX, "rdi", "setne", RAX);
+            gen_cmp(RAX, "rcx", "setne", RAX);
             break;
         case ND_LESS_THAN:
-            gen_cmp(RAX, "rdi", "setl", RAX);
+            gen_cmp(RAX, "rcx", "setl", RAX);
             break;
         case ND_LESS_OR_EQUAL:
-            gen_cmp(RAX, "rdi", "setle", RAX);
+            gen_cmp(RAX, "rcx", "setle", RAX);
+            break;
+        case ND_BIT_SHIFT_L:
+            printf("  shl rax, cl\n");
+            int sz = size(node->lhs->type);
+            if (size(node->lhs->type) <= 4)
+                printf("  %s rax, %s\n", cnvword(MOVS, 4), cnvword(RAX, 4));
+            break;
+        case ND_BIT_SHIFT_R:
+            printf("  sar rax, cl\n");  // signed: 符号ビットで埋める
+            // printf("  shr rax, cl\n"); // unsigned: ゼロで埋める
             break;
         case ND_ADD:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
-            printf("  add rax, rdi\n");
+            printf("  add rax, rcx\n");
             break;
         case ND_SUB:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
-            printf("  sub rax, rdi\n");
+            printf("  sub rax, rcx\n");
             break;
         case ND_MUL:
-            printf("  imul rax, rdi\n");
+            printf("  imul rax, rcx\n");
             break;
         case ND_DIV:
         case ND_MOD:
             printf("  cqo\n");
-            printf("  idiv rdi\n");
+            printf("  idiv rcx\n");
             break;
         default:
             return;

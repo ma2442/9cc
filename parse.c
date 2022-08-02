@@ -273,17 +273,30 @@ Node *add() {
     }
 }
 
-Node *relational() {
+Node *bit_shift() {
     Node *node = add();
     for (;;) {
+        if (consume("<<")) {
+            node = new_node(ND_BIT_SHIFT_L, node, add());
+        } else if (consume(">>")) {
+            node = new_node(ND_BIT_SHIFT_R, node, add());
+        } else {
+            return node;
+        }
+    }
+}
+
+Node *relational() {
+    Node *node = bit_shift();
+    for (;;) {
         if (consume("<")) {
-            node = new_node(ND_LESS_THAN, node, add());
+            node = new_node(ND_LESS_THAN, node, bit_shift());
         } else if (consume(">")) {
-            node = new_node(ND_LESS_THAN, add(), node);
+            node = new_node(ND_LESS_THAN, bit_shift(), node);
         } else if (consume("<=")) {
-            node = new_node(ND_LESS_OR_EQUAL, node, add());
+            node = new_node(ND_LESS_OR_EQUAL, node, bit_shift());
         } else if (consume(">=")) {
-            node = new_node(ND_LESS_OR_EQUAL, add(), node);
+            node = new_node(ND_LESS_OR_EQUAL, bit_shift(), node);
         } else {
             return node;
         }

@@ -27,7 +27,8 @@ or = xor ("|" xor)*
 xor = and ("^" and)*
 and = equality ("&" equality)*
 equality    = relational (("=="|"!=") relational)*
-relational  = add (("<"|">"|"<="|">=") add)*
+relational  = shift (("<"|">"|"<="|">=") shift)*
+shift = add (("<<"|">>") add)*
 add = mul (("+"|"-") mul)*
 mul = unary (("*"|"/"|"%") unary)*
 unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!"|"~")? unary | regex
