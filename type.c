@@ -100,6 +100,10 @@ void typing(Node *node) {
         case ND_ASSIGN:
         case ND_ASSIGN_POST_INCDEC:
         case ND_ASSIGN_COMPOSITE:
+        case ND_BIT_OR:
+        case ND_BIT_XOR:
+        case ND_BIT_AND:
+        case ND_BIT_NOT:
             node->type = node->lhs->type;
             break;
         case ND_IF_ELSE:

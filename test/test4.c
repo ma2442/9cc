@@ -573,6 +573,19 @@ int main_t28() {
     return 0;
 }
 
+int main_t29() {
+    if ((3 | 9) != 11) return 1;
+    if ((3 & 9) != 1) return 2;
+    if ((3 ^ 9) != 10) return 3;
+    char c = 84;
+    char notc = -85;
+    if (~c != -85) return 4;
+    if (~c != notc) return 5; // 符号拡張されているか
+    _Bool b = 10;
+    if ( ~b != -2) return 6;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -603,5 +616,6 @@ int main() {
     if (main_t26()) return 26;
     if (main_t27()) return 27;
     if (main_t28()) return 28;
+    if (main_t29()) return 29;
     return 255;
 }

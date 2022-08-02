@@ -22,12 +22,15 @@ expr    = assign
 assign  = cond ("=" assign)?
 cond = bool_or "?" (expr) ":" cond
 bool_or = bool_and ("||" bool_and)*
-bool_and = equality ("&&" equality)*
+bool_and = or ("&&" or)*
+or = xor ("|" xor)*
+xor = and ("^" and)*
+and = equality ("&" equality)*
 equality    = relational (("=="|"!=") relational)*
 relational  = add (("<"|">"|"<="|">=") add)*
 add = mul (("+"|"-") mul)*
 mul = unary (("*"|"/"|"%") unary)*
-unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
+unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!"|"~")? unary | regex
 regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->") symbol) )*
 primary = strlit
     | "(" expr ")"

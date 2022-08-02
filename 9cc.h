@@ -82,11 +82,15 @@ typedef enum {
     ND_DEFGLOBAL,           // global variable definition
     ND_ADDR,                // pointer &
     ND_DEREF,               // pointer *
+    ND_BIT_NOT,             // ~
     ND_LVAR,                // local variable, evaluation of x++ x--
     ND_GVAR,                // global variable, or x++, x--
     ND_MEMBER,              // 構造体メンバへのアクセス
     ND_NUM,                 // 整数
     ND_OMITTED_TERM,   // x++,--x,複合代入等により省略された項
+    ND_BIT_OR,         // |
+    ND_BIT_XOR,        // ^
+    ND_BIT_AND,        // &
     ND_EQUAL,          // ==
     ND_NOT_EQUAL,      // !=
     ND_LESS_THAN,      // <
@@ -95,7 +99,7 @@ typedef enum {
     ND_SUB,            // -
     ND_MUL,            // *
     ND_DIV,            // /
-    ND_MOD             // %
+    ND_MOD,            // %
 } NodeKind;
 
 typedef enum {

@@ -1,6 +1,5 @@
 ### To Do
 
-- [ ] void
 - [ ] typedef Type Typename;
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
@@ -52,6 +51,7 @@
 
 ### Completed
 
+- [x] void
 - [x] goto label:
 - [x] switch(){case : default:}
 - [x] continue, break

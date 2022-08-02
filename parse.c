@@ -241,6 +241,7 @@ Node *unary() {
     if (consume("&")) return new_node(ND_ADDR, unary(), NULL);
     if (consume("*")) return new_node(ND_DEREF, unary(), NULL);
     if (consume("!")) return new_node(ND_EQUAL, unary(), new_node_num(0));
+    if (consume("~")) return new_node(ND_BIT_NOT, unary(), NULL);
     return regex();
 }
 
@@ -302,8 +303,26 @@ Node *equality() {
     }
 }
 
-Node *bool_and() {
+Node *bit_and() {
     Node *node = equality();
+    while (consume("&")) node = new_node(ND_BIT_AND, node, equality());
+    return node;
+}
+
+Node *bit_xor() {
+    Node *node = bit_and();
+    while (consume("^")) node = new_node(ND_BIT_XOR, node, bit_and());
+    return node;
+}
+
+Node *bit_or() {
+    Node *node = bit_xor();
+    while (consume("|")) node = new_node(ND_BIT_OR, node, bit_xor());
+    return node;
+}
+
+Node *bool_and() {
+    Node *node = bit_or();
     if (consume("&&")) {
         Node *lhs = new_node(ND_NOT_EQUAL, bool_and(), new_node_num(0));
         node = new_node_bool(node, lhs, new_node_num(0));

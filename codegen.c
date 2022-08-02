@@ -349,6 +349,12 @@ bool gen_unary(Node* node) {
             gen(node->lhs);
             gen_load(node->type);
             return true;
+        case ND_BIT_NOT:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            printf("  not rax\n");
+            printf("  push rax\n");
+            return true;
         default:
             return false;
     }
@@ -385,6 +391,15 @@ void gen(Node* node) {
     printf("  pop rax\n");
 
     switch (node->kind) {
+        case ND_BIT_OR:
+            printf("  or rax, rdi\n");
+            break;
+        case ND_BIT_XOR:
+            printf("  xor rax, rdi\n");
+            break;
+        case ND_BIT_AND:
+            printf("  and rax, rdi\n");
+            break;
         case ND_EQUAL:
             gen_cmp(RAX, "rdi", "sete", RAX);
             break;
