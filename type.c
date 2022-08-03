@@ -4,22 +4,17 @@ void init_sizes() {
     sizes[CHAR] = 1;
     sizes[VOID] = sizes[CHAR];
     sizes[BOOL] = 1;
+    sizes[SHORT] = 2;
     sizes[INT] = 4;
+    sizes[LL] = 8;
+    sizes[UCHAR] = 1;
+    sizes[USHORT] = 2;
+    sizes[UINT] = 4;
+    sizes[ULL] = 8;
     sizes[ENUM] = 4;
     sizes[PTR] = 8;
     sizes[STRUCT] = -1;
     sizes[ARRAY] = -1;
-}
-
-void init_words() {
-    type_words[VOID] = STR_VOID;
-    type_words[BOOL] = STR_BOOL;
-    type_words[CHAR] = STR_CHAR;
-    type_words[INT] = STR_INT;
-    type_words[STRUCT] = "";
-    type_words[ENUM] = "";
-    type_words[PTR] = "";
-    type_words[ARRAY] = "";
 }
 
 // 型のサイズを計算する関数
@@ -69,6 +64,42 @@ int set_offset(Var *var, int base) {
     return var->offset;
 }
 
+Type *new_type(TypeKind kind) {
+    Type *typ = calloc(1, sizeof(Type));
+    typ->ty = kind;
+    return typ;
+}
+
+// 計算の型優先度 二項演算で優先度の高い方の型にあわせる
+int priority(Type *typ) {
+    if (typ->ty == ULL) return 4;
+    if (typ->ty == LL) return 3;
+    if (typ->ty == UINT) return 2;
+    if (typ->ty == INT) return 1;
+    if (typ->ty == USHORT || typ->ty == SHORT || typ->ty == UCHAR ||
+        typ->ty == CHAR || typ->ty == BOOL)
+        return 0;  // USHORT SHORT UCHAR CHAR BOOL
+    return -1;     // ARRAY, PTR など
+}
+
+// 整数拡張
+Type *promote_integer(Type *typ) {
+    if (typ->ty == USHORT || typ->ty == SHORT || typ->ty == UCHAR ||
+        typ->ty == CHAR || typ->ty == BOOL)
+        return new_type(INT);
+    return typ;
+}
+
+// 暗黙型
+Type *implicit_type(Type *lt, Type *rt) {
+    int lpy = priority(lt);
+    int rpy = priority(rt);
+    if (lpy == -1 || rpy == -1) return NULL; // ARRAY, PTR など処理できない型
+    if (lpy == 0 && rpy == 0) return new_type(INT);  // どちらもintより小さい型
+    if (lpy >= rpy) return lt;
+    return rt;
+}
+
 //ノードに型情報を付与
 void typing(Node *node) {
     switch (node->kind) {
@@ -79,42 +110,46 @@ void typing(Node *node) {
             break;
         case ND_ADDR:
             if (node->lhs->type) {
-                node->type = calloc(1, sizeof(Type));
-                node->type->ty = PTR;
+                node->type = new_type(PTR);
                 node->type->ptr_to = node->lhs->type;
             }
             break;
         case ND_ADD:
         case ND_SUB:
             if (can_deref(node->lhs->type)) {
-                node->type = node->lhs->type;
+                node->type = new_type(PTR);
+                node->type->ptr_to = node->lhs->type->ptr_to;
             } else if (can_deref(node->rhs->type)) {
-                node->type = node->rhs->type;
+                node->type = new_type(PTR);
+                node->type->ptr_to = node->rhs->type->ptr_to;
             } else {  // 両オペランド共ポインタでない
-                node->type = node->lhs->type;
+                node->type = implicit_type(node->lhs->type, node->rhs->type);
             }
+            break;
+        case ND_ASSIGN:
+        case ND_ASSIGN_POST_INCDEC:
+        case ND_ASSIGN_COMPOSITE:
+            node->type = node->lhs->type;
+            break;
+        case ND_BIT_NOT:
+            node->type = promote_integer(node->lhs->type);
             break;
         case ND_MUL:
         case ND_DIV:
         case ND_MOD:
-        case ND_ASSIGN:
-        case ND_ASSIGN_POST_INCDEC:
-        case ND_ASSIGN_COMPOSITE:
         case ND_BIT_OR:
         case ND_BIT_XOR:
         case ND_BIT_AND:
-        case ND_BIT_NOT:
         case ND_BIT_SHIFT_L:
         case ND_BIT_SHIFT_R:
-            node->type = node->lhs->type;
+            node->type = implicit_type(node->lhs->type, node->rhs->type);
             break;
         case ND_IF_ELSE:
         case ND_EQUAL:
         case ND_NOT_EQUAL:
         case ND_LESS_THAN:
         case ND_LESS_OR_EQUAL:
-            node->type = calloc(1, sizeof(Type));
-            node->type->ty = BOOL;
+            node->type = new_type(BOOL);
             break;
     }
 }
@@ -122,8 +157,7 @@ void typing(Node *node) {
 // 型の後方にある **... を読んでポインタ型にして返す
 Type *type_pointer(Type *typ) {
     while (consume("*")) {
-        Type *ptr = calloc(1, sizeof(Type));
-        ptr->ty = PTR;
+        Type *ptr = new_type(PTR);
         ptr->ptr_to = typ;
         typ = ptr;
     }
@@ -161,8 +195,9 @@ Type *def_struct(Token *tag) {
 
     int ofst = 0;
     while (!consume("}")) {
+        Token *tok_void = token;
         Type *typ = base_type();
-        voidcheck(typ, tok_type->str);
+        voidcheck(typ, tok_void->str);
         Token *tok = consume_ident();
         // メンバ作成（メンバのノードは不要なので放置）
         declaration_var(typ, tok);
@@ -174,8 +209,7 @@ Type *def_struct(Token *tag) {
     (*stcs)->stc->mems = def[nest]->vars;
     member_out();
     // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
-    Type *typ = calloc(1, sizeof(Type));
-    typ->ty = STRUCT;
+    Type *typ = new_type(STRUCT);
     typ->strct = def[nest]->structs;
     (*stcs)->stc->align = calc_align(typ);
     (*stcs)->stc->size = align(ofst, (*stcs)->stc->align);
@@ -189,8 +223,7 @@ Type *type_struct() {
     if (typ) return typ;
     // 既存struct型を返す
     if (!tag) error_at(token->str, "構造体タグがありません");
-    typ = calloc(1, sizeof(Type));
-    typ->ty = STRUCT;
+    typ = new_type(STRUCT);
     typ->strct = fit_def(tag, DK_STRUCT);
     return typ;
 }
@@ -258,8 +291,7 @@ Type *def_enum(Token *tag) {
     } while (consume(","));
     expect("}");
 
-    Type *typ = calloc(1, sizeof(Type));
-    typ->ty = ENUM;
+    Type *typ = new_type(ENUM);
     typ->enm = *enums;
     return typ;
 }
@@ -271,29 +303,77 @@ Type *type_enum() {
     if (typ) return typ;
     // 既存enum型を返す
     if (!tag) error_at(token->str, "列挙体タグがありません");
-    typ = calloc(1, sizeof(Type));
-    typ->ty = ENUM;
+    typ = new_type(ENUM);
     typ->enm = fit_def(tag, DK_ENUM);
     return typ;
 }
 
+// tokenと文字列の一致を調べる
+bool eq(Token *tok, char *str) {
+    if (!tok) return false;
+    return !strncmp(tok->str, str, tok->len);
+}
+
+#define ERR_MSG_TYPEQ "型修飾子が不正です"
+
+typedef enum {
+    TYPEQ_LEN_NONE = 0,
+    TYPEQ_LEN_SHORT,
+    TYPEQ_LEN_LONG,
+    TYPEQ_LEN_LL
+} TypeqLen;
+
+TypeqLen typeq_len() {
+    Token *qlen = consume_typeq_len();
+    Token *qlen2 = consume_typeq_len();
+    if (!qlen) return TYPEQ_LEN_NONE;
+    if (eq(qlen, STR_LONG) && eq(qlen2, STR_LONG)) return TYPEQ_LEN_LL;
+    if (qlen2) error_at(qlen2->str, ERR_MSG_TYPEQ);
+    if (eq(qlen, STR_LONG)) return TYPEQ_LEN_LONG;
+    if (eq(qlen, STR_SHORT)) return TYPEQ_LEN_SHORT;
+    error_at(qlen->str, ERR_MSG_TYPEQ);
+}
+
+TypeKind attach_qsign(TypeKind kind, Token *qsign) {
+    if (eq(qsign, STR_UNSIGNED)) kind |= UNSIGNED;
+    return kind;
+}
+
 // ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..
 Type *base_type() {
-    Token *tok = consume_type();
-    if (!tok) return NULL;
-    if (tok->kind == TK_STRUCT) {
-        return type_pointer(type_struct());
-    }
-    if (tok->kind == TK_ENUM) {
-        return type_pointer(type_enum());
+    Token *qsign = consume_typeq_sign();
+    TypeqLen qlen = typeq_len();
+    Token *core = consume_type();
+    Type *typ = calloc(1, sizeof(Type));
+    if (!qsign && !qlen && !core) return NULL;
+
+    // (struct|enum) (tag)? {..} | void | _Bool
+    if (!qsign && !qlen) {
+        if (core->kind == TK_STRUCT) return type_pointer(type_struct());
+        if (core->kind == TK_ENUM) return type_pointer(type_enum());
+        if (eq(core, STR_VOID)) {
+            typ->ty = VOID;
+            return type_pointer(typ);
+        } else if (eq(core, STR_BOOL)) {
+            typ->ty = BOOL;
+            return type_pointer(typ);
+        }
     }
 
-    Type *typ = calloc(1, sizeof(Type));
-    for (int tk = 0; tk < LEN_TYPE_KIND; tk++) {
-        if (!strncmp(tok->str, type_words[tk], tok->len)) {
-            typ->ty = tk;
-            break;
-        }
+    // (signed|unsigned)? char
+    if (!qlen && eq(core, STR_CHAR)) {
+        typ->ty = attach_qsign(CHAR, qsign);
+        return type_pointer(typ);
+    }
+
+    // (signed|unsigned)? (long long|long|short)? int
+    if (core && !eq(core, STR_INT)) error_at(core->str, "不正な型です");
+    if (qlen == TYPEQ_LEN_LL) {
+        typ->ty = attach_qsign(LL, qsign);
+    } else if (qlen == TYPEQ_LEN_SHORT) {
+        typ->ty = attach_qsign(SHORT, qsign);
+    } else {
+        typ->ty = attach_qsign(INT, qsign);
     }
     return type_pointer(typ);
 }

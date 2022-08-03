@@ -1,7 +1,7 @@
 #include "9cc.h"
 
 typedef enum AsmWord AsmWord;
-enum AsmWord { RAX, RDI, RCX, QWORD_PTR, MOVS, MOVZ };
+enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ };
 
 // レジスタや命令を扱うサイズごとに適切な名前に変換する
 char* cnvword(AsmWord word, int byte) {
@@ -26,6 +26,11 @@ char* cnvword(AsmWord word, int byte) {
             if (byte == 2) return "cx";
             if (byte == 1) return "cl";
             return "rcx";
+        case RDX:
+            if (byte == 4) return "edx";
+            if (byte == 2) return "dx";
+            if (byte == 1) return "dl";
+            return "rdx";
         case MOVS:  // 符号拡張 (byteはソースサイズ)
             if (byte == 4) return "movsxd";  // movsxd 8 byte, 4 byte
             if (byte == 2) return "movsx";   // movsx  8 byte, 2 byte
@@ -38,6 +43,8 @@ char* cnvword(AsmWord word, int byte) {
             return "mov";                   // mov 8 byte, 8 byte
     }
 }
+
+char* just(AsmWord word) { return cnvword(word, 8); }
 
 void gen_lval(Node* node) {
     switch (node->kind) {
@@ -73,11 +80,16 @@ void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
     printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
 }
 
-void gen_load(Type* type) {
-    if (type->ty == ARRAY || type->ty == STRUCT) return;
+void gen_load(Type* typ) {
+    if (typ->ty == ARRAY || typ->ty == STRUCT) return;
     printf("  pop rax\n");
-    int sz = size(type);
-    printf("  %s rax, %s[rax]\n", cnvword(MOVS, sz), cnvword(QWORD_PTR, sz));
+    int sz = size(typ);
+    AsmWord mov = MOVS;
+    if (typ->ty & UNSIGNED) mov = MOVZ;
+    if (sz == 4 && mov == MOVZ)
+        printf("  mov eax, dword ptr[rax]\n");
+    else
+        printf("  %s rax, %s[rax]\n", cnvword(mov, sz), cnvword(QWORD_PTR, sz));
     printf("  push rax\n");
 }
 
@@ -159,7 +171,7 @@ bool gen_ctrl(Node* node) {
             gen(node->judge);
             printf("  pop rax\n");
             for (int i = 0; i < node->case_cnt; i++) {
-                printf("  cmp rax, %d\n", node->cases[i]->val);
+                printf("  cmp rax, %lld\n", node->cases[i]->val);
                 printf("  je .L%dcase%d\n", node->label_num,
                        node->cases[i]->label_num);
             }
@@ -340,7 +352,7 @@ bool gen_unary(Node* node) {
             gen_load(node->type);
             return true;
         case ND_NUM:
-            printf("  push %d\n", node->val);
+            printf("  push %lld\n", node->val);
             return true;
         case ND_ADDR:
             gen_lval(node->lhs);
@@ -369,6 +381,19 @@ void gen_addsub_sizing(Type* l, Type* r) {
     }
 }
 
+void expand_size(AsmWord reg, Type* typ) {
+    if (can_deref(typ)) return;
+    if (typ->ty == BOOL) return;
+    int sz = size(typ);
+    if (sz == 8 || sz == -1) return;
+    AsmWord mov = MOVS;
+    if (typ->ty & UNSIGNED) mov = MOVZ;
+    if (sz == 4 && mov == MOVZ)
+        printf("  mov %s, %s\n", cnvword(reg, 4), cnvword(reg, 4));
+    else
+        printf("  %s %s, %s\n", cnvword(mov, sz), just(reg), cnvword(reg, sz));
+}
+
 void gen(Node* node) {
     if (!node || node->kind == ND_NO_EVAL) return;
     if (gen_ctrl(node)) return;
@@ -386,9 +411,16 @@ void gen(Node* node) {
         gen(node->lhs);
         gen(node->rhs);
     }
-
     printf("  pop rcx\n");
     printf("  pop rax\n");
+
+    // ここまででlhs, rhsともに自分の型に従い符号orゼロを8バイト伸長済
+    // よって intまでの promote integer は必要なし
+    // 以下の暗黙の型変換からの拡張は、符号の有無が逆転して
+    // 新たに上位ビットを符号･ゼロ拡張しなければならない場合の処理
+    Type* impt = implicit_type(node->lhs->type, node->rhs->type);
+    if (impt && impt->ty != node->lhs->type->ty) expand_size(RAX, impt);
+    if (impt && impt->ty != node->rhs->type->ty) expand_size(RCX, impt);
 
     switch (node->kind) {
         case ND_BIT_OR:
@@ -414,13 +446,14 @@ void gen(Node* node) {
             break;
         case ND_BIT_SHIFT_L:
             printf("  shl rax, cl\n");
-            int sz = size(node->lhs->type);
-            if (size(node->lhs->type) <= 4)
-                printf("  %s rax, %s\n", cnvword(MOVS, 4), cnvword(RAX, 4));
             break;
         case ND_BIT_SHIFT_R:
-            printf("  sar rax, cl\n");  // signed: 符号ビットで埋める
-            // printf("  shr rax, cl\n"); // unsigned: ゼロで埋める
+            if (node->lhs->type->ty & UNSIGNED)
+                printf("  shr rax, cl\n");  // unsigned: ゼロで埋める
+            else if (node->rhs->type->ty & UNSIGNED)
+                printf("  shr rax, cl\n");  // unsigned: ゼロで埋める
+            else
+                printf("  sar rax, cl\n");  // signed: 符号ビットで埋める
             break;
         case ND_ADD:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
@@ -441,8 +474,8 @@ void gen(Node* node) {
         default:
             return;
     }
-    if (node->kind == ND_MOD)
-        printf("  push rdx\n");
-    else
-        printf("  push rax\n");
+    AsmWord ans = RAX;
+    if (node->kind == ND_MOD) ans = RDX;
+    expand_size(ans, node->type);
+    printf("  push %s\n", just(ans));
 }

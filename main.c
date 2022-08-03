@@ -34,7 +34,6 @@ int main(int argc, char **argv) {
     filename = argv[1];
     user_input = read_file(filename);
     init_sizes();
-    init_words();
 
     // トークナイズする
     token = tokenize(user_input);

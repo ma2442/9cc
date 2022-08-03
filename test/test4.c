@@ -625,6 +625,152 @@ int main_t31() {
     return 0;
 }
 
+// short
+int main_t32() {
+    short sx = (1 << 15) - 1;
+    short int six = (1 << 15) - 1;
+    signed short ssx = (1 << 15) - 1;
+    signed short int ssix = (1 << 15) - 1;
+    if (!(sizeof(sx) == 2)) return 1;
+    if (!(sizeof(six) == 2)) return 2;
+    if (!(sizeof(ssx) == 2)) return 3;
+    if (!(sizeof(ssix) == 2)) return 4;
+    if (!(sx == 32767)) return 5;
+    if (!(six == 32767)) return 6;
+    if (!(ssx == 32767)) return 7;
+    if (!(ssix == 32767)) return 8;
+    sx++;
+    six++;
+    ssx++;
+    ssix++;
+    if (!(sx == -32768)) return 6;
+    if (!(six == -32768)) return 7;
+    if (!(ssx == -32768)) return 8;
+    if (!(ssix == -32768)) return 9;
+    sx = 1 << 15;
+    if (sx & 1 << 14) return 10;
+    if (!(sx & 1 << 15)) return 11;
+    if (!(sx & 1 << 16)) return 12;
+    sx = (1 << 16) - 1;
+    if (!(sx == -1)) return 13;
+    int x = sx;
+    unsigned int ux = sx;
+    if (!(x == -1)) return 14;
+    if (!(ux == -1)) return 115;
+    sx++;
+    if (!(sx == 0)) return 16;
+    return 0;
+}
+
+// long
+int main_t33() {
+    signed sx = (1 << 31) - 1;
+    long lx = (1 << 31) - 1;
+    long int lix = (1 << 31) - 1;
+    signed long slx = (1 << 31) - 1;
+    signed long int slix = (1 << 31) - 1;
+    if (!(sizeof(sx) == 4)) return 1;
+    if (!(sizeof(lx) == 4)) return 2;
+    if (!(sizeof(lix) == 4)) return 3;
+    if (!(sizeof(slx) == 4)) return 4;
+    if (!(sizeof(slix) == 4)) return 5;
+    if (!(sx == 2147483647)) return 6;
+    if (!(lx == 2147483647)) return 7;
+    if (!(lix == 2147483647)) return 8;
+    if (!(slx == 2147483647)) return 9;
+    if (!(slix == 2147483647)) return 10;
+    sx++;
+    lx++;
+    lix++;
+    slx++;
+    slix++;
+    if (!(sx == -2147483647 - 1)) return 11;
+    if (!(lx == -2147483647 - 1)) return 12;
+    if (!(lix == -2147483647 - 1)) return 13;
+    if (!(slx == -2147483647 - 1)) return 14;
+    if (!(slix == -2147483647 - 1)) return 15;
+    if (!(lx == 2147483647 + 1)) return 16;  // 整数定数の接尾辞導入後に再検討
+    lx = (1 << 32) - 1;
+    long long llx = lx;
+    unsigned long long ullx = lx;
+    if (!(llx == -1)) return 17;
+    if (!(ullx == -1)) return 18;
+    if (!(lx == -1)) return 19;
+    lx++;
+    if (!(lx == 0)) return 20;
+    return 0;
+}
+
+// unsigned short
+int main_t34() {
+    unsigned short usx = (1 << 15) - 1;
+    unsigned short int usix = (1 << 15) - 1;
+    if (!(sizeof(usx) == 2)) return 1;
+    if (!(sizeof(usix) == 2)) return 2;
+    if (!(usx == 32767)) return 3;
+    if (!(usix == 32767)) return 4;
+    usx++;
+    usix++;
+    if (!(usx == 32768)) return 5;
+    if (!(usix == 32768)) return 6;
+    usx = 1 << 15;
+    if (usx & 1 << 14) return 7;
+    if (!(usx & 1 << 15)) return 8;
+    if (usx & 1 << 16) return 9;
+    usx = (1 << 16) - 1;
+    if (!(usx == 65535)) return 10;
+    int x = usx;
+    unsigned int ux = usx;
+    if (!(x == 65535)) return 11;
+    if (!(ux == 65535)) return 12;
+    usx++;
+    if (!(usx == 0)) return 13;
+    return 0;
+}
+
+// unsigned long
+int main_t35() {
+    unsigned ux = (1 << 31) - 1;
+    unsigned long ulx = (1 << 31) - 1;
+    unsigned long int ulix = (1 << 31) - 1;
+    if (!(sizeof(ux) == 4)) return 1;
+    if (!(sizeof(ulx) == 4)) return 2;
+    if (!(sizeof(ulix) == 4)) return 3;
+    if (!(ux == 2147483647)) return 6;
+    if (!(ulx == 2147483647)) return 7;
+    if (!(ulix == 2147483647)) return 8;
+    ux++;
+    ulx++;
+    ulix++;
+    if (!(ux == 2147483647 + 1)) return 11;
+    if (!(ulx == 2147483647 + 1)) return 12;
+    if (!(ulix == 2147483647 + 1)) return 13;
+    ux = -1;
+    long long llx = ux;
+    unsigned long long ullx = ux;
+    if (!(llx != -1)) return 17;
+    if (!(ullx != -1)) return 18;
+    if (!(ux == -1)) return 19;
+    ux++;
+    if (!(ux == (1 << 32))) return 20;
+    return 0;
+}
+
+// long long 整数リテラル 接尾辞実装後にテスト拡張
+int main_t36() {
+    long long llx;
+    signed long long sllx;
+    signed long long int sllix;
+    unsigned long long ullx;
+    unsigned long long int ullix;
+    if (!(sizeof(llx) == 8)) return 1;
+    if (!(sizeof(sllx) == 8)) return 2;
+    if (!(sizeof(sllix) == 8)) return 3;
+    if (!(sizeof(ullx) == 8)) return 4;
+    if (!(sizeof(ullix) == 8)) return 5;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -657,6 +803,11 @@ int main() {
     if (main_t28()) return 28;
     if (main_t29()) return 29;
     if (main_t30()) return 30;
-    if (main_t31()) return main_t31();
+    if (main_t31()) return 31;
+    if (main_t32()) return 32;
+    if (main_t33()) return 33;
+    if (main_t34()) return 34;
+    if (main_t35()) return 35;
+    if (main_t36()) return 36;
     return 255;
 }

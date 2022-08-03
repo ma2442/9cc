@@ -34,13 +34,14 @@ Token *consume_numeric() {
     return consume_if_kind_is(TK_NUM);
 }
 Token *consume_str() { return consume_if_kind_is(TK_STR); }
+Token *consume_typeq_sign() { return consume_if_kind_is(TK_TYPEQ_SIGN); }
+Token *consume_typeq_len() { return consume_if_kind_is(TK_TYPEQ_LENGTH); }
 Token *consume_type() {
-    tok_type = consume_if_kind_is(TK_STRUCT);
-    if (tok_type) return tok_type;
-    tok_type = consume_if_kind_is(TK_TYPE);
-    if (tok_type) return tok_type;
-    tok_type = consume_if_kind_is(TK_ENUM);
-    return tok_type;
+    Token *tok = consume_if_kind_is(TK_STRUCT);
+    if (tok) return tok;
+    tok = consume_if_kind_is(TK_TYPE);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_ENUM);
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 

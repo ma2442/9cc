@@ -129,14 +129,29 @@ bool read_reserved(char **pp, Token **tokp) {
 
 // 制御構文if else while for等 判定
 bool read_controls(char **pp, Token **tokp, int len) {
-    const KindWordPair kdwds[] = {
-        {TK_CTRL, "if"},       {TK_CTRL, "else"},    {TK_CTRL, "switch"},
-        {TK_CTRL, "case"},     {TK_CTRL, "default"}, {TK_CTRL, "break"},
-        {TK_CTRL, "continue"}, {TK_CTRL, "goto"},    {TK_CTRL, "while"},
-        {TK_CTRL, "do"},       {TK_CTRL, "for"},     {TK_RETURN, "return"},
-        {TK_SIZEOF, "sizeof"}, {TK_TYPE, STR_VOID},  {TK_TYPE, STR_INT},
-        {TK_TYPE, STR_CHAR},   {TK_TYPE, STR_BOOL},  {TK_STRUCT, "struct"},
-        {TK_ENUM, "enum"}};
+    const KindWordPair kdwds[] = {{TK_CTRL, "if"},
+                                  {TK_CTRL, "else"},
+                                  {TK_CTRL, "switch"},
+                                  {TK_CTRL, "case"},
+                                  {TK_CTRL, "default"},
+                                  {TK_CTRL, "break"},
+                                  {TK_CTRL, "continue"},
+                                  {TK_CTRL, "goto"},
+                                  {TK_CTRL, "while"},
+                                  {TK_CTRL, "do"},
+                                  {TK_CTRL, "for"},
+                                  {TK_RETURN, "return"},
+                                  {TK_SIZEOF, "sizeof"},
+                                  {TK_TYPE, STR_VOID},
+                                  {TK_TYPE, STR_INT},
+                                  {TK_TYPE, STR_CHAR},
+                                  {TK_TYPE, STR_BOOL},
+                                  {TK_TYPEQ_SIGN, STR_SIGNED},
+                                  {TK_TYPEQ_SIGN, STR_UNSIGNED},
+                                  {TK_TYPEQ_LENGTH, STR_LONG},
+                                  {TK_TYPEQ_LENGTH, STR_SHORT},
+                                  {TK_STRUCT, "struct"},
+                                  {TK_ENUM, "enum"}};
     for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
         if (len == strlen(kdwds[i].word) && !strncmp(*pp, kdwds[i].word, len)) {
             *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, len);
@@ -165,7 +180,7 @@ Token *tokenize(char *p) {
 
         if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 1);
-            cur->val = strtol(p, &p, 10);
+            cur->val = strtoll(p, &p, 10);
             continue;
         }
 

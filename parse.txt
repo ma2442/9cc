@@ -15,7 +15,12 @@ stmt
 decla_and_assign = declaration ("=" assign)? | expr
 assign  = cond ("=" assign)?
 declaration = type symbol ("[" num "]")*
-type = ("int" | "char" | stc | enm ) "*"* 
+type = (tint | tchar | stc | enm ) "*"* 
+tint
+    = ("signed" | "unsigned")? ("long" "long" | "long" | "short")? ("int")
+    | ("signed" | "unsigned")? ("long" "long" | "long" | "short")  ("int")?
+    | ("signed" | "unsigned")  ("long" "long" | "long" | "short")? ("int")?
+tchar = ("signed" | "unsigned")? "char"
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
 enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
 expr    = compo_assign 

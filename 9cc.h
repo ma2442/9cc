@@ -18,6 +18,10 @@
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
 #define STR_VOID "void"
+#define STR_SIGNED "signed"
+#define STR_UNSIGNED "unsigned"
+#define STR_SHORT "short"
+#define STR_LONG "long"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -33,16 +37,18 @@ typedef struct Def Def;
 
 // トークンの種類
 typedef enum {
-    TK_RESERVED,  // 記号
-    TK_TYPE,      // 型
-    TK_IDENT,     // 識別子
-    TK_NUM,       // 整数トークン
-    TK_CHAR,      // 文字型トークン
-    TK_EOF,       // 入力の終わりを表すトークン
-    TK_SIZEOF,    // sizeof
-    TK_RETURN,    // return
-    TK_CTRL,      // if, else, while, for等 制御構文を表すトークン
-    TK_STR,       // 文字列リテラルを表すトークン
+    TK_RESERVED,      // 記号
+    TK_TYPE,          // 型
+    TK_TYPEQ_SIGN,    // 型修飾子 signed unsigned
+    TK_TYPEQ_LENGTH,  // 型修飾子 short long
+    TK_IDENT,         // 識別子
+    TK_NUM,           // 整数トークン
+    TK_CHAR,          // 文字型トークン
+    TK_EOF,           // 入力の終わりを表すトークン
+    TK_SIZEOF,        // sizeof
+    TK_RETURN,        // return
+    TK_CTRL,  // if, else, while, for等 制御構文を表すトークン
+    TK_STR,   // 文字列リテラルを表すトークン
     TK_STRUCT,
     TK_ENUM
 } TokenKind;
@@ -51,7 +57,7 @@ typedef enum {
 struct Token {
     TokenKind kind;  // トークンの型
     Token *next;     // 次の入力トークン
-    int val;         // kindがTK_NUMの場合、その数値
+    long long val;   // kindがTK_NUMの場合、その数値
     char *str;       // トークン文字列
     int len;         // トークンの長さ
 };
@@ -107,12 +113,19 @@ typedef enum {
 typedef enum {
     VOID,
     CHAR,
+    SHORT,
     INT,
-    BOOL,
+    LL,
     STRUCT,
     ENUM,
     PTR,
     ARRAY,
+    UNSIGNED = 16,
+    UCHAR = UNSIGNED | CHAR,
+    USHORT = UNSIGNED | SHORT,
+    UINT = UNSIGNED | INT,
+    ULL = UNSIGNED | LL,
+    BOOL = UNSIGNED | LL + 1,
     LEN_TYPE_KIND
 } TypeKind;
 
@@ -211,7 +224,7 @@ struct Node {
     Def *def;        // 変数情報 関数情報 文字列リテラル情報
     Token *label;    // jump label
     Type *type;      // int, int*などの型情報
-    int val;         // 評価値が定数になる場合の数値
+    long long val;   // 評価値が定数になる場合の数値
     int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
     bool exists_default;  // switch内にdefaultがあるか
     int label_num;  // if,while,do-while,for,switchのラベル通し番号
@@ -227,7 +240,6 @@ char *type_words[LEN_TYPE_KIND];
 char *filename;    // 入力ファイル名
 char *user_input;  // 入力ソース
 Token *token;
-Token *tok_type;  // 型チェック用トークン
 Node *code[CODE_LEN];
 Node *statement[STMT_LEN];
 
@@ -258,7 +270,7 @@ bool can_deref(Type *typ);
 Def *calloc_def(DefKind kind);
 Node *new_node();
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(int val);
+Node *new_node_num(long long val);
 
 // error.c
 void error_at(char *loc, char *fmt, ...);
@@ -288,7 +300,6 @@ void gen(Node *node);
 
 // type.c
 void init_sizes();
-void init_words();
 int val(Node *node);  // 定数計算
 int size(Type *typ);
 bool can_deref(Type *typ);
@@ -298,11 +309,15 @@ int set_offset(Var *var, int base);
 void typing(Node *node);
 Type *base_type();
 void voidcheck(Type *typ, char *pos);
+Type *implicit_type(Type *lt, Type *rt);
+Type *promote_integer(Type *typ);
 
 // consume.c
 bool consume(char *op);
 Token *consume_numeric();
 Token *consume_str();
+Token *consume_typeq_sign();
+Token *consume_typeq_len();
 Token *consume_type();
 Token *consume_ident();
 int consume_incdec();

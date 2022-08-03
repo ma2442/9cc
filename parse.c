@@ -28,7 +28,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     return node;
 }
 
-Node *new_node_num(int val) {
+Node *new_node_num(long long val) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
@@ -419,12 +419,13 @@ Node *block() {
 
 // decla_and_assign = declaration ("=" assign)?
 Node *decla_and_assign() {
+    Token *tok_void = token;
     Type *typ = base_type();
     if (!typ) return expr();
     // 変数定義
     Token *idt = consume_ident();
     if (!idt) return new_node(ND_NO_EVAL, NULL, NULL);
-    voidcheck(typ, tok_type->str);
+    voidcheck(typ, tok_void->str);
     Node *node = declaration_var(typ, idt);
     if (consume("="))
         node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
@@ -624,8 +625,9 @@ Node *func(Type *typ, Token *func_name) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
+            Token *tok_void = token;
             typ = base_type();
-            voidcheck(typ, tok_type->str);
+            voidcheck(typ, tok_void->str);
             Token *tok = consume_ident();
             Node *ln = declaration_var(typ, tok);
             ln->kind = ND_LVAR;
@@ -662,6 +664,7 @@ void program() {
     strlits = calloc_def(DK_STRLIT);
     strlits_end = strlits;
     while (!at_eof()) {
+        Token *tok_void = token;
         Type *typ = base_type();
         // 関数定義 または グローバル変数宣言
         Token *idt = consume_ident();
@@ -671,7 +674,7 @@ void program() {
         }
         Node *node = func(typ, idt);
         if (!node) {
-            voidcheck(typ, tok_type->str);
+            voidcheck(typ, tok_void->str);
             node = declaration_var(typ, idt);
             expect(";");
         }

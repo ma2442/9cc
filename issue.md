@@ -4,10 +4,11 @@
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
-- [ ] long long, long, short
-- [ ] unsigned
+
 - [ ] static
 - [ ] const
+- [ ] 整数リテラル 接尾辞 u l ll lu ul llu ull
+- [ ] prefix 0x 0
 
 ### Essential To Do 使用中かつ代替不可能
 
@@ -25,7 +26,6 @@
 ### Optional To Do 未使用
 
 - [ ] ,
-- [ ] &= ^= |= <<= >>=
 - [ ] static
 - [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
 - [ ] (int\* p)[10] のような入れ子になっている型定義
@@ -50,6 +50,9 @@
 
 ### Completed
 
+- [x] long long, long, short
+- [x] unsigned, signed
+- [x] &= ^= |= <<= >>=
 - [x] & | ^ ~ >> <<
 - [x] void
 - [x] goto label:
