@@ -111,21 +111,22 @@ typedef enum {
 } NodeKind;
 
 typedef enum {
-    VOID,
-    CHAR,
-    SHORT,
-    INT,
-    LL,
+    UCHAR,
+    USHORT,
+    UINT,
+    ULL,
     STRUCT,
     ENUM,
     PTR,
     ARRAY,
-    UNSIGNED = 16,
-    UCHAR = UNSIGNED | CHAR,
-    USHORT = UNSIGNED | SHORT,
-    UINT = UNSIGNED | INT,
-    ULL = UNSIGNED | LL,
-    BOOL = UNSIGNED | LL + 1,
+    VOID,
+    BOOL,
+    SIGNED = 16,
+    CHAR = UCHAR | SIGNED,
+    SHORT = USHORT | SIGNED,
+    INT = UINT | SIGNED,
+    LL = ULL | SIGNED,
+
     LEN_TYPE_KIND
 } TypeKind;
 
@@ -306,6 +307,7 @@ bool can_deref(Type *typ);
 int align(int x, int aln);
 int calc_align(Type *type);
 int set_offset(Var *var, int base);
+bool is_signed(Type *typ);
 void typing(Node *node);
 Type *base_type();
 void voidcheck(Type *typ, char *pos);

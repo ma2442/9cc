@@ -70,6 +70,8 @@ Type *new_type(TypeKind kind) {
     return typ;
 }
 
+bool is_signed(Type *typ) { return typ->ty & SIGNED; }
+
 // 計算の型優先度 二項演算で優先度の高い方の型にあわせる
 int priority(Type *typ) {
     if (typ->ty == ULL) return 4;
@@ -94,7 +96,7 @@ Type *promote_integer(Type *typ) {
 Type *implicit_type(Type *lt, Type *rt) {
     int lpy = priority(lt);
     int rpy = priority(rt);
-    if (lpy == -1 || rpy == -1) return NULL; // ARRAY, PTR など処理できない型
+    if (lpy == -1 || rpy == -1) return NULL;  // ARRAY, PTR など処理できない型
     if (lpy == 0 && rpy == 0) return new_type(INT);  // どちらもintより小さい型
     if (lpy >= rpy) return lt;
     return rt;
@@ -335,8 +337,8 @@ TypeqLen typeq_len() {
 }
 
 TypeKind attach_qsign(TypeKind kind, Token *qsign) {
-    if (eq(qsign, STR_UNSIGNED)) kind |= UNSIGNED;
-    return kind;
+    if (!eq(qsign, STR_UNSIGNED)) return kind;
+    return kind & ~SIGNED;
 }
 
 // ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..

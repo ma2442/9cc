@@ -84,8 +84,8 @@ void gen_load(Type* typ) {
     if (typ->ty == ARRAY || typ->ty == STRUCT) return;
     printf("  pop rax\n");
     int sz = size(typ);
-    AsmWord mov = MOVS;
-    if (typ->ty & UNSIGNED) mov = MOVZ;
+    AsmWord mov = MOVZ;
+    if (is_signed(typ)) mov = MOVS;
     if (sz == 4 && mov == MOVZ)
         printf("  mov eax, dword ptr[rax]\n");
     else
@@ -386,8 +386,8 @@ void expand_size(AsmWord reg, Type* typ) {
     if (typ->ty == BOOL) return;
     int sz = size(typ);
     if (sz == 8 || sz == -1) return;
-    AsmWord mov = MOVS;
-    if (typ->ty & UNSIGNED) mov = MOVZ;
+    AsmWord mov = MOVZ;
+    if (is_signed(typ)) mov = MOVS;
     if (sz == 4 && mov == MOVZ)
         printf("  mov %s, %s\n", cnvword(reg, 4), cnvword(reg, 4));
     else
@@ -448,12 +448,10 @@ void gen(Node* node) {
             printf("  shl rax, cl\n");
             break;
         case ND_BIT_SHIFT_R:
-            if (node->lhs->type->ty & UNSIGNED)
-                printf("  shr rax, cl\n");  // unsigned: ゼロで埋める
-            else if (node->rhs->type->ty & UNSIGNED)
-                printf("  shr rax, cl\n");  // unsigned: ゼロで埋める
-            else
+            if (is_signed(node->lhs->type) && is_signed(node->rhs->type))
                 printf("  sar rax, cl\n");  // signed: 符号ビットで埋める
+            else
+                printf("  shr rax, cl\n");  // ゼロで埋める
             break;
         case ND_ADD:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
