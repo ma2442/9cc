@@ -251,7 +251,8 @@ Node *unary() {
         return node;
     }
     if (consume("sizeof")) {
-        Type *typ = unary()->type;
+        Type *typ = base_type();
+        if (!typ) typ = unary()->type;
         if (typ == NULL) {
             error("sizeof:不明な型です");
         }
