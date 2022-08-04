@@ -127,6 +127,65 @@ bool read_reserved(char **pp, Token **tokp) {
     return false;
 }
 
+int read_numprefix(char **pp) {
+    if (**pp == '0') {
+        if ((*pp)[1] == 'x' || (*pp)[1] == 'X') {
+            (*pp) += 2;
+            return 16;
+        } else if ((*pp)[1] == 'b' || (*pp)[1] == 'B') {
+            (*pp) += 2;
+            return 2;
+        } else if (isdigit((*pp)[1])) {
+            (*pp)++;
+            return 8;
+        }
+    }
+    return 10;
+}
+
+void read_numsuffix(char **pp, Token **tokp) {
+    int cnt_lenlit = 0;
+    int cnt_signlit = 0;
+    TypeKind lenspec = INT;
+    TypeKind signspec = SIGNED;
+    char *p = *pp;
+    while (cnt_lenlit < 2 && cnt_signlit < 2) {
+        if (*p == 'l' || *p == 'L') {
+            p++;
+            lenspec = INT;
+            if (*p == 'l' || *p == 'L') {
+                p++;
+                lenspec = LL;
+            }
+            cnt_lenlit++;
+        } else if (*p == 'u' || *p == 'U') {
+            p++;
+            signspec = ~SIGNED;
+            cnt_signlit++;
+        } else {
+            break;
+        }
+    }
+    if (*pp == p) return;
+    if (cnt_lenlit > 1 || cnt_signlit > 1)
+        error_at(p - 1, "不正な定数接尾辞です");
+    *tokp = new_token(TK_NUMSUFFIX, *tokp, *pp, p - *pp);
+    (*tokp)->val = lenspec & signspec;
+    *pp = p;
+}
+
+bool read_num(char **pp, Token **tokp) {
+    if (!isdigit(**pp)) return false;
+    *tokp = new_token(TK_NUM, *tokp, *pp, 1);
+    int base = read_numprefix(pp);
+    (*tokp)->val = strtoll(*pp, pp, base);
+    (*tokp)->len = *pp - (*tokp)->str;
+    read_numsuffix(pp, tokp);
+    if (isdigit(**pp) || isalpha(**pp))
+        error_at(*pp, "不正な%d進定数です", base);
+    return true;
+}
+
 // 制御構文if else while for等 判定
 bool read_controls(char **pp, Token **tokp, int len) {
     const KindWordPair kdwds[] = {{TK_CTRL, "if"},
@@ -177,12 +236,7 @@ Token *tokenize(char *p) {
         if (read_str(&p, &cur)) continue;
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;
-
-        if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p, 1);
-            cur->val = strtoll(p, &p, 10);
-            continue;
-        }
+        if (read_num(&p, &cur)) continue;
 
         //先頭から変数として読める部分の長さを取得
         int ident_len = read_ident(p);

@@ -44,6 +44,7 @@ Token *consume_type() {
     return consume_if_kind_is(TK_ENUM);
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
+Token *consume_numsuffix() { return consume_if_kind_is(TK_NUMSUFFIX); }
 
 int consume_incdec() {
     if (consume("++")) return ND_ADD;

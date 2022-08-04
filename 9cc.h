@@ -43,6 +43,7 @@ typedef enum {
     TK_TYPEQ_LENGTH,  // 型修飾子 short long
     TK_IDENT,         // 識別子
     TK_NUM,           // 整数トークン
+    TK_NUMSUFFIX,     // 定数接尾辞トークン ull llu u ll
     TK_CHAR,          // 文字型トークン
     TK_EOF,           // 入力の終わりを表すトークン
     TK_SIZEOF,        // sizeof
@@ -55,11 +56,11 @@ typedef enum {
 
 // トークン型
 struct Token {
-    TokenKind kind;  // トークンの型
-    Token *next;     // 次の入力トークン
-    long long val;   // kindがTK_NUMの場合、その数値
-    char *str;       // トークン文字列
-    int len;         // トークンの長さ
+    TokenKind kind;          // トークンの型
+    Token *next;             // 次の入力トークン
+    unsigned long long val;  // kindがTK_NUMの場合、その数値
+    char *str;               // トークン文字列
+    int len;                 // トークンの長さ
 };
 
 // 抽象構文木のノードの種類
@@ -225,8 +226,8 @@ struct Node {
     Def *def;        // 変数情報 関数情報 文字列リテラル情報
     Token *label;    // jump label
     Type *type;      // int, int*などの型情報
-    long long val;   // 評価値が定数になる場合の数値
-    int arg_idx;     // ND_FUNC_*_ARGの場合の引数番号(0始まり)
+    unsigned long long val;  // 評価値が定数になる場合の数値
+    int arg_idx;          // ND_FUNC_*_ARGの場合の引数番号(0始まり)
     bool exists_default;  // switch内にdefaultがあるか
     int label_num;  // if,while,do-while,for,switchのラベル通し番号
                     // switch内caseラベル番号
@@ -271,7 +272,7 @@ bool can_deref(Type *typ);
 Def *calloc_def(DefKind kind);
 Node *new_node();
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(long long val);
+Node *new_node_num(unsigned long long val);
 
 // error.c
 void error_at(char *loc, char *fmt, ...);
@@ -313,6 +314,7 @@ Type *base_type();
 void voidcheck(Type *typ, char *pos);
 Type *implicit_type(Type *lt, Type *rt);
 Type *promote_integer(Type *typ);
+int priority(Type *typ);
 
 // consume.c
 bool consume(char *op);
@@ -322,6 +324,7 @@ Token *consume_typeq_sign();
 Token *consume_typeq_len();
 Token *consume_type();
 Token *consume_ident();
+Token *consume_numsuffix();
 int consume_incdec();
 int consume_compo_assign();
 void expect(char *op);

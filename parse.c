@@ -28,12 +28,24 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     return node;
 }
 
-Node *new_node_num(long long val) {
+Node *new_node_num(unsigned long long val) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_NUM;
     node->val = val;
     node->type = calloc(1, sizeof(Type));
     node->type->ty = INT;
+    Token *suf = consume_numsuffix();
+    if (suf) node->type->ty = suf->val;
+    Type auto_typ;
+    auto_typ.ty = INT;
+    if (val > (1ULL << 63) - 1)
+        auto_typ.ty = ULL;
+    else if (val > (1LL << 32) - 1)
+        auto_typ.ty = LL;
+    else if (val > (1U << 31) - 1)
+        auto_typ.ty = UINT;
+    if (priority(&auto_typ) > priority(node->type))
+        node->type->ty = auto_typ.ty;
     return node;
 }
 
@@ -208,7 +220,6 @@ Node *primary() {
         Token *num = consume_numeric();
         if (!num) return NULL;
         node = new_node_num(num->val);
-        if (num->kind == TK_CHAR) node->type->ty = CHAR;
         return node;
     }
     // 関数名として識別
@@ -236,13 +247,27 @@ Node *unary() {
     }
     Node *node = incdec(NULL);  // ++x or --x
     if (node) return node;
-    if (consume("+")) return unary();
-    if (consume("-")) return new_node(ND_SUB, new_node_num(0), unary());
     if (consume("&")) return new_node(ND_ADDR, unary(), NULL);
     if (consume("*")) return new_node(ND_DEREF, unary(), NULL);
     if (consume("!")) return new_node(ND_EQUAL, unary(), new_node_num(0));
     if (consume("~")) return new_node(ND_BIT_NOT, unary(), NULL);
-    return regex();
+    int sign = 1;
+    int cnt_sgn = 0;
+    for (;; cnt_sgn++) {
+        if (consume("-"))
+            sign *= -1;
+        else if (!consume("+"))
+            break;
+    }
+    if (!cnt_sgn) return regex();
+    Token *num = consume_numeric();
+    if (num) {
+        Node *node = new_node_num(num->val);
+        node->val *= sign;
+        return node;
+    }
+    if (sign == -1) return new_node(ND_SUB, new_node_num(0), unary());
+    return unary();
 }
 
 Node *mul() {

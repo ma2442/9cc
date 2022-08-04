@@ -155,7 +155,7 @@ char func_t9(char c) { return c + 1; }
 
 char main_t9() {
     if (func_t9(('0' + 1) * 2) != 99) return 1;
-    if (sizeof('0') != 1) return 2;
+    if (sizeof('0') != 4) return 2;
     int a['['];
     a['\0'] = ' ';
     if (sizeof(a) != 91 * 4) return 3;
@@ -643,22 +643,22 @@ int main_t32() {
     six++;
     ssx++;
     ssix++;
-    if (!(sx == -32768)) return 6;
-    if (!(six == -32768)) return 7;
-    if (!(ssx == -32768)) return 8;
-    if (!(ssix == -32768)) return 9;
+    if (!(sx == -32768)) return 9;
+    if (!(six == -32768)) return 10;
+    if (!(ssx == -32768)) return 11;
+    if (!(ssix == -32768)) return 12;
     sx = 1 << 15;
-    if (sx & 1 << 14) return 10;
-    if (!(sx & 1 << 15)) return 11;
-    if (!(sx & 1 << 16)) return 12;
+    if (sx & 1 << 14) return 13;
+    if (!(sx & 1 << 15)) return 14;
+    if (!(sx & 1 << 16)) return 15;
     sx = (1 << 16) - 1;
-    if (!(sx == -1)) return 13;
+    if (!(sx == -1)) return 16;
     int x = sx;
     unsigned int ux = sx;
-    if (!(x == -1)) return 14;
-    if (!(ux == -1)) return 115;
+    if (!(x == -1)) return 17;
+    if (!(ux == -1)) return 18;
     sx++;
-    if (!(sx == 0)) return 16;
+    if (!(sx == 0)) return 19;
     return 0;
 }
 
@@ -756,7 +756,7 @@ int main_t35() {
     return 0;
 }
 
-// long long 整数リテラル 接尾辞実装後にテスト拡張
+// long long
 int main_t36() {
     long long llx;
     signed long long sllx;
@@ -768,6 +768,30 @@ int main_t36() {
     if (!(sizeof(sllix) == 8)) return 3;
     if (!(sizeof(ullx) == 8)) return 4;
     if (!(sizeof(ullix) == 8)) return 5;
+    // long unsigned long lulx;
+    // if (!(sizeof(lulix) == 8)) return 6;
+    return 0;
+}
+
+//  整数リテラル 16進, 8進, 2進 suffix
+// long long , unsigned long long
+int main_t37() {
+    int x = 255UL - 2;
+    if (x != 0xfd) return 1;
+    if (x != 0b11111101) return 2;
+    if (x != 0375) return 3;
+    if (x != 0xfdU) return 1;
+    if (x != 0b11111101L) return 2;
+    if (x != 0375LLU) return 3;
+    //              0x6400480032001600;
+    long long llx = 0x8fffffffffffffff;
+    unsigned long long lly = (1ULL << 62) - 1;
+    long long lls = 1ULL << 62;
+    if (llx != (1ULL << 63) - 1) return 4;
+    if (llx == lly) return 5;
+    lly += lls;
+    if (llx != lly) return 6;
+    if (llx != 0x8fffffffffffffffLL) return 7;
     return 0;
 }
 
@@ -809,5 +833,6 @@ int main() {
     if (main_t34()) return 34;
     if (main_t35()) return 35;
     if (main_t36()) return 36;
+    if (main_t37()) return 37;
     return 255;
 }

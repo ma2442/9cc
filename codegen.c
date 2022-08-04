@@ -352,7 +352,12 @@ bool gen_unary(Node* node) {
             gen_load(node->type);
             return true;
         case ND_NUM:
-            printf("  push %lld\n", node->val);
+            if (sizeof(node->type) == 8) {
+                printf("  movabs rax, %lld\n", node->val);
+                printf("  push rax\n");
+            } else {
+                printf("  push %lld\n", node->val);
+            }
             return true;
         case ND_ADDR:
             gen_lval(node->lhs);

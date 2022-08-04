@@ -4,11 +4,8 @@
       enum や struct の型定義も同時に行える
 - [ ] 関数宣言
 - [ ] extern
-
 - [ ] static
 - [ ] const
-- [ ] 整数リテラル 接尾辞 u l ll lu ul llu ull
-- [ ] prefix 0x 0
 
 ### Essential To Do 使用中かつ代替不可能
 
@@ -50,6 +47,8 @@
 
 ### Completed
 
+- [x] 整数リテラル 接尾辞 u l ll lu ul llu ull
+- [x] prefix 0x 0 0b
 - [x] long long, long, short
 - [x] unsigned, signed
 - [x] &= ^= |= <<= >>=
