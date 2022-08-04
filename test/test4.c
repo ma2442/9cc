@@ -797,7 +797,7 @@ int main_t37() {
     return 0;
 }
 
-// short|long unsigned|signed 逆順 
+// short|long unsigned|signed 逆順
 int main_t38() {
     short unsigned su = (1 << 15) - 1;
     short signed ss = (1 << 15) - 1;
@@ -810,6 +810,19 @@ int main_t38() {
     ls++;
     long long unsigned llu = lu;
     if (llu == ls) return 2;
+    return 0;
+}
+
+// cast
+int main_t39() {
+    if ((unsigned)-1 == (long long)-1) return 1;
+    if ((signed int)(-1) != (unsigned long long)-(2 - 1)) return 2;
+    void *v;
+    int a[10];
+    for (int i = 0; i < 10; i++) a[i] = i + 10;
+    v = a;
+    for (int i = 0; i < 10; i++)
+        if (*((int *)v)++ != a[i]) return 3;
     return 0;
 }
 
@@ -853,5 +866,6 @@ int main() {
     if (main_t36()) return 36;
     if (main_t37()) return 37;
     if (main_t38()) return 38;
+    if (main_t39()) return 39;
     return 255;
 }

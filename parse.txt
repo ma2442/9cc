@@ -1,8 +1,9 @@
-program = ( (func | strc | enm) ";" )*
+program = ( (func | decla_and_assign | "typedef" type ident) ";" )*
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
 labeled = label ":" labeled | stmt
 stmt 
     = (decla_and_assign | "break" | "continue") ";"
+    |  "typedef" type ident;
     | "{" labeled* "}"
     | "return" (expr) ";" 
     | "if" "(" expr ")" labeled ("else" labeled )? 
@@ -15,11 +16,10 @@ stmt
 decla_and_assign = declaration ("=" assign)? | expr
 assign  = cond ("=" assign)?
 declaration = type symbol ("[" num "]")*
-type = (tint | tchar | stc | enm ) "*"* 
+type = (tint | tchar | void | stc | enm ) "*"*
 tint
-    = ("signed" | "unsigned")? ("long" "long" | "long" | "short")? ("int")
-    | ("signed" | "unsigned")? ("long" "long" | "long" | "short")  ("int")?
-    | ("signed" | "unsigned")  ("long" "long" | "long" | "short")? ("int")?
+    = ("signed" | "unsigned" | "long" | "short")* "int"
+    = ("signed" | "unsigned" | "long" | "short")+
 tchar = ("signed" | "unsigned")? "char"
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
 enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
@@ -39,7 +39,8 @@ relational  = shift (("<"|">"|"<="|">=") shift)*
 shift = add (("<<"|">>") add)*
 add = mul (("+"|"-") mul)*
 mul = unary (("*"|"/"|"%") unary)*
-unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!"|"~")? unary | regex
+unary = ("("cast")"|"sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!"|"~")? unary | regex
+cast = type
 regex = primary ( "++" | "--" | "[" expr "]" | (("."|"->") symbol) )*
 primary = strlit
     | "(" expr ")"

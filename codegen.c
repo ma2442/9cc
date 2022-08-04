@@ -46,6 +46,19 @@ char* cnvword(AsmWord word, int byte) {
 
 char* just(AsmWord word) { return cnvword(word, 8); }
 
+void expand_size(AsmWord reg, Type* typ) {
+    if (can_deref(typ)) return;
+    if (typ->ty == BOOL) return;
+    int sz = size(typ);
+    if (sz == 8 || sz == -1) return;
+    AsmWord mov = MOVZ;
+    if (is_signed(typ)) mov = MOVS;
+    if (sz == 4 && mov == MOVZ)
+        printf("  mov %s, %s\n", cnvword(reg, 4), cnvword(reg, 4));
+    else
+        printf("  %s %s, %s\n", cnvword(mov, sz), just(reg), cnvword(reg, sz));
+}
+
 void gen_lval(Node* node) {
     switch (node->kind) {
         case ND_LVAR:  // local var
@@ -65,6 +78,12 @@ void gen_lval(Node* node) {
             break;
         case ND_DEREF:  // *p = ..
             gen(node->lhs);
+            return;
+        case ND_CAST:
+            gen_lval(node->lhs);
+            printf("  pop rax\n");
+            expand_size(RAX, node->type);
+            printf("  push rax\n");
             return;
         default:
             error("代入の左辺値が変数ではありません");
@@ -372,6 +391,12 @@ bool gen_unary(Node* node) {
             printf("  not rax\n");
             printf("  push rax\n");
             return true;
+        case ND_CAST:
+            gen(node->lhs);
+            printf("  pop rax\n");
+            expand_size(RAX, node->type);
+            printf("  push rax\n");
+            return true;
         default:
             return false;
     }
@@ -384,19 +409,6 @@ void gen_addsub_sizing(Type* l, Type* r) {
     } else if (can_deref(r)) {
         printf("  imul rax, %d\n", size(r->ptr_to));
     }
-}
-
-void expand_size(AsmWord reg, Type* typ) {
-    if (can_deref(typ)) return;
-    if (typ->ty == BOOL) return;
-    int sz = size(typ);
-    if (sz == 8 || sz == -1) return;
-    AsmWord mov = MOVZ;
-    if (is_signed(typ)) mov = MOVS;
-    if (sz == 4 && mov == MOVZ)
-        printf("  mov %s, %s\n", cnvword(reg, 4), cnvword(reg, 4));
-    else
-        printf("  %s %s, %s\n", cnvword(mov, sz), just(reg), cnvword(reg, sz));
 }
 
 void gen(Node* node) {

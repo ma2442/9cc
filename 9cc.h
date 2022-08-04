@@ -90,6 +90,7 @@ typedef enum {
     ND_ADDR,                // pointer &
     ND_DEREF,               // pointer *
     ND_BIT_NOT,             // ~
+    ND_CAST,                // (int *) など
     ND_LVAR,                // local variable, evaluation of x++ x--
     ND_GVAR,                // global variable, or x++, x--
     ND_MEMBER,              // 構造体メンバへのアクセス

@@ -199,6 +199,7 @@ bool read_controls(char **pp, Token **tokp, int len) {
                                   {TK_CTRL, "while"},
                                   {TK_CTRL, "do"},
                                   {TK_CTRL, "for"},
+                                  {TK_CTRL, "typedef"},
                                   {TK_RETURN, "return"},
                                   {TK_SIZEOF, "sizeof"},
                                   {TK_TYPE, STR_VOID},

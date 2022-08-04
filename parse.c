@@ -238,6 +238,18 @@ Node *primary() {
 
 // 単項 unary = ("sizeof"|"++"|"--"|"+"|"-"|"*"|"&"|"!")? unary | regex
 Node *unary() {
+    Token *save = token;
+    if (consume("(")) {  // cast
+        Type *typ = base_type();
+        if (!typ) {
+            token = save;
+            return regex();
+        }
+        expect(")");
+        Node *node = new_node(ND_CAST, unary(), NULL);
+        node->type = typ;
+        return node;
+    }
     if (consume("sizeof")) {
         Type *typ = unary()->type;
         if (typ == NULL) {
