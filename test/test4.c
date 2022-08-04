@@ -763,13 +763,15 @@ int main_t36() {
     signed long long int sllix;
     unsigned long long ullx;
     unsigned long long int ullix;
+    long unsigned long lulx;
+    long long signed int llsix;
     if (!(sizeof(llx) == 8)) return 1;
     if (!(sizeof(sllx) == 8)) return 2;
     if (!(sizeof(sllix) == 8)) return 3;
     if (!(sizeof(ullx) == 8)) return 4;
     if (!(sizeof(ullix) == 8)) return 5;
-    // long unsigned long lulx;
-    // if (!(sizeof(lulix) == 8)) return 6;
+    if (!(sizeof(lulx) == 8)) return 6;
+    if (!(sizeof(llsix) == 8)) return 7;
     return 0;
 }
 
@@ -792,6 +794,22 @@ int main_t37() {
     lly += lls;
     if (llx != lly) return 6;
     if (llx != 0x8fffffffffffffffLL) return 7;
+    return 0;
+}
+
+// short|long unsigned|signed 逆順 
+int main_t38() {
+    short unsigned su = (1 << 15) - 1;
+    short signed ss = (1 << 15) - 1;
+    su++;
+    ss++;
+    if (su == ss) return 1;
+    long unsigned lu = (1 << 31) - 1;
+    long signed ls = (1 << 31) - 1;
+    lu++;
+    ls++;
+    long long unsigned llu = lu;
+    if (llu == ls) return 2;
     return 0;
 }
 
@@ -834,5 +852,6 @@ int main() {
     if (main_t35()) return 35;
     if (main_t36()) return 36;
     if (main_t37()) return 37;
+    if (main_t38()) return 38;
     return 255;
 }

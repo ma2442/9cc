@@ -319,20 +319,18 @@ bool eq(Token *tok, char *str) {
 #define ERR_MSG_TYPEQ "型修飾子が不正です"
 
 typedef enum {
-    TYPEQ_LEN_NONE = 0,
-    TYPEQ_LEN_SHORT,
-    TYPEQ_LEN_LONG,
-    TYPEQ_LEN_LL
-} TypeqLen;
+    LENSPEC_NONE = 0,
+    LENSPEC_SHORT,
+    LENSPEC_LONG,
+    LENSPEC_LL
+} LenSpec;
 
-TypeqLen typeq_len() {
-    Token *qlen = consume_typeq_len();
-    Token *qlen2 = consume_typeq_len();
-    if (!qlen) return TYPEQ_LEN_NONE;
-    if (eq(qlen, STR_LONG) && eq(qlen2, STR_LONG)) return TYPEQ_LEN_LL;
+LenSpec lenspec(Token *qlen, Token *qlen2) {
+    if (!qlen) return LENSPEC_NONE;
+    if (eq(qlen, STR_LONG) && eq(qlen2, STR_LONG)) return LENSPEC_LL;
     if (qlen2) error_at(qlen2->str, ERR_MSG_TYPEQ);
-    if (eq(qlen, STR_LONG)) return TYPEQ_LEN_LONG;
-    if (eq(qlen, STR_SHORT)) return TYPEQ_LEN_SHORT;
+    if (eq(qlen, STR_LONG)) return LENSPEC_LONG;
+    if (eq(qlen, STR_SHORT)) return LENSPEC_SHORT;
     error_at(qlen->str, ERR_MSG_TYPEQ);
 }
 
@@ -343,14 +341,27 @@ TypeKind attach_qsign(TypeKind kind, Token *qsign) {
 
 // ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..
 Type *base_type() {
-    Token *qsign = consume_typeq_sign();
-    TypeqLen qlen = typeq_len();
+    Token *qsign = NULL;
+    Token *qlen = NULL;
+    Token *qlen2 = NULL;
+    for (Token *q = NULL; q = consume_typeq();) {
+        if (q->kind == TK_TYPEQ_SIGN && qsign ||
+            q->kind == TK_TYPEQ_LENGTH && qlen && qlen2)
+            error_at(q->str, ERR_MSG_TYPEQ);
+        else if (q->kind == TK_TYPEQ_SIGN && !qsign)
+            qsign = q;
+        else if (q->kind == TK_TYPEQ_LENGTH && !qlen)
+            qlen = q;
+        else if (q->kind == TK_TYPEQ_LENGTH && !qlen2)
+            qlen2 = q;
+    }
+    LenSpec lenspc = lenspec(qlen, qlen2);
     Token *core = consume_type();
     Type *typ = calloc(1, sizeof(Type));
-    if (!qsign && !qlen && !core) return NULL;
+    if (!qsign && !lenspc && !core) return NULL;
 
     // (struct|enum) (tag)? {..} | void | _Bool
-    if (!qsign && !qlen) {
+    if (!qsign && !lenspc) {
         if (core->kind == TK_STRUCT) return type_pointer(type_struct());
         if (core->kind == TK_ENUM) return type_pointer(type_enum());
         if (eq(core, STR_VOID)) {
@@ -363,16 +374,16 @@ Type *base_type() {
     }
 
     // (signed|unsigned)? char
-    if (!qlen && eq(core, STR_CHAR)) {
+    if (!lenspc && eq(core, STR_CHAR)) {
         typ->ty = attach_qsign(CHAR, qsign);
         return type_pointer(typ);
     }
 
-    // (signed|unsigned)? (long long|long|short)? int
+    // (signed|unsigned|long|short)* int
     if (core && !eq(core, STR_INT)) error_at(core->str, "不正な型です");
-    if (qlen == TYPEQ_LEN_LL) {
+    if (lenspc == LENSPEC_LL) {
         typ->ty = attach_qsign(LL, qsign);
-    } else if (qlen == TYPEQ_LEN_SHORT) {
+    } else if (lenspc == LENSPEC_SHORT) {
         typ->ty = attach_qsign(SHORT, qsign);
     } else {
         typ->ty = attach_qsign(INT, qsign);

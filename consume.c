@@ -34,8 +34,11 @@ Token *consume_numeric() {
     return consume_if_kind_is(TK_NUM);
 }
 Token *consume_str() { return consume_if_kind_is(TK_STR); }
-Token *consume_typeq_sign() { return consume_if_kind_is(TK_TYPEQ_SIGN); }
-Token *consume_typeq_len() { return consume_if_kind_is(TK_TYPEQ_LENGTH); }
+Token *consume_typeq() {
+    Token *tok = consume_if_kind_is(TK_TYPEQ_SIGN);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_TYPEQ_LENGTH);
+}
 Token *consume_type() {
     Token *tok = consume_if_kind_is(TK_STRUCT);
     if (tok) return tok;
