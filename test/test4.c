@@ -873,6 +873,13 @@ int main_t42() {
     return 0;
 }
 
+extern int extn_glb;
+int main_t43() {
+    extn_glb += 2;
+    if (extn_glb != 125) return 1;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -917,5 +924,6 @@ int main() {
     if (main_t40()) return 40;
     if (main_t41()) return 41;
     if (main_t42()) return 42;
+    if (main_t43()) return 43;
     return 255;
 }

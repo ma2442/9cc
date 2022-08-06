@@ -54,17 +54,15 @@ int main(int argc, char **argv) {
 
     // 文字列リテラル部のコード生成
     printf(".data\n");
-    Def *dglb = dglobals_end->prev;
-    while (dglb) {
+
+    for (Def *dglb = dglobals_end->prev; dglb; dglb = dglb->prev) {
+        if (!dglb->var->is_defined) continue;
         printf("%.*s:\n", dglb->tok->len, dglb->tok->str);
         printf("  .zero %d\n", size(dglb->var->type));
-        dglb = dglb->prev;
     }
-    Def *dstrl = dstrlits_end->prev;
-    while (dstrl) {
+    for (Def *dstrl = dstrlits_end->prev; dstrl; dstrl = dstrl->prev) {
         printf("%s:\n", dstrl->strlit->label);
         printf("  .string %.*s\n", dstrl->tok->len, dstrl->tok->str);
-        dstrl = dstrl->prev;
     }
 
     // 先頭の式から順にコード生成

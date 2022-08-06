@@ -146,9 +146,10 @@ struct Type {
 
 // ローカル変数
 struct Var {
-    int offset;    // RBPからのオフセット
-    Type *type;    // 型
-    bool islocal;  // ローカル変数かどうか
+    int offset;       // RBPからのオフセット
+    Type *type;       // 型
+    bool islocal;     // ローカル変数かどうか
+    bool is_defined;  // 定義済みか、宣言のみか
 };
 
 // 関数名と引数情報
@@ -306,7 +307,7 @@ Node *expr();
 Node *stmt();
 Node *labeled();
 Node *localtop();
-Node *declaration_var(Type *typ, Token *tok);
+Node *defvar(Type *typ, Token *tok);
 void program();
 
 // codegen.c
@@ -326,7 +327,7 @@ int calc_align(Type *type);
 int set_offset(Var *var, int base);
 bool is_signed(Type *typ);
 void typing(Node *node);
-bool typdef();
+Node *typdef();
 Type *defdtype();
 Type *base_type();
 void voidcheck(Type *typ, char *pos);

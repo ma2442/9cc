@@ -38,7 +38,7 @@ bool can_deref(Type *typ) {
 bool eqtype(Type *typ1, Type *typ2) {
     if (!typ1 || !typ2) return false;
     if (typ1->ty != typ2->ty) return false;
-    if (typ1->ty == STRUCT && typ1->dstc != typ2->dstc) return false;
+    if (typ1->ty == STRUCT && typ1->dstc->stc != typ2->dstc->stc) return false;
     if (typ1->ty == ARRAY && typ1->array_size != typ2->array_size) return false;
     if (can_deref(typ1)) return eqtype(typ1->ptr_to, typ2->ptr_to);
     return true;
@@ -268,7 +268,7 @@ Type *def_struct(Token *tag) {
         voidcheck(typ, tok_void->str);
         Token *tok = consume_ident();
         // メンバ作成（メンバのノードは不要なので放置）
-        declaration_var(typ, tok);
+        defvar(typ, tok);
         expect(";");
         int sz = size(def[nest]->dvars->var->type);
         ofst = set_offset(def[nest]->dvars->var, ofst) + sz;
@@ -388,8 +388,8 @@ void deftype(Type *typ, Token *name) {
     def[stcidx()]->dtypdefs = dtyp;
 }
 
-bool typdef() {
-    if (!consume("typedef")) return false;
+Node *typdef() {
+    if (!consume("typedef")) return NULL;
     Token *save = token;
     Token *idt = NULL;
     Type *typ = NULL;
@@ -411,7 +411,7 @@ GET_IDENT:
     if (!typ || !idt) error_at(save->str, "typedefが不正です");
     deftype(type_array(typ), idt);
     expect(";");
-    return true;
+    return new_node(ND_NO_EVAL, NULL, NULL);
 }
 
 typedef enum {

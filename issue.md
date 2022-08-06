@@ -3,7 +3,6 @@
 -   [ ] #include <..>, #include ".."
 -   [ ] #define
 -   [ ] #ifdef, #endif, #ifndef
--   [ ] extern 変数
 -   [ ] static
 -   [ ] const
 -   [ ] restrict
@@ -42,6 +41,7 @@
 
 ### Completed
 
+-   [x] extern 変数
 -   [x] 関数宣言, extern func
 -   [x] typedef Type Typename;
         enum や struct の型定義も同時に行える

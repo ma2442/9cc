@@ -61,11 +61,11 @@ Node *new_node_num(unsigned long long val) {
 
 // 変数定義
 Node *new_node_defvar(Type *typ, Token *var_name) {
-    if (!can_def_symbol(var_name)) return NULL;
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
     Def *dvar = calloc_def(DK_VAR);
     dvar->next = def[nest]->dvars;
+    dvar->var->is_defined = true;
     dvar->tok = var_name;
     dvar->var->islocal = nest;
     dvar->var->type = typ;
@@ -449,7 +449,31 @@ Node *assign() {
     return node;
 }
 
-Node *declaration_var(Type *typ, Token *tok) {
+// 宣言できる変数でなければエラー
+void decla_var_check(Type *typ, Token *name) {
+    if (can_def_symbol(name)) return;
+    Def *ddecla = fit_def_noerr(name, DK_VAR);
+    if (ddecla && ddecla->var->is_defined)
+        error_at(name->str, "定義済みの変数です");
+    if (ddecla && !eqtype(typ, ddecla->var->type))
+        error_at(name->str, "宣言時の型と一致しません");
+}
+
+Node *decla_var(Type *typ, Token *name) {
+    decla_var_check(typ, name);
+    Def *dvar = calloc_def(DK_VAR);
+    dvar->next = def[nest]->dvars;
+    dvar->var->is_defined = false;
+    dvar->tok = name;
+    dvar->var->islocal = nest;
+    dvar->var->type = typ;
+    if (def[nest]->dvars) def[nest]->dvars->prev = dvar;
+    def[nest]->dvars = dvar;
+    return new_node(ND_NO_EVAL, NULL, NULL);
+}
+
+Node *defvar(Type *typ, Token *tok) {
+    decla_var_check(typ, tok);
     return new_node_defvar(type_array(typ), tok);
 }
 
@@ -480,7 +504,7 @@ Node *decla_and_assign() {
     Token *idt = consume_ident();
     if (!idt) return new_node(ND_NO_EVAL, NULL, NULL);
     voidcheck(typ, tok_void->str);
-    Node *node = declaration_var(typ, idt);
+    Node *node = defvar(typ, idt);
     if (consume("="))
         node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
     return node;
@@ -659,8 +683,9 @@ Node *labeled() {
 }
 
 Node *localtop() {
-    if (typdef()) return new_node(ND_NO_EVAL, NULL, NULL);
-    Node *node = labeled();
+    Node *node = typdef();
+    if (node) return node;
+    node = labeled();
     if (node) return node;
     return new_node(ND_NO_EVAL, NULL, NULL);
 }
@@ -750,7 +775,7 @@ Node *func(Type *typ, Token *name) {
             typ = base_type();
             voidcheck(typ, tok_void->str);
             Token *tok = consume_ident();
-            Node *ln = declaration_var(typ, tok);
+            Node *ln = defvar(typ, tok);
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -798,7 +823,10 @@ void program() {
         Node *node = func(typ, idt);
         if (!node) {
             voidcheck(typ, tok_void->str);
-            node = declaration_var(typ, idt);
+            if (is_decla)
+                node = decla_var(typ, idt);
+            else
+                node = defvar(typ, idt);
             expect(";");
         }
         code[i] = node;

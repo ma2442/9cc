@@ -33,3 +33,5 @@ int alloc4_2D(int ***p, int x1, int x2, int x3, int x4) {
         // printf("\n");
     }
 }
+
+int extn_glb = 123;
