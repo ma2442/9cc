@@ -1,12 +1,12 @@
 ### To Do
 
--   [ ] 関数宣言
 -   [ ] #include <..>, #include ".."
 -   [ ] #define
 -   [ ] #ifdef, #endif, #ifndef
--   [ ] extern
+-   [ ] extern 変数
 -   [ ] static
 -   [ ] const
+-   [ ] restrict
 
 ### Essential To Do 使用中かつ代替不可能
 
@@ -42,6 +42,7 @@
 
 ### Completed
 
+-   [x] 関数宣言, extern func
 -   [x] typedef Type Typename;
         enum や struct の型定義も同時に行える
 -   [x] キャスト (int) x

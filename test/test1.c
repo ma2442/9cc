@@ -1,4 +1,10 @@
 // 四則演算 ~ ブロックまで
+int foo();
+int bar(int a, int b);
+int bar6(int a, int b, int c, int d, int e, int f);
+int alloc4(int **p, int x1, int x2, int x3, int x4);
+int alloc4_2D(int ***p, int x1, int x2, int x3, int x4);
+
 int main_t0() { return 0; }
 int main_t1() { return 42; }
 int main_t2() { return 5 + 20 - 4; }

@@ -1,3 +1,10 @@
+int foo();
+int bar(int, int);
+int bar6(int, int, int, int, int, int);
+int alloc4(int **, int, int, int, int);
+int alloc4_2D(int ***, int, int, int, int);
+int printf(char *, ...);
+
 // ローカル変数スタック長可変化テスト
 int main_t0() {
     int a[100];
@@ -826,6 +833,46 @@ int main_t39() {
     return 0;
 }
 
+long long castll(long long llx) { return llx; }
+// 関数の引数･返り値型確認 long long
+int main_t40() {
+    if (castll((unsigned int)-1) == -1) return 1;
+    if (castll(-1) != -1) return 2;
+    unsigned int ux = -1;
+    if (castll(ux) == -1) return 3;
+    char c = -1;
+    if (castll(c) != -1) return 4;
+    _Bool b = 100;
+    if (castll(b) != 1) return 5;
+    return 0;
+}
+
+char castchar(int x) { return x; }
+unsigned char castuchar(int x) { return x; }
+unsigned castchar2(char c) { return c; }
+char castchar3(unsigned char c) { return c; }
+_Bool castbool(int x) { return x; }
+// 関数の引数･返り値型確認 char, int, _Bool
+int main_t41() {
+    if (castchar(-1) != -1) return 1;
+    if (castchar(256 + 10) != 10) return 2;
+    if (castuchar(-1) != 255) return 3;
+    if (castchar2(0xffff) == -1LL) return 4;
+    if (castchar3(0xffff) != -1LL) return 5;
+    if (castbool(2) != 1) return 6;
+    return 0;
+}
+
+int *fn(int *p) { return ++p; }
+// 関数の引数･返り値型確認 pointer
+int main_t42() {
+    int a[2];
+    a[1] = 10;
+    int *p = a;
+    if (*fn(p) != 10) return 10;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -867,5 +914,8 @@ int main() {
     if (main_t37()) return 37;
     if (main_t38()) return 38;
     if (main_t39()) return 39;
+    if (main_t40()) return 40;
+    if (main_t41()) return 41;
+    if (main_t42()) return 42;
     return 255;
 }

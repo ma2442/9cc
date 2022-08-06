@@ -105,12 +105,12 @@ bool read_str(char **pp, Token **tokp) {
 }
 
 bool read_reserved(char **pp, Token **tokp) {
-    const char resv[][4] = {"<<=", ">>=", "<<", ">>", "&&", "||", "++", "--",
-                            "->",  "&=",  "^=", "|=", "+=", "-=", "*=", "/=",
-                            "%=",  "<=",  ">=", "==", "!=", "=",  ".",  ",",
-                            "{",   "}",   ";",  "+",  "-",  "*",  "/",  "%",
-                            "(",   ")",   "<",  ">",  "&",  "!",  "?",  ":",
-                            "[",   "]",   "|",  "^",  "~"};
+    const char resv[][4] = {"...", "<<=", ">>=", "<<", ">>", "&&", "||", "++",
+                            "--",  "->",  "&=",  "^=", "|=", "+=", "-=", "*=",
+                            "/=",  "%=",  "<=",  ">=", "==", "!=", "=",  ".",
+                            ",",   "{",   "}",   ";",  "+",  "-",  "*",  "/",
+                            "%",   "(",   ")",   "<",  ">",  "&",  "!",  "?",
+                            ":",   "[",   "]",   "|",  "^",  "~"};
     for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
         int len = strlen(resv[i]);
         if (!strncmp(resv[i], *pp, len)) {
@@ -142,7 +142,7 @@ void read_numsuffix(char **pp, Token **tokp) {
     int cnt_lenlit = 0;
     int cnt_signlit = 0;
     TypeKind lenspec = INT;
-    TypeKind signspec = SIGNED;
+    bool is_unsigned = false;
     char *p = *pp;
     while (cnt_lenlit < 2 && cnt_signlit < 2) {
         if (*p == 'l' || *p == 'L') {
@@ -155,7 +155,7 @@ void read_numsuffix(char **pp, Token **tokp) {
             cnt_lenlit++;
         } else if (*p == 'u' || *p == 'U') {
             p++;
-            signspec = ~SIGNED;
+            is_unsigned = true;
             cnt_signlit++;
         } else {
             break;
@@ -165,7 +165,7 @@ void read_numsuffix(char **pp, Token **tokp) {
     if (cnt_lenlit > 1 || cnt_signlit > 1)
         error_at(p - 1, "不正な定数接尾辞です");
     *tokp = new_token(TK_NUMSUFFIX, *tokp, *pp, p - *pp);
-    (*tokp)->val = lenspec & signspec;
+    (*tokp)->val = is_unsigned ? lenspec & ~SIGNED : lenspec;
     *pp = p;
 }
 
@@ -195,6 +195,7 @@ bool read_controls(char **pp, Token **tokp, int len) {
                                   {TK_CTRL, "do"},
                                   {TK_CTRL, "for"},
                                   {TK_CTRL, "typedef"},
+                                  {TK_CTRL, "extern"},
                                   {TK_RETURN, "return"},
                                   {TK_SIZEOF, "sizeof"},
                                   {TK_TYPE, STR_VOID},

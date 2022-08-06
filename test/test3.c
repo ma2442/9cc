@@ -1,4 +1,11 @@
 // グローバル変数 ~ string literal、二次元配列、変数宣言と同時代入まで
+int foo();
+int bar(int, int);
+int bar6(int, int, int, int, int, int);
+int alloc4(int**, int, int, int, int);
+int alloc4_2D(int***, int, int, int, int);
+int printf(char*, ...);
+
 // グローバル変数
 int x_t0;
 int main_t0() {

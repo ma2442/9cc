@@ -1,3 +1,5 @@
+extern int printf(char* __format, ...);
+
 int ngRaw[100];
 int ngCol[100];
 int ngDown[200];

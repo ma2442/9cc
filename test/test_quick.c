@@ -1,4 +1,11 @@
 //!/bin/bash
+int foo();
+int bar(int, int);
+int bar6(int, int, int, int, int, int);
+int alloc4(int**, int, int, int, int);
+int alloc4_2D(int***, int, int, int, int);
+int printf(char* __format, ...);
+
 // 四則演算、不等号, return
 char main_t0() {
     return 5 + 10 * (+3 + 6 - 6) / 2 + (3 == 1 + 2) + (3 != 1 + 1) + (11 < 12) +

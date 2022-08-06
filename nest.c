@@ -24,8 +24,8 @@ void scope_in() {
 void scope_out() {
     if (nest > 0 && def[nest]->dvars_last) {
         // 関数内ネストの変数はローカル変数に載せて行く
-        def[nest]->dvars_last->next = dfn->fn->dvars;
-        dfn->fn->dvars = def[nest]->dvars;
+        def[nest]->dvars_last->next = dfunc->fn->dvars;
+        dfunc->fn->dvars = def[nest]->dvars;
     }
     free(def[nest]);
     def[nest] = NULL;

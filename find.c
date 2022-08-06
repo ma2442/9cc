@@ -9,8 +9,8 @@ void error_undef(Token *tok, DefKind kind) {
         error_at(tok->str, "未定義の列挙体です");
     // else if (kind == DK_ENUMCONST)
     //     error_at(tok->str, "未定義の定数です");
-    // else if (kind == DK_FUNC)
-    // error_at(tok->str, "未定義の関数です");
+    else if (kind == DK_FUNC)
+    error_at(tok->str, "未定義の関数です");
 }
 
 // 変数･関数･構造体･列挙体のいずれかを名前で検索する。

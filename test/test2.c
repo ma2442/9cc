@@ -1,4 +1,12 @@
 //関数コール ~ 配列
+int foo();
+int bar(int, int);
+int bar6(int, int, int, int, int, int);
+int alloc4(int**, int, int, int, int);
+extern int alloc4_2D(int***, int, int, int, int);
+int bar(int, int);
+int alloc4(int**, int, int, int, int);
+
 //外部関数コール
 int main_t0() {
     foo();

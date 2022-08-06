@@ -22,6 +22,8 @@
 #define STR_UNSIGNED "unsigned"
 #define STR_SHORT "short"
 #define STR_LONG "long"
+#define ERR_MSG_TYPEQ "型修飾子が不正です"
+#define ERR_MSG_MISMATCH_SIGNATURE "関数シグネチャが宣言と一致しません"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -113,6 +115,7 @@ typedef enum {
 } NodeKind;
 
 typedef enum {
+    VARIABLE,  // printfのような可変個数の引数
     UCHAR,
     USHORT,
     UINT,
@@ -150,10 +153,12 @@ struct Var {
 
 // 関数名と引数情報
 struct Func {
+    Def *darg0;      // 第一引数の手前
     Def *dargs;      // 引数情報
     Def *dvars;      // 変数情報(引数含む)
     int stack_size;  // 変数分の確保領域
     Type *type;
+    bool is_defined;  //定義済みか、宣言のみか
 };
 
 // 文字列リテラル
@@ -212,7 +217,7 @@ struct Def {
         Enum *enm;
         EnumConst *cst;
         StrLit *strlit;
-        Type *type;
+        Type *defdtype;
     };
 };
 
@@ -255,7 +260,7 @@ extern Node *statement[STMT_LEN];
 // また、structメンバの定義･アクセスにも一時的に使用される。
 extern Defs *def[NEST_MAX];
 
-extern Def *dfn;                 // 現在定義中の関数
+extern Def *dfunc;               // 現在定義中の関数
 extern Def *dglobals_end;        // グローバル変数(出現順)
 extern Def *dstrlits;            // 文字列リテラル(出現逆順)
 extern Def *dstrlits_end;        // 文字列リテラル(出現順)
@@ -312,6 +317,9 @@ void init_sizes();
 int val(Node *node);  // 定数計算
 int size(Type *typ);
 bool can_deref(Type *typ);
+bool eqtype(Type *typ1, Type *typ2);
+bool can_cast(Type *to, Type *from);
+Type *new_type(TypeKind kind);
 Def *calloc_def(DefKind kind);
 int align(int x, int aln);
 int calc_align(Type *type);

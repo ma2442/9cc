@@ -34,6 +34,45 @@ bool can_deref(Type *typ) {
     return true;
 }
 
+// タイプ一致するか
+bool eqtype(Type *typ1, Type *typ2) {
+    if (!typ1 || !typ2) return false;
+    if (typ1->ty != typ2->ty) return false;
+    if (typ1->ty == STRUCT && typ1->dstc != typ2->dstc) return false;
+    if (typ1->ty == ARRAY && typ1->array_size != typ2->array_size) return false;
+    if (can_deref(typ1)) return eqtype(typ1->ptr_to, typ2->ptr_to);
+    return true;
+}
+
+// _Bool, (unsigned) int, char, ll, short
+bool is_basic_numeric(Type *typ) {
+    TypeKind ty = typ->ty;
+    if (ty == BOOL || ty == CHAR || ty == UCHAR || ty == SHORT ||
+        ty == USHORT || ty == INT || ty == UINT || ty == LL || ty == ULL)
+        return true;
+    return false;
+}
+
+// ポインタ同士か？その上キャスト可能か
+bool can_cast_ptr(Type *to, Type *from) {
+    if (!to || !from) return false;
+    if (to->ty != PTR || from->ty != PTR) return false;
+    if (to->ptr_to->ty == VOID || from->ptr_to->ty == VOID) return true;
+    return can_cast(to->ptr_to, from->ptr_to);
+}
+
+// キャスト可能か
+bool can_cast(Type *to, Type *from) {
+    if (!to || !from) return false;
+    if (to->ty == VOID || from->ty == VOID) return false;
+    if (to->ty == VARIABLE) return true;
+    if (to->ty == PTR && from->ty == ARRAY)
+        return eqtype(to->ptr_to, from->ptr_to);
+    if (can_cast_ptr(to, from)) return true;
+    if (is_basic_numeric(to) && is_basic_numeric(from)) return true;
+    return eqtype(to, from);
+}
+
 // アラインメント(alnの倍数)に揃える
 int align(int x, int aln) {
     if (aln == 0) return 1;
@@ -192,7 +231,7 @@ void typing_defdtype(Token *tag, TypeKind kind, Def *dtyped) {
         for (Def *dtyp = def[i]->dtypdefs; dtyp && dtyp->next;
              dtyp = dtyp->next) {
             if (!sametok(tag, dtyp->tok)) continue;
-            Type *typ = dtyp->type;
+            Type *typ = dtyp->defdtype;
             while (can_deref(typ)) typ = typ->ptr_to;
             if (typ->ty != kind) continue;
             if (kind == STRUCT && !(typ->dstc)) {
@@ -345,7 +384,7 @@ void deftype(Type *typ, Token *name) {
     Def *dtyp = calloc_def(DK_TYPE);
     dtyp->next = def[stcidx()]->dtypdefs;
     dtyp->tok = name;
-    dtyp->type = typ;
+    dtyp->defdtype = typ;
     def[stcidx()]->dtypdefs = dtyp;
 }
 
@@ -375,8 +414,6 @@ GET_IDENT:
     return true;
 }
 
-#define ERR_MSG_TYPEQ "型修飾子が不正です"
-
 typedef enum {
     LENSPEC_NONE = 0,
     LENSPEC_SHORT,
@@ -403,7 +440,7 @@ Type *defdtype() {
     Token *idt = consume_ident();
     if (!idt) return NULL;
     Def *dtyp = fit_def(idt, DK_TYPE);
-    if (dtyp) return dtyp->type;
+    if (dtyp) return dtyp->defdtype;
     token = idt;
     return NULL;
 }

@@ -1,6 +1,6 @@
 #include "9cc.h"
 
-Def *dfn;
+Def *dfunc;
 Def *dstrlits;
 Node *statement[STMT_LEN];
 Defs *def[NEST_MAX];
@@ -23,7 +23,7 @@ Def *calloc_def(DefKind kind) {
     else if (kind == DK_STRLIT)
         d->strlit = calloc(1, sizeof(StrLit));
     else if (kind == DK_TYPE)
-        d->type = calloc(1, sizeof(Type));
+        d->defdtype = calloc(1, sizeof(Type));
     d->kind = kind;
     return d;
 }
@@ -62,8 +62,6 @@ Node *new_node_num(unsigned long long val) {
 // 変数定義
 Node *new_node_defvar(Type *typ, Token *var_name) {
     if (!can_def_symbol(var_name)) return NULL;
-    // if (find_def(var_name, DK_VAR))
-    //     error_at(var_name->str, "定義済みの変数です。");
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
     Def *dvar = calloc_def(DK_VAR);
@@ -140,33 +138,50 @@ Node *str_literal() {
     return node;
 }
 
+// 関数シグネチャ一致確認
+bool eq_signature(Def *dfn1, Def *dfn2, bool check_rettype) {
+    if (check_rettype && !eqtype(dfn1->fn->type, dfn2->fn->type))
+        error_at(dfn2->tok->str, ERR_MSG_MISMATCH_SIGNATURE);
+    Def *darg1 = dfn1->fn->darg0->prev;
+    Def *darg2 = dfn2->fn->darg0->prev;
+    while (darg1 || darg2) {
+        if (darg1 && darg1->var->type->ty == VARIABLE) return true;
+        if (darg2 && darg2->var->type->ty == VARIABLE) return true;
+        if (!darg1 || !darg2 || !eqtype(darg1->var->type, darg2->var->type))
+            error_at(dfn2->tok->str, ERR_MSG_MISMATCH_SIGNATURE);
+        darg1 = darg1->prev;
+        darg2 = darg2->prev;
+    }
+    return true;
+}
+
 // 関数コールノード 引数は関数名
 Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
     Def *dfn = fit_def(tok, DK_FUNC);
-    if (dfn) {
-        node->def = dfn;
-        node->type = dfn->fn->type;
-    } else {
-        node->def = calloc_def(DK_FUNC);
-        node->def->tok = tok;
-        // 関数が見つからなければ関数返却型をintと想定
-        // (関数宣言未実装時点の処置)
-        node->type = calloc(1, sizeof(Type));
-        node->type->ty = INT;
-    }
+    node->def = dfn;
+    node->type = dfn->fn->type;
 
     // 実引数処理
+    Def *darg = dfn->fn->darg0;
     if (!consume(")")) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
+            if (!darg->var->type || darg->var->type->ty != VARIABLE)
+                darg = darg->prev;
+            if (!darg) error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
             arg->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
+            arg->next_arg->type = darg->var->type;
+            if (!can_cast(arg->next_arg->type, arg->next_arg->rhs->type))
+                error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
             arg = arg->next_arg;
         } while (consume(","));
         expect(")");
     }
+    if (darg != dfn->fn->dargs)
+        error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
     return node;
 }
 
@@ -480,7 +495,7 @@ Node *stmt() {
         return node;
     }
     if (consume("return")) {
-        if (dfn->fn->type->ty != VOID) {
+        if (dfunc->fn->type->ty != VOID) {
             node = expr();
             if (!node) error_at(token->str, "返却値がありません");
         }
@@ -650,21 +665,81 @@ Node *localtop() {
     return new_node(ND_NO_EVAL, NULL, NULL);
 }
 
-// 関数定義ノード
-Node *func(Type *typ, Token *func_name) {
-    if (!consume("(")) return NULL;
-    if (!func_name) return NULL;
-    dfn = calloc_def(DK_FUNC);
-    dfn->next = def[nest]->dfns;
-    dfn->fn->type = typ;
+bool decla_func(Type *typ, Token *name) {
+    if (!consume("(")) return false;
+    if (!name) return false;
+
+    dfunc = calloc_def(DK_FUNC);
+    dfunc->fn->type = typ;
+    dfunc->tok = name;
+    dfunc->fn->is_defined = false;
+    scope_in();
+    dfunc->fn->darg0 = def[nest]->dvars_last;
+
+    // 仮引数処理
+    if (!consume(")")) {
+        do {
+            if (consume("...")) {
+                typ = new_type(VARIABLE);
+            } else {
+                Token *tok_void = token;
+                typ = base_type();
+                if (!typ) error_at(tok_void->str, "型ではありません");
+                voidcheck(typ, tok_void->str);
+                consume_ident();
+            }
+            Def *dvar = calloc_def(DK_VAR);
+            dvar->next = def[nest]->dvars;
+            dvar->var->type = typ;
+            if (def[nest]->dvars) def[nest]->dvars->prev = dvar;
+            def[nest]->dvars = dvar;
+        } while (consume(","));
+        expect(")");
+    }
+    // 関数情報（仮引数含む）更新
+    dfunc->fn->dargs = def[nest]->dvars;
+    scope_out();
+
+    Def *ddecla = fit_def_noerr(dfunc->tok, DK_FUNC);
+    if (!ddecla) {             // 既存宣言がなければ登録して終了
+        can_def_symbol(name);  // シンボル使用済みエラー?
+        goto REGISTER;
+    }
+    // 定義済関数の宣言はエラーとする
+    if (ddecla->fn->is_defined) error_at(name->str, "定義済みの関数です");
+
+    // 既存宣言とのシグネチャ一致確認
+    if (!eq_signature(ddecla, dfunc, true)) return false;
+
+REGISTER:
+    dfunc->next = def[nest]->dfns;
+    def[nest]->dfns = dfunc;
+    return true;
+}
+
+// 関数宣言or定義ノード
+Node *func(Type *typ, Token *name) {
+    Token *save = token;
+    // 関数宣言を試す
+    if (!decla_func(typ, name)) return NULL;
+    if (consume(";")) return new_node(ND_NO_EVAL, NULL, NULL);
+    // 関数宣言でないなら関数定義
+    token = save;
+
+    expect("(");
+    dfunc = calloc_def(DK_FUNC);
+    dfunc->next = def[nest]->dfns;
+    dfunc->fn->type = typ;
+    dfunc->fn->is_defined = true;
     fncnt++;
 
     // スコープ内変数等初期化
     scope_in();
+    dfunc->fn->darg0 = def[nest]->dvars_last;
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
-    dfn->tok = func_name;
-    node->def = dfn;
+    dfunc->tok = name;
+    node->def = dfunc;
 
     // 仮引数処理
     if (!consume(")")) {
@@ -684,20 +759,20 @@ Node *func(Type *typ, Token *func_name) {
         expect(")");
     }
     // 関数情報（仮引数含む）更新
-    dfn->fn->dargs = def[nest]->dvars;
+    dfunc->fn->dargs = def[nest]->dvars;
     // 関数本文 "{" localtop* "}"
     node->rhs = block();
     scope_out();
-    def[nest]->dfns = dfn;
+    def[nest]->dfns = dfunc;
     // ローカル変数のオフセットを計算
     int ofst = 0;
-    for (Def *dlcl = dfn->fn->dvars; dlcl; dlcl = dlcl->next) {
+    for (Def *dlcl = dfunc->fn->dvars; dlcl; dlcl = dlcl->next) {
         if (!dlcl->var->type) continue;
         int sz = size(dlcl->var->type);
         ofst = set_offset(dlcl->var, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
-    dfn->fn->stack_size = align(ofst, 8);
+    dfunc->fn->stack_size = align(ofst, 8);
 
     return node;
 }
@@ -712,8 +787,9 @@ void program() {
     while (!at_eof()) {
         if (typdef()) continue;
         Token *tok_void = token;
+        bool is_decla = consume("extern");
         Type *typ = base_type();
-        // 関数定義 または グローバル変数宣言
+        // 関数宣言･定義 または グローバル変数宣言
         Token *idt = consume_ident();
         if (!idt) {
             expect(";");

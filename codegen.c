@@ -46,11 +46,21 @@ char* cnvword(AsmWord word, int byte) {
 
 char* just(AsmWord word) { return cnvword(word, 8); }
 
+void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
+    char* src1byte = cnvword(src, 1);
+    printf("  cmp %s, %s\n", cnvword(src, 8), cmpval);
+    printf("  %s %s\n", cmptype, src1byte);
+    printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
+}
+
 void expand_size(AsmWord reg, Type* typ) {
     if (can_deref(typ)) return;
-    if (typ->ty == BOOL) return;
     int sz = size(typ);
     if (sz == 8 || sz == -1) return;
+    if (typ->ty == BOOL) {
+        gen_cmp(reg, "0", "setne", reg);
+        return;
+    }
     AsmWord mov = MOVZ;
     if (is_signed(typ)) mov = MOVS;
     if (sz == 4 && mov == MOVZ)
@@ -90,13 +100,6 @@ void gen_lval(Node* node) {
             return;
     }
     printf("  push rax\n");
-}
-
-void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
-    char* src1byte = cnvword(src, 1);
-    printf("  cmp %s, %s\n", cnvword(src, 8), cmpval);
-    printf("  %s %s\n", cmptype, src1byte);
-    printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
 }
 
 void gen_load(Type* typ) {
@@ -284,9 +287,9 @@ bool gen_func(Node* node) {
             printf("  add rsp, rbx\n");
 
             // 返り値をスタックに保存
-            if (node->type->ty != VOID) printf("  push rax\n");
-            if (size(node->type) == 1) {
-                gen_tochar();
+            if (node->type->ty != VOID) {
+                expand_size(RAX, node->type);
+                printf("  push rax\n");
             }
             return true;
         case ND_FUNC_CALL_ARG:

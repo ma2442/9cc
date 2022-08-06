@@ -1,4 +1,5 @@
-program = ( (func | decla_and_assign | "typedef" type ident) ";" )*
+program = ( (decla_func | func | decla_and_assign | "typedef" type ident) ";" )*
+decla_func = "extern"? declaration "(" ((declaration|type|"...") ("," (declaration|type|"..."))* )? ")"
 func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
 localtop = "typedef" type ident ";" | labeled
 labeled = label ":" labeled | stmt
