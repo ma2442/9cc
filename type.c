@@ -294,16 +294,16 @@ Type *def_enum(Token *tag) {
     Def *enm = calloc_def(DK_ENUM);
     enm->tok = tag;
     // 定義中列挙子も検索が可能なように先行登録
-    Def **enums = &def[stcidx()]->enums;
-    enm->next = *enums;
-    *enums = enm;
+    enm->next = def[stcidx()]->enums;
+    def[stcidx()]->enums = enm;
+    Def *denm = def[stcidx()]->enums;
 
     // 列挙子初期化
-    (*enums)->enm->consts = calloc_def(DK_ENUMCONST);
-    (*enums)->enm->consts->cst->val = -1;
+    denm->enm->consts = calloc_def(DK_ENUMCONST);
+    denm->enm->consts->cst->val = -1;
     do {
         Def *cst = calloc_def(DK_ENUMCONST);
-        cst->cst->enm = (*enums);
+        cst->cst->enm = denm;
         Token *tok = consume_ident();
         if (!can_def_symbol(tok)) return NULL;
         cst->tok = tok;
@@ -311,16 +311,16 @@ Type *def_enum(Token *tag) {
             Node *node = condition();
             cst->cst->val = val(node);
         } else {
-            cst->cst->val = (*enums)->enm->consts->cst->val + 1;
+            cst->cst->val = denm->enm->consts->cst->val + 1;
         }
-        cst->next = (*enums)->enm->consts;
-        (*enums)->enm->consts = cst;
+        cst->next = denm->enm->consts;
+        denm->enm->consts = cst;
     } while (consume(","));
     expect("}");
 
     Type *typ = new_type(ENUM);
-    typ->enm = *enums;
-    typing_defdtype(tag, ENUM, *enums);
+    typ->enm = denm;
+    typing_defdtype(tag, ENUM, denm);
     return typ;
 }
 
