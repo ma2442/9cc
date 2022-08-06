@@ -118,7 +118,7 @@ bool read_reserved(char **pp, Token **tokp) {
                             "[",   "]",   "|",  "^",  "~"};
     for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
         int len = strlen(resv[i]);
-        if (!memcmp(resv[i], *pp, len)) {
+        if (!strncmp(resv[i], *pp, len)) {
             *tokp = new_token(TK_RESERVED, *tokp, *pp, len);
             *pp += len;
             return true;

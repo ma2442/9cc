@@ -13,9 +13,7 @@ bool consume(char *op) {
         default:
             return false;
     }
-    if (strlen(op) != token->len || memcmp(token->str, op, token->len)) {
-        return false;
-    }
+    if (!eqtokstr(token, op)) return false;
     token = token->next;
     return true;
 }
@@ -83,7 +81,7 @@ int consume_compo_assign() {
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
     if ((token->kind != TK_RESERVED && token->kind != TK_CTRL) ||
-        strlen(op) != token->len || memcmp(token->str, op, token->len)) {
+        !eqtokstr(token, op)) {
         error_at(token->str, "'%s'ではありません", op);
     }
     token = token->next;

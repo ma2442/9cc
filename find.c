@@ -29,22 +29,17 @@ Def *find_def(Token *tok, DefKind kind) {
     else if (kind == DK_TYPE)
         d = def[nest]->dtypdefs;
     for (; d && d->tok; d = d->next) {
-        if (d->tok->len == tok->len &&
-            !memcmp(d->tok->str, tok->str, tok->len)) {
-            return d;
-        }
+        if (sametok(d->tok, tok)) return d;
     }
     return NULL;
 }
 
 // 列挙体定数を名前で検索する。 見つからなかった場合はNULLを返す。
 Def *find_enumconst(Token *tok) {
-    for (Def *d = def[nest]->denms; d; d = d->next) {
-        for (Def *cst = d->enm->dconsts; cst && cst->tok; cst = cst->next) {
-            if (cst->tok->len == tok->len &&
-                !memcmp(cst->tok->str, tok->str, tok->len)) {
-                return cst;
-            }
+    for (Def *denm = def[nest]->denms; denm; denm = denm->next) {
+        for (Def *dcst = denm->enm->dconsts; dcst && dcst->tok;
+             dcst = dcst->next) {
+            if (sametok(dcst->tok, tok)) return dcst;
         }
     }
     return NULL;
@@ -68,7 +63,7 @@ Def *fit_def_noerr(Token *tok, DefKind kind) {
 // スコープ内で定義済みの変数を検索。なければエラー
 Def *fit_def(Token *tok, DefKind kind) {
     Def *dfit = fit_def_noerr(tok, kind);
-    if(dfit) return dfit;
+    if (dfit) return dfit;
     error_undef(tok, kind);
     return NULL;
 }
