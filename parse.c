@@ -59,14 +59,14 @@ Node *new_node_defvar(Type *typ, Token *var_name) {
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
     Def *var = calloc_def(DK_VAR);
-    var->next = def[nest]->vars;
+    var->next = def[nest]->dvars;
     var->tok = var_name;
     var->var->islocal = nest;
     var->var->type = typ;
     node->def = var;
     node->type = var->var->type;
-    if (def[nest]->vars) def[nest]->vars->prev = var;
-    def[nest]->vars = var;
+    if (def[nest]->dvars) def[nest]->dvars->prev = var;
+    def[nest]->dvars = var;
     return node;
 }
 
@@ -84,7 +84,7 @@ Node *new_node_var(Token *tok) {
 // メンバ変数として識別
 Node *new_node_mem(Node *nd_stc, Token *tok) {
     member_in();
-    def[nest]->vars = nd_stc->type->strct->stc->mems;
+    def[nest]->dvars = nd_stc->type->dstc->stc->dmems;
     Def *var = find_def(tok, DK_VAR);
     member_out();
     if (!var) {
@@ -126,9 +126,9 @@ Node *str_literal() {
     sprintf(strlit->strlit->label, ".LC%d", str_label_cnt);
     str_label_cnt++;
     node->def = strlit;
-    strlit->next = strlits;
-    strlits->prev = strlit;
-    strlits = strlit;
+    strlit->next = dstrlits;
+    dstrlits->prev = strlit;
+    dstrlits = strlit;
     return node;
 }
 
@@ -472,7 +472,7 @@ Node *stmt() {
         return node;
     }
     if (consume("return")) {
-        if (fnc->fn->type->ty != VOID) {
+        if (dfn->fn->type->ty != VOID) {
             node = expr();
             if (!node) error_at(token->str, "返却値がありません");
         }
@@ -646,17 +646,17 @@ Node *localtop() {
 Node *func(Type *typ, Token *func_name) {
     if (!consume("(")) return NULL;
     if (!func_name) return NULL;
-    fnc = calloc_def(DK_FUNC);
-    fnc->next = def[nest]->funcs;
-    fnc->fn->type = typ;
+    dfn = calloc_def(DK_FUNC);
+    dfn->next = def[nest]->dfns;
+    dfn->fn->type = typ;
     fncnt++;
 
     // スコープ内変数等初期化
     scope_in();
 
     Node *node = new_node(ND_FUNC_DEFINE, NULL, NULL);
-    fnc->tok = func_name;
-    node->def = fnc;
+    dfn->tok = func_name;
+    node->def = dfn;
 
     // 仮引数処理
     if (!consume(")")) {
@@ -676,20 +676,20 @@ Node *func(Type *typ, Token *func_name) {
         expect(")");
     }
     // 関数情報（仮引数含む）更新
-    fnc->fn->args = def[nest]->vars;
+    dfn->fn->dargs = def[nest]->dvars;
     // 関数本文 "{" localtop* "}"
     node->rhs = block();
     scope_out();
-    def[nest]->funcs = fnc;
+    def[nest]->dfns = dfn;
     // ローカル変数のオフセットを計算
     int ofst = 0;
-    for (Def *lcl = fnc->fn->vars; lcl; lcl = lcl->next) {
+    for (Def *lcl = dfn->fn->dvars; lcl; lcl = lcl->next) {
         if (!lcl->var->type) continue;
         int sz = size(lcl->var->type);
         ofst = set_offset(lcl->var, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
-    fnc->fn->stack_size = align(ofst, 8);
+    dfn->fn->stack_size = align(ofst, 8);
 
     return node;
 }
@@ -697,10 +697,10 @@ Node *func(Type *typ, Token *func_name) {
 void program() {
     int i = 0;
     scope_in();
-    def[nest]->vars = calloc_def(DK_VAR);
-    globals_end = def[nest]->vars;
-    strlits = calloc_def(DK_STRLIT);
-    strlits_end = strlits;
+    def[nest]->dvars = calloc_def(DK_VAR);
+    dglobals_end = def[nest]->dvars;
+    dstrlits = calloc_def(DK_STRLIT);
+    dstrlits_end = dstrlits;
     while (!at_eof()) {
         if (typdef()) continue;
         Token *tok_void = token;

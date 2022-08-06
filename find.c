@@ -19,15 +19,15 @@ Def *find_def(Token *tok, DefKind kind) {
     if (kind == DK_ENUMCONST) return find_enumconst(tok);
     Def *d = NULL;
     if (kind == DK_VAR)
-        d = def[nest]->vars;
+        d = def[nest]->dvars;
     else if (kind == DK_FUNC)
-        d = def[nest]->funcs;
+        d = def[nest]->dfns;
     else if (kind == DK_STRUCT)
-        d = def[nest]->structs;
+        d = def[nest]->dstcs;
     else if (kind == DK_ENUM)
-        d = def[nest]->enums;
+        d = def[nest]->denms;
     else if (kind == DK_TYPE)
-        d = def[nest]->typdefs;
+        d = def[nest]->dtypdefs;
     for (; d && d->tok; d = d->next) {
         if (d->tok->len == tok->len &&
             !memcmp(d->tok->str, tok->str, tok->len)) {
@@ -39,8 +39,8 @@ Def *find_def(Token *tok, DefKind kind) {
 
 // 列挙体定数を名前で検索する。 見つからなかった場合はNULLを返す。
 Def *find_enumconst(Token *tok) {
-    for (Def *d = def[nest]->enums; d; d = d->next) {
-        for (Def *cst = d->enm->consts; cst && cst->tok; cst = cst->next) {
+    for (Def *d = def[nest]->denms; d; d = d->next) {
+        for (Def *cst = d->enm->dconsts; cst && cst->tok; cst = cst->next) {
             if (cst->tok->len == tok->len &&
                 !memcmp(cst->tok->str, tok->str, tok->len)) {
                 return cst;

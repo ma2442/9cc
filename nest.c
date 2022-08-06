@@ -12,19 +12,19 @@ int stcnest = -1;
 void scope_in() {
     nest++;
     def[nest] = calloc(1, sizeof(Defs));
-    def[nest]->funcs = calloc_def(DK_FUNC);
-    def[nest]->vars = calloc_def(DK_VAR);
-    def[nest]->vars_last = def[nest]->vars;
-    def[nest]->structs = calloc_def(DK_STRUCT);
-    def[nest]->typdefs = calloc_def(DK_TYPE);
+    def[nest]->dfns = calloc_def(DK_FUNC);
+    def[nest]->dvars = calloc_def(DK_VAR);
+    def[nest]->dvars_last = def[nest]->dvars;
+    def[nest]->dstcs = calloc_def(DK_STRUCT);
+    def[nest]->dtypdefs = calloc_def(DK_TYPE);
 }
 
 // スコープから出る
 void scope_out() {
-    if (nest > 0 && def[nest]->vars_last) {
+    if (nest > 0 && def[nest]->dvars_last) {
         // 関数内ネストの変数はローカル変数に載せて行く
-        def[nest]->vars_last->next = fnc->fn->vars;
-        fnc->fn->vars = def[nest]->vars;
+        def[nest]->dvars_last->next = dfn->fn->dvars;
+        dfn->fn->dvars = def[nest]->dvars;
     }
     free(def[nest]);
     def[nest] = NULL;

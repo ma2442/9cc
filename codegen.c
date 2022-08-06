@@ -117,7 +117,7 @@ void gen_store(Type* type) {
     printf("  pop rax\n");
     int dst_size = size(type);  // 書き込み先のサイズ
     if (type->ty == STRUCT) {
-        for (int i = 0; i < dst_size; i += type->strct->stc->align) {
+        for (int i = 0; i < dst_size; i += type->dstc->stc->align) {
             printf("  mov rdi, [rcx+%d]\n", i);
             // 8バイト境界から8バイト先までコピーの必要があるなら
             // QWORD コピーが望ましい
@@ -127,8 +127,8 @@ void gen_store(Type* type) {
             }
             // QWORD未満のコピーはアラインサイズごとにする
             printf("  mov %s[rax+%d], %s\n",
-                   cnvword(QWORD_PTR, type->strct->stc->align), i,
-                   cnvword(RDI, type->strct->stc->align));
+                   cnvword(QWORD_PTR, type->dstc->stc->align), i,
+                   cnvword(RDI, type->dstc->stc->align));
         }
         return;
     }

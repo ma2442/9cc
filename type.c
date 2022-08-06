@@ -21,7 +21,7 @@ void init_sizes() {
 int size(Type *typ) {
     if (typ == NULL) return -1;
     if (typ->ty == ARRAY) return size(typ->ptr_to) * typ->array_size;
-    if (typ->ty == STRUCT) return typ->strct->stc->size;
+    if (typ->ty == STRUCT) return typ->dstc->stc->size;
     return sizes[typ->ty];
 }
 
@@ -46,9 +46,9 @@ int calc_align(Type *type) {
         // メンバのアラインメントの最小公倍数がアラインメント境界
         // (0,)1,2,4,8のいずれかなので単に最大値でよい
         int lcm = 0;
-        for (Def *mem = type->strct->stc->mems; mem && mem->next;
-             mem = mem->next) {
-            int mem_align = calc_align(mem->var->type);
+        for (Def *dmem = type->dstc->stc->dmems; dmem && dmem->next;
+             dmem = dmem->next) {
+            int mem_align = calc_align(dmem->var->type);
             if (lcm < mem_align) lcm = mem_align;
         }
         return lcm;
@@ -187,17 +187,18 @@ int stcidx() { return nest - (stcnest + 1); }
 // 型割当てが行われていないtypedefを探して割当て
 void typing_defdtype(Token *tag, TypeKind kind, Def *dtyped) {
     for (int i = stcidx(); i > -1; i--) {
-        for (Def *dtyp = def[i]->typdefs; dtyp && dtyp->next; dtyp = dtyp->next) {
+        for (Def *dtyp = def[i]->dtypdefs; dtyp && dtyp->next;
+             dtyp = dtyp->next) {
             if (!sametok(tag, dtyp->tok)) continue;
             Type *typ = dtyp->type;
             while (can_deref(typ)) typ = typ->ptr_to;
             if (typ->ty != kind) continue;
-            if (kind == STRUCT && !(typ->strct)) {
-                typ->strct = dtyped;
+            if (kind == STRUCT && !(typ->dstc)) {
+                typ->dstc = dtyped;
                 return;
             }
-            if (kind == ENUM && !(typ->enm)) {
-                typ->enm = dtyped;
+            if (kind == ENUM && !(typ->denm)) {
+                typ->denm = dtyped;
                 return;
             }
         }
@@ -209,12 +210,12 @@ Type *def_struct(Token *tag) {
     if (!consume("{")) return NULL;
     tag = make_tag(tag);
     if (!tag) return NULL;
-    Def *stc = calloc_def(DK_STRUCT);
-    stc->tok = tag;
+    Def *dnew = calloc_def(DK_STRUCT);
+    dnew->tok = tag;
     // メンバに同じ構造体型を持てるように構造体リストに先行登録
-    stc->next = def[stcidx()]->structs;
-    def[stcidx()]->structs = stc;
-    Def *dstc = def[stcidx()]->structs;
+    dnew->next = def[stcidx()]->dstcs;
+    def[stcidx()]->dstcs = dnew;
+    Def *dstc = def[stcidx()]->dstcs;
 
     //メンバ初期化
     member_in();
@@ -228,15 +229,15 @@ Type *def_struct(Token *tag) {
         // メンバ作成（メンバのノードは不要なので放置）
         declaration_var(typ, tok);
         expect(";");
-        int sz = size(def[nest]->vars->var->type);
-        ofst = set_offset(def[nest]->vars->var, ofst) + sz;
+        int sz = size(def[nest]->dvars->var->type);
+        ofst = set_offset(def[nest]->dvars->var, ofst) + sz;
     }
 
-    dstc->stc->mems = def[nest]->vars;
+    dstc->stc->dmems = def[nest]->dvars;
     member_out();
     // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
     Type *typ = new_type(STRUCT);
-    typ->strct = dstc;
+    typ->dstc = dstc;
     dstc->stc->align = calc_align(typ);
     dstc->stc->size = align(ofst, dstc->stc->align);
     typing_defdtype(tag, STRUCT, dstc);
@@ -251,7 +252,7 @@ Type *type_struct() {
     // 既存struct型を返す
     if (!tag) error_at(token->str, "構造体タグがありません");
     typ = new_type(STRUCT);
-    typ->strct = fit_def(tag, DK_STRUCT);
+    typ->dstc = fit_def(tag, DK_STRUCT);
     return typ;
 }
 
@@ -291,35 +292,35 @@ Type *def_enum(Token *tag) {
     if (!consume("{")) return NULL;
     tag = make_tag(tag);
     if (!tag) return NULL;
-    Def *enm = calloc_def(DK_ENUM);
-    enm->tok = tag;
+    Def *dnew = calloc_def(DK_ENUM);
+    dnew->tok = tag;
     // 定義中列挙子も検索が可能なように先行登録
-    enm->next = def[stcidx()]->enums;
-    def[stcidx()]->enums = enm;
-    Def *denm = def[stcidx()]->enums;
+    dnew->next = def[stcidx()]->denms;
+    def[stcidx()]->denms = dnew;
+    Def *denm = def[stcidx()]->denms;
 
     // 列挙子初期化
-    denm->enm->consts = calloc_def(DK_ENUMCONST);
-    denm->enm->consts->cst->val = -1;
+    denm->enm->dconsts = calloc_def(DK_ENUMCONST);
+    denm->enm->dconsts->cst->val = -1;
     do {
-        Def *cst = calloc_def(DK_ENUMCONST);
-        cst->cst->enm = denm;
+        Def *dcst = calloc_def(DK_ENUMCONST);
+        dcst->cst->denm = denm;
         Token *tok = consume_ident();
         if (!can_def_symbol(tok)) return NULL;
-        cst->tok = tok;
+        dcst->tok = tok;
         if (consume("=")) {
             Node *node = condition();
-            cst->cst->val = val(node);
+            dcst->cst->val = val(node);
         } else {
-            cst->cst->val = denm->enm->consts->cst->val + 1;
+            dcst->cst->val = denm->enm->dconsts->cst->val + 1;
         }
-        cst->next = denm->enm->consts;
-        denm->enm->consts = cst;
+        dcst->next = denm->enm->dconsts;
+        denm->enm->dconsts = dcst;
     } while (consume(","));
     expect("}");
 
     Type *typ = new_type(ENUM);
-    typ->enm = denm;
+    typ->denm = denm;
     typing_defdtype(tag, ENUM, denm);
     return typ;
 }
@@ -332,7 +333,7 @@ Type *type_enum() {
     // 既存enum型を返す
     if (!tag) error_at(token->str, "列挙体タグがありません");
     typ = new_type(ENUM);
-    typ->enm = fit_def(tag, DK_ENUM);
+    typ->denm = fit_def(tag, DK_ENUM);
     return typ;
 }
 
@@ -340,10 +341,10 @@ Type *type_enum() {
 void deftype(Type *typ, Token *name) {
     if (!can_def_symbol(name)) return;
     Def *dtyp = calloc_def(DK_TYPE);
-    dtyp->next = def[stcidx()]->typdefs;
+    dtyp->next = def[stcidx()]->dtypdefs;
     dtyp->tok = name;
     dtyp->type = typ;
-    def[stcidx()]->typdefs = dtyp;
+    def[stcidx()]->dtypdefs = dtyp;
 }
 
 bool typdef() {
@@ -354,24 +355,17 @@ bool typdef() {
     Token *tag = consume_tag_without_def(TK_STRUCT);
     if (tag && !fit_def_noerr(tag, DK_STRUCT)) {  // 未定義の構造体タグ
         typ = type_pointer(new_type(STRUCT));
-        idt = consume_ident();
-        if (!typ || !idt) error_at(save->str, "typedefが不正です");
-        deftype(type_array(typ), idt);
-        expect(";");
-        return true;
+        goto GET_IDENT;
     }
     token = save;
     tag = consume_tag_without_def(TK_ENUM);
     if (tag && !fit_def_noerr(tag, DK_ENUM)) {  // 未定義の列挙体タグ
         typ = type_pointer(new_type(ENUM));
-        idt = consume_ident();
-        if (!typ || !idt) error_at(save->str, "typedefが不正です");
-        deftype(type_array(typ), idt);
-        expect(";");
-        return true;
+        goto GET_IDENT;
     }
     token = save;
-    typ = base_type();
+    typ = base_type();  // 定義済み or 同時定義の型
+GET_IDENT:
     idt = consume_ident();
     if (!typ || !idt) error_at(save->str, "typedefが不正です");
     deftype(type_array(typ), idt);
@@ -390,7 +384,8 @@ typedef enum {
 
 LenSpec lenspec(Token *qlen, Token *qlen2) {
     if (!qlen) return LENSPEC_NONE;
-    if (eqtokstr(qlen, STR_LONG) && eqtokstr(qlen2, STR_LONG)) return LENSPEC_LL;
+    if (eqtokstr(qlen, STR_LONG) && eqtokstr(qlen2, STR_LONG))
+        return LENSPEC_LL;
     if (qlen2) error_at(qlen2->str, ERR_MSG_TYPEQ);
     if (eqtokstr(qlen, STR_LONG)) return LENSPEC_LONG;
     if (eqtokstr(qlen, STR_SHORT)) return LENSPEC_SHORT;
@@ -405,8 +400,8 @@ TypeKind attach_qsign(TypeKind kind, Token *qsign) {
 Type *defdtype() {
     Token *idt = consume_ident();
     if (!idt) return NULL;
-    Def *typ = fit_def(idt, DK_TYPE);
-    if (typ) return typ->type;
+    Def *dtyp = fit_def(idt, DK_TYPE);
+    if (dtyp) return dtyp->type;
     token = idt;
     return NULL;
 }

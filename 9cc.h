@@ -137,8 +137,8 @@ struct Type {
     TypeKind ty;
     Type *ptr_to;
     size_t array_size;
-    Def *strct;
-    Def *enm;
+    Def *dstc;
+    Def *denm;
 };
 
 // ローカル変数
@@ -150,8 +150,8 @@ struct Var {
 
 // 関数名と引数情報
 struct Func {
-    Def *args;       // 引数情報
-    Def *vars;       // 変数情報(引数含む)
+    Def *dargs;       // 引数情報
+    Def *dvars;       // 変数情報(引数含む)
     int stack_size;  // 変数分の確保領域
     Type *type;
 };
@@ -162,29 +162,29 @@ struct StrLit {
 };
 
 struct Struct {
-    Def *mems;
+    Def *dmems;
     int size;
     int align;
 };
 
 struct Enum {
-    Def *consts;
+    Def *dconsts;
 };
 
 // 列挙子
 struct EnumConst {
     int val;
-    Def *enm;  // 属している列挙体
+    Def *denm;  // 属している列挙体
 };
 
 // 定義をまとめたもの(関数 変数, enum, struct)
 struct Defs {
-    Def *funcs;
-    Def *vars;
-    Def *vars_last;  // ブロック内で最初に定義された変数
-    Def *enums;
-    Def *structs;
-    Def *typdefs;
+    Def *dfns;
+    Def *dvars;
+    Def *dvars_last;  // ブロック内で最初に定義された変数
+    Def *denms;
+    Def *dstcs;
+    Def *dtypdefs;
 };
 
 // 定義の種類
@@ -255,10 +255,10 @@ Node *statement[STMT_LEN];
 // また、structメンバの定義･アクセスにも一時的に使用される。
 Defs *def[NEST_MAX];
 
-Def *fnc;                 // 現在定義中の関数
-Def *globals_end;         // グローバル変数(出現順)
-Def *strlits;             // 文字列リテラル(出現逆順)
-Def *strlits_end;         // 文字列リテラル(出現順)
+Def *dfn;                 // 現在定義中の関数
+Def *dglobals_end;         // グローバル変数(出現順)
+Def *dstrlits;             // 文字列リテラル(出現逆順)
+Def *dstrlits_end;         // 文字列リテラル(出現順)
 int jmp_label_cnt;        // jmpラベル通し番号
 int str_label_cnt;        // 文字列リテラル ラベル通し番号
 int nest;                 // 現在のネストの深さ(0:global)
