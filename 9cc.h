@@ -118,7 +118,6 @@ typedef enum {
     UINT,
     ULL,
     STRUCT,
-    ENUM,
     PTR,
     ARRAY,
     VOID,
@@ -127,6 +126,7 @@ typedef enum {
     CHAR = UCHAR | SIGNED,
     SHORT = USHORT | SIGNED,
     INT = UINT | SIGNED,
+    ENUM = INT,
     LL = ULL | SIGNED,
 
     LEN_TYPE_KIND
@@ -184,6 +184,7 @@ struct Defs {
     Def *vars_last;  // ブロック内で最初に定義された変数
     Def *enums;
     Def *structs;
+    Def *typdefs;
 };
 
 // 定義の種類
@@ -194,6 +195,7 @@ typedef enum {
     DK_ENUM,
     DK_ENUMCONST,
     DK_STRLIT,
+    DK_TYPE,
     DK_LEN
 } DefKind;
 
@@ -210,6 +212,7 @@ struct Def {
         Enum *enm;
         EnumConst *cst;
         StrLit *strlit;
+        Type *type;
     };
 };
 
@@ -259,6 +262,7 @@ Def *strlits_end;         // 文字列リテラル(出現順)
 int jmp_label_cnt;        // jmpラベル通し番号
 int str_label_cnt;        // 文字列リテラル ラベル通し番号
 int nest;                 // 現在のネストの深さ(0:global)
+int stcnest;              // 構造体のネストの深さ
 int breaklcnt[NEST_MAX];  // break対象ラベル番号
 int breaknest;            // breakネスト数
 int contilcnt[NEST_MAX];  // continue対象ラベル番号
@@ -268,20 +272,21 @@ int swnest;               // switchネスト数
 int fncnt;                // 関数通し番号(goto label 用)
 
 #endif  // HEADER_H
-int size(Type *typ);
-bool can_deref(Type *typ);
-Def *calloc_def(DefKind kind);
-Node *new_node();
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(unsigned long long val);
+// util.c
+bool sametok(Token *tok1, Token *tok2);
+bool eqtokstr(Token *tok, char *str);
 
 // error.c
 void error_at(char *loc, char *fmt, ...);
 void error(char *fmt, ...);
 
-// parse.c
+// tokenize.c
 Token *new_token(TokenKind kind, Token *cur, char *str, int len);
 Token *tokenize(char *p);
+
+// parse.c
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
+Node *new_node_num(unsigned long long val);
 Node *regex();
 Node *primary();
 Node *unary();
@@ -295,6 +300,7 @@ Node *assign();
 Node *expr();
 Node *stmt();
 Node *labeled();
+Node *localtop();
 Node *declaration_var(Type *typ, Token *tok);
 void program();
 
@@ -306,23 +312,29 @@ void init_sizes();
 int val(Node *node);  // 定数計算
 int size(Type *typ);
 bool can_deref(Type *typ);
+Def *calloc_def(DefKind kind);
 int align(int x, int aln);
 int calc_align(Type *type);
 int set_offset(Var *var, int base);
 bool is_signed(Type *typ);
 void typing(Node *node);
+bool typdef();
+Type *defdtype();
 Type *base_type();
 void voidcheck(Type *typ, char *pos);
 Type *implicit_type(Type *lt, Type *rt);
 Type *promote_integer(Type *typ);
 int priority(Type *typ);
+Type *type_array(Type *typ);
 
 // consume.c
 bool consume(char *op);
 Token *consume_numeric();
 Token *consume_str();
 Token *consume_typeq();
-Token *consume_type();
+Token *consume_tag_without_def();
+Token *consume_enum_tag();
+Token *consume_typecore();
 Token *consume_ident();
 Token *consume_numsuffix();
 int consume_incdec();
@@ -334,6 +346,7 @@ bool at_eof();
 // find.c
 Def *find_def(Token *tok, DefKind kind);
 Def *find_enumconst(Token *tok);
+Def *fit_def_noerr(Token *tok, DefKind kind);
 Def *fit_def(Token *tok, DefKind kind);
 bool can_def_symbol(Token *sym);
 bool can_def_tag(Token *sym);

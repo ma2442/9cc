@@ -26,6 +26,8 @@ Def *find_def(Token *tok, DefKind kind) {
         d = def[nest]->structs;
     else if (kind == DK_ENUM)
         d = def[nest]->enums;
+    else if (kind == DK_TYPE)
+        d = def[nest]->typdefs;
     for (; d && d->tok; d = d->next) {
         if (d->tok->len == tok->len &&
             !memcmp(d->tok->str, tok->str, tok->len)) {
@@ -48,8 +50,8 @@ Def *find_enumconst(Token *tok) {
     return NULL;
 }
 
-// スコープ内で定義済みの変数を検索。なければエラー
-Def *fit_def(Token *tok, DefKind kind) {
+// スコープ内で定義済みの変数を検索
+Def *fit_def_noerr(Token *tok, DefKind kind) {
     int store = nest;
     while (nest >= 0) {
         Def *d = find_def(tok, kind);
@@ -60,14 +62,21 @@ Def *fit_def(Token *tok, DefKind kind) {
         nest--;
     }
     nest = store;
+    return NULL;
+}
+
+// スコープ内で定義済みの変数を検索。なければエラー
+Def *fit_def(Token *tok, DefKind kind) {
+    Def *dfit = fit_def_noerr(tok, kind);
+    if(dfit) return dfit;
     error_undef(tok, kind);
     return NULL;
 }
 
-// 関数、変数、定数の名前が定義可能か
+// 関数、変数、定数、型の名前が定義可能か
 bool can_def_symbol(Token *sym) {
     if (!find_def(sym, DK_VAR) && !find_def(sym, DK_ENUMCONST) &&
-        !find_def(sym, DK_FUNC))
+        !find_def(sym, DK_FUNC) && !find_def(sym, DK_TYPE))
         return true;
     error_at(sym->str, "定義済みのシンボルです");
     return false;

@@ -191,7 +191,7 @@ int main_t7() {
     enm1 = 1000;
     if (enm1 != 1000) return 2;
     enm1 = G * (4 + ((F + 2) == 3));
-    if (enm1 != 10) return 3;
+    if (enm1 + 1 != 11) return 3;
     enum enm1 { E = 10, F, G } enm1 = E;
     if (enm1 != E) return 4;
     if (enm1 != 10) return 5;
@@ -235,6 +235,117 @@ int main_t8() {
     return 0;
 }
 
+struct stc8 {
+    enum enm8 { A8 } e;
+    struct stc8a {
+        int x;
+    } s;
+};
+// 構造体内のenum, struct定義が外側で行われる確認
+int main_t8b() {
+    struct stc8 st;
+    st.e = A8;
+    st.s.x = A8;
+    if (st.e != st.s.x) return 1;
+    struct stc8 {
+        enum enm8 { A8 = 10 } f;
+        struct stc8a {
+            int y;
+        } q;
+    };
+    struct stc8 lcl;
+    lcl.f = A8;
+    lcl.q.y = 10;
+    if (lcl.f != lcl.q.y) return 2;
+    return 0;
+}
+
+// typedef
+int main_t9() {
+    typedef signed char *ucp;
+    ucp *pp;
+    char a[10];
+    ucp p = a;
+    for (int i = 0; i < 10; i++) a[i] = i + 10;
+    pp = &p;
+    for (int i = 0; i < 10; i++)
+        if ((*pp)[i] != i + 10) return 1;
+    typedef char arr[10];
+    arr *ap = &a;
+    for (int i = 0; i < 10; i++) (*ap)[i] = i + 10;
+    for (int i = 0; i < 10; i++)
+        if ((*ap)[i] != i + 10) return 2;
+    return 0;
+}
+
+typedef enum { A_t10 = 5, B_t10 } enm_t10;
+typedef struct {
+    enm_t10 x;
+    struct stc_t10_1 {
+        int yx;
+    } y1;
+} stc_t10;
+
+// typedef scope
+int main_t10() {
+    struct stc_t10_1 stc1;
+    stc_t10 s;
+    s.x = A_t10;
+    typedef enum { A_t10 = 10, B_t10 } enm_t10;
+    typedef struct {
+        int x[10];
+    } stc_t10;
+    stc_t10 lcl;
+    lcl.x[0] = A_t10;
+    if (s.x + 5 != lcl.x[0]) return 1;
+    if (sizeof(s) != 8) return 2;
+    if (sizeof(lcl) != 40) return 3;
+    return 0;
+}
+
+typedef enum enm_t11 enm_t11;
+typedef struct stc_t11 stc_t11;
+enum enm_t11 { A_t11 = 5, B_t11 };
+struct stc_t11 {
+    enm_t11 x;
+};
+
+// typedef scope
+int main_t11() {
+    stc_t11 s;
+    s.x = 10;
+    if (s.x != A_t11 + 5) return 1;
+    if (sizeof(s) != 4) return 2;
+}
+
+int main_t11b() {
+    typedef enum enm_t11 enm_t11;
+    typedef struct stc_t11 stc_t11;
+    enum enm_t11 { A_t11 = 10, B_t11 };
+    struct stc_t11 {
+        enm_t11 x[10];
+    };
+    stc_t11 lcl;
+    lcl.x = 5;
+    if (lcl.x + 5 != A_t11) return 1;
+    if (sizeof(lcl) != 4) return 2;
+    return 0;
+}
+
+int main_t11c() {
+    enum enm_t11 { A_t11 = 10, B_t11 };
+    struct stc_t11 {
+        enm_t11 x[10];
+    };
+    typedef enum enm_t11 enm_t11;
+    typedef struct stc_t11 stc_t11;
+    stc_t11 lcl;
+    lcl.x[1] = 5;
+    if (lcl.x[1] + 5 != A_t11) return 1;
+    if (sizeof(lcl) != 40) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t0()) return 0;
     if (main_t1()) return 1;
@@ -245,5 +356,11 @@ int main() {
     if (main_t6()) return 6;
     if (main_t7()) return 7;
     if (main_t8()) return 8;
+    if (main_t8b()) return 8;
+    if (main_t9()) return 9;
+    if (main_t10()) return 10;
+    if (main_t11()) return 11;
+    if (main_t11b()) return 112;
+    if (main_t11c()) return 113;
     return 255;
 }

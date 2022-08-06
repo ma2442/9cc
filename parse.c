@@ -14,6 +14,8 @@ Def *calloc_def(DefKind kind) {
         d->cst = calloc(1, sizeof(EnumConst));
     else if (kind == DK_STRLIT)
         d->strlit = calloc(1, sizeof(StrLit));
+    else if (kind == DK_TYPE)
+        d->type = calloc(1, sizeof(Type));
     d->kind = kind;
     return d;
 }
@@ -51,8 +53,9 @@ Node *new_node_num(unsigned long long val) {
 
 // 変数定義
 Node *new_node_defvar(Type *typ, Token *var_name) {
-    if (find_def(var_name, DK_VAR))
-        error_at(var_name->str, "定義済みの変数です。");
+    if (!can_def_symbol(var_name)) return NULL;
+    // if (find_def(var_name, DK_VAR))
+    //     error_at(var_name->str, "定義済みの変数です。");
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
     Def *var = calloc_def(DK_VAR);
@@ -424,17 +427,7 @@ Node *assign() {
 }
 
 Node *declaration_var(Type *typ, Token *tok) {
-    Type head;
-    Type *last = &head;
-    while (consume("[")) {
-        last->ptr_to = calloc(1, sizeof(Type));
-        last = last->ptr_to;
-        last->array_size = expect_numeric();
-        last->ty = ARRAY;
-        expect("]");
-    }
-    last->ptr_to = typ;
-    return new_node_defvar(head.ptr_to, tok);
+    return new_node_defvar(type_array(typ), tok);
 }
 
 Node *expr() { return assign(); }
@@ -450,7 +443,7 @@ Node *block() {
         if (consume("}")) {
             break;
         }
-        node->block[i] = labeled();
+        node->block[i] = localtop();
     }
     return node;
 }
@@ -521,9 +514,9 @@ Node *stmt() {
         expect("(");
         node->judge = expr();
         expect(")");
-        node->lhs = labeled();
+        node->lhs = localtop();
         if (consume("else")) {
-            node->rhs = labeled();
+            node->rhs = localtop();
         }
         return node;
     }
@@ -538,7 +531,7 @@ Node *stmt() {
         node->cases = calloc(CASE_LEN, sizeof(Node *));
         swnest++;
         sw[swnest] = node;
-        node->lhs = labeled();
+        node->lhs = localtop();
         sw[swnest] = NULL;
         swnest--;
         switch_out();
@@ -548,7 +541,7 @@ Node *stmt() {
         node = new_node(ND_DO, NULL, NULL);
         loop_in();
         node->label_num = breaklcnt[breaknest];
-        node->lhs = labeled();
+        node->lhs = localtop();
         expect("while");
         expect("(");
         node->judge = expr();
@@ -564,7 +557,7 @@ Node *stmt() {
         expect("(");
         node->judge = expr();
         expect(")");
-        node->lhs = labeled();
+        node->lhs = localtop();
         loop_out();
         return node;
     }
@@ -586,7 +579,7 @@ Node *stmt() {
             node->inc = expr();
             expect(")");
         }
-        node->lhs = labeled();
+        node->lhs = localtop();
         scope_out();
         loop_out();
         return node;
@@ -642,6 +635,13 @@ Node *labeled() {
     return node;
 }
 
+Node *localtop() {
+    if (typdef()) return new_node(ND_NO_EVAL, NULL, NULL);
+    Node *node = labeled();
+    if (node) return node;
+    return new_node(ND_NO_EVAL, NULL, NULL);
+}
+
 // 関数定義ノード
 Node *func(Type *typ, Token *func_name) {
     if (!consume("(")) return NULL;
@@ -677,7 +677,7 @@ Node *func(Type *typ, Token *func_name) {
     }
     // 関数情報（仮引数含む）更新
     fnc->fn->args = def[nest]->vars;
-    // 関数本文 "{" labeled* "}"
+    // 関数本文 "{" localtop* "}"
     node->rhs = block();
     scope_out();
     def[nest]->funcs = fnc;
@@ -702,6 +702,7 @@ void program() {
     strlits = calloc_def(DK_STRLIT);
     strlits_end = strlits;
     while (!at_eof()) {
+        if (typdef()) continue;
         Token *tok_void = token;
         Type *typ = base_type();
         // 関数定義 または グローバル変数宣言

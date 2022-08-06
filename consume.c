@@ -39,7 +39,7 @@ Token *consume_typeq() {
     if (tok) return tok;
     return consume_if_kind_is(TK_TYPEQ_LENGTH);
 }
-Token *consume_type() {
+Token *consume_typecore() {
     Token *tok = consume_if_kind_is(TK_STRUCT);
     if (tok) return tok;
     tok = consume_if_kind_is(TK_TYPE);
@@ -48,6 +48,15 @@ Token *consume_type() {
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 Token *consume_numsuffix() { return consume_if_kind_is(TK_NUMSUFFIX); }
+
+Token *consume_tag_without_def(TokenKind kind) {
+    Token *save = token;
+    Token *idt = NULL;
+    if (consume_if_kind_is(kind)) idt = consume_ident();
+    if (idt && !consume("{")) return idt;
+    token = save;
+    return NULL;
+}
 
 int consume_incdec() {
     if (consume("++")) return ND_ADD;

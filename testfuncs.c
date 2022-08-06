@@ -1,4 +1,5 @@
 // cc -c testfuncs.c
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 int foo() { printf("foo!!!\n"); }

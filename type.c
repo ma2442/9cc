@@ -78,10 +78,12 @@ int priority(Type *typ) {
     if (typ->ty == LL) return 3;
     if (typ->ty == UINT) return 2;
     if (typ->ty == INT) return 1;
+    if (typ->ty == ENUM) error("ENUMはここには来ないはず");
+    if (typ->ty == STRUCT) error("STRUCTはここには来ないはず");
     if (typ->ty == USHORT || typ->ty == SHORT || typ->ty == UCHAR ||
         typ->ty == CHAR || typ->ty == BOOL)
-        return 0;  // USHORT SHORT UCHAR CHAR BOOL
-    return -1;     // ARRAY, PTR など
+        return 0;                   // USHORT SHORT UCHAR CHAR BOOL
+    if (can_deref(typ)) return -1;  // ARRAY, PTR など
 }
 
 // 整数拡張
@@ -180,6 +182,28 @@ Token *make_tag(Token *tag) {
     return tag;
 }
 
+int stcidx() { return nest - (stcnest + 1); }
+
+// 型割当てが行われていないtypedefを探して割当て
+void typing_defdtype(Token *tag, TypeKind kind, Def *dtyped) {
+    for (int i = stcidx(); i > -1; i--) {
+        for (Def *dtyp = def[i]->typdefs; dtyp && dtyp->next; dtyp = dtyp->next) {
+            if (!sametok(tag, dtyp->tok)) continue;
+            Type *typ = dtyp->type;
+            while (can_deref(typ)) typ = typ->ptr_to;
+            if (typ->ty != kind) continue;
+            if (kind == STRUCT && !(typ->strct)) {
+                typ->strct = dtyped;
+                return;
+            }
+            if (kind == ENUM && !(typ->enm)) {
+                typ->enm = dtyped;
+                return;
+            }
+        }
+    }
+}
+
 // 構造体定義
 Type *def_struct(Token *tag) {
     if (!consume("{")) return NULL;
@@ -188,9 +212,9 @@ Type *def_struct(Token *tag) {
     Def *stc = calloc_def(DK_STRUCT);
     stc->tok = tag;
     // メンバに同じ構造体型を持てるように構造体リストに先行登録
-    Def **stcs = &def[nest]->structs;
-    stc->next = *stcs;
-    *stcs = stc;
+    stc->next = def[stcidx()]->structs;
+    def[stcidx()]->structs = stc;
+    Def *dstc = def[stcidx()]->structs;
 
     //メンバ初期化
     member_in();
@@ -208,13 +232,14 @@ Type *def_struct(Token *tag) {
         ofst = set_offset(def[nest]->vars->var, ofst) + sz;
     }
 
-    (*stcs)->stc->mems = def[nest]->vars;
+    dstc->stc->mems = def[nest]->vars;
     member_out();
     // 構造体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
     Type *typ = new_type(STRUCT);
-    typ->strct = def[nest]->structs;
-    (*stcs)->stc->align = calc_align(typ);
-    (*stcs)->stc->size = align(ofst, (*stcs)->stc->align);
+    typ->strct = dstc;
+    dstc->stc->align = calc_align(typ);
+    dstc->stc->size = align(ofst, dstc->stc->align);
+    typing_defdtype(tag, STRUCT, dstc);
     return typ;
 }
 
@@ -269,7 +294,7 @@ Type *def_enum(Token *tag) {
     Def *enm = calloc_def(DK_ENUM);
     enm->tok = tag;
     // 定義中列挙子も検索が可能なように先行登録
-    Def **enums = &def[nest]->enums;
+    Def **enums = &def[stcidx()]->enums;
     enm->next = *enums;
     *enums = enm;
 
@@ -295,6 +320,7 @@ Type *def_enum(Token *tag) {
 
     Type *typ = new_type(ENUM);
     typ->enm = *enums;
+    typing_defdtype(tag, ENUM, *enums);
     return typ;
 }
 
@@ -310,10 +336,47 @@ Type *type_enum() {
     return typ;
 }
 
-// tokenと文字列の一致を調べる
-bool eq(Token *tok, char *str) {
-    if (!tok) return false;
-    return !strncmp(tok->str, str, tok->len);
+// 型定義
+void deftype(Type *typ, Token *name) {
+    if (!can_def_symbol(name)) return;
+    Def *dtyp = calloc_def(DK_TYPE);
+    dtyp->next = def[stcidx()]->typdefs;
+    dtyp->tok = name;
+    dtyp->type = typ;
+    def[stcidx()]->typdefs = dtyp;
+}
+
+bool typdef() {
+    if (!consume("typedef")) return false;
+    Token *save = token;
+    Token *idt = NULL;
+    Type *typ = NULL;
+    Token *tag = consume_tag_without_def(TK_STRUCT);
+    if (tag && !fit_def_noerr(tag, DK_STRUCT)) {  // 未定義の構造体タグ
+        typ = type_pointer(new_type(STRUCT));
+        idt = consume_ident();
+        if (!typ || !idt) error_at(save->str, "typedefが不正です");
+        deftype(type_array(typ), idt);
+        expect(";");
+        return true;
+    }
+    token = save;
+    tag = consume_tag_without_def(TK_ENUM);
+    if (tag && !fit_def_noerr(tag, DK_ENUM)) {  // 未定義の列挙体タグ
+        typ = type_pointer(new_type(ENUM));
+        idt = consume_ident();
+        if (!typ || !idt) error_at(save->str, "typedefが不正です");
+        deftype(type_array(typ), idt);
+        expect(";");
+        return true;
+    }
+    token = save;
+    typ = base_type();
+    idt = consume_ident();
+    if (!typ || !idt) error_at(save->str, "typedefが不正です");
+    deftype(type_array(typ), idt);
+    expect(";");
+    return true;
 }
 
 #define ERR_MSG_TYPEQ "型修飾子が不正です"
@@ -327,20 +390,31 @@ typedef enum {
 
 LenSpec lenspec(Token *qlen, Token *qlen2) {
     if (!qlen) return LENSPEC_NONE;
-    if (eq(qlen, STR_LONG) && eq(qlen2, STR_LONG)) return LENSPEC_LL;
+    if (eqtokstr(qlen, STR_LONG) && eqtokstr(qlen2, STR_LONG)) return LENSPEC_LL;
     if (qlen2) error_at(qlen2->str, ERR_MSG_TYPEQ);
-    if (eq(qlen, STR_LONG)) return LENSPEC_LONG;
-    if (eq(qlen, STR_SHORT)) return LENSPEC_SHORT;
+    if (eqtokstr(qlen, STR_LONG)) return LENSPEC_LONG;
+    if (eqtokstr(qlen, STR_SHORT)) return LENSPEC_SHORT;
     error_at(qlen->str, ERR_MSG_TYPEQ);
 }
 
 TypeKind attach_qsign(TypeKind kind, Token *qsign) {
-    if (!eq(qsign, STR_UNSIGNED)) return kind;
+    if (!eqtokstr(qsign, STR_UNSIGNED)) return kind;
     return kind & ~SIGNED;
+}
+
+Type *defdtype() {
+    Token *idt = consume_ident();
+    if (!idt) return NULL;
+    Def *typ = fit_def(idt, DK_TYPE);
+    if (typ) return typ->type;
+    token = idt;
+    return NULL;
 }
 
 // ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..
 Type *base_type() {
+    Type *typ = defdtype();
+    if (typ) return type_pointer(typ);
     Token *qsign = NULL;
     Token *qlen = NULL;
     Token *qlen2 = NULL;
@@ -356,31 +430,31 @@ Type *base_type() {
             qlen2 = q;
     }
     LenSpec lenspc = lenspec(qlen, qlen2);
-    Token *core = consume_type();
-    Type *typ = calloc(1, sizeof(Type));
+    Token *core = consume_typecore();
+    typ = calloc(1, sizeof(Type));
     if (!qsign && !lenspc && !core) return NULL;
 
     // (struct|enum) (tag)? {..} | void | _Bool
     if (!qsign && !lenspc) {
         if (core->kind == TK_STRUCT) return type_pointer(type_struct());
         if (core->kind == TK_ENUM) return type_pointer(type_enum());
-        if (eq(core, STR_VOID)) {
+        if (eqtokstr(core, STR_VOID)) {
             typ->ty = VOID;
             return type_pointer(typ);
-        } else if (eq(core, STR_BOOL)) {
+        } else if (eqtokstr(core, STR_BOOL)) {
             typ->ty = BOOL;
             return type_pointer(typ);
         }
     }
 
     // (signed|unsigned)? char
-    if (!lenspc && eq(core, STR_CHAR)) {
+    if (!lenspc && eqtokstr(core, STR_CHAR)) {
         typ->ty = attach_qsign(CHAR, qsign);
         return type_pointer(typ);
     }
 
     // (signed|unsigned|long|short)* int
-    if (core && !eq(core, STR_INT)) error_at(core->str, "不正な型です");
+    if (core && !eqtokstr(core, STR_INT)) error_at(core->str, "不正な型です");
     if (lenspc == LENSPEC_LL) {
         typ->ty = attach_qsign(LL, qsign);
     } else if (lenspc == LENSPEC_SHORT) {
@@ -393,4 +467,18 @@ Type *base_type() {
 
 void voidcheck(Type *typ, char *pos) {
     if (typ->ty == VOID) error_at(pos, "void型は定義できません");
+}
+
+Type *type_array(Type *typ) {
+    Type head;
+    Type *last = &head;
+    while (consume("[")) {
+        last->ptr_to = calloc(1, sizeof(Type));
+        last = last->ptr_to;
+        last->array_size = expect_numeric();
+        last->ty = ARRAY;
+        expect("]");
+    }
+    last->ptr_to = typ;
+    return head.ptr_to;
 }

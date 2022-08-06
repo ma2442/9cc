@@ -1,7 +1,5 @@
 ### To Do
 
--   [ ] typedef Type Typename;
-        enum や struct の型定義も同時に行える
 -   [ ] 関数宣言
 -   [ ] #include <..>, #include ".."
 -   [ ] #define
@@ -21,7 +19,6 @@
 ### Optional To Do 未使用
 
 -   [ ] ,
--   [ ] static
 -   [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
 -   [ ] (int\* p)[10] のような入れ子になっている型定義
 
@@ -45,6 +42,8 @@
 
 ### Completed
 
+-   [x] typedef Type Typename;
+        enum や struct の型定義も同時に行える
 -   [x] キャスト (int) x
 -   [x] 整数リテラル 接尾辞 u l ll lu ul llu ull
 -   [x] prefix 0x 0 0b

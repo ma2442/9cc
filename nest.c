@@ -6,6 +6,7 @@ int continest = -1;
 int swnest = -1;
 int fncnt = -1;
 int nest = -1;
+int stcnest = -1;
 
 // スコープに入る
 void scope_in() {
@@ -15,6 +16,7 @@ void scope_in() {
     def[nest]->vars = calloc_def(DK_VAR);
     def[nest]->vars_last = def[nest]->vars;
     def[nest]->structs = calloc_def(DK_STRUCT);
+    def[nest]->typdefs = calloc_def(DK_TYPE);
 }
 
 // スコープから出る
@@ -30,13 +32,17 @@ void scope_out() {
 }
 
 // 構造体メンバのスコープに入る
-void member_in() { scope_in(); }
+void member_in() {
+    stcnest++;  // struct enum tag定義用ネスト
+    scope_in();
+}
 
 // 構造体メンバのスコープから出る
 void member_out() {
     free(def[nest]);
     def[nest] = NULL;
     nest--;
+    stcnest--;
 }
 
 // for, while, do-while スコープに入る際のbreak, continueラベル同期処理
