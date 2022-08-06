@@ -2,6 +2,13 @@
 
 #include "9cc.h"
 
+char *filename;
+char *user_input;  // 入力プログラム
+Token *token;      // 現在着目しているトークン
+Node *code[CODE_LEN];
+Def *dglobals_end;
+Def *dstrlits_end;
+
 // 指定されたファイルの内容を返す
 char *read_file(char *path) {
     // ファイルを開く

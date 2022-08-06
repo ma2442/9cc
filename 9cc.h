@@ -150,8 +150,8 @@ struct Var {
 
 // 関数名と引数情報
 struct Func {
-    Def *dargs;       // 引数情報
-    Def *dvars;       // 変数情報(引数含む)
+    Def *dargs;      // 引数情報
+    Def *dvars;      // 変数情報(引数含む)
     int stack_size;  // 変数分の確保領域
     Type *type;
 };
@@ -240,36 +240,36 @@ struct Node {
     int case_cnt;   // switch内のcaseの数
 };
 
-size_t sizes[LEN_TYPE_KIND];
-char *type_words[LEN_TYPE_KIND];
+extern size_t sizes[LEN_TYPE_KIND];
+extern char *type_words[LEN_TYPE_KIND];
 
-char *filename;    // 入力ファイル名
-char *user_input;  // 入力ソース
-Token *token;
-Node *code[CODE_LEN];
-Node *statement[STMT_LEN];
+extern char *filename;    // 入力ファイル名
+extern char *user_input;  // 入力ソース
+extern Token *token;
+extern Node *code[CODE_LEN];
+extern Node *statement[STMT_LEN];
 
 // def[0]: グローバル 関数, 変数, struct定義, enum定義
 // def[1]: 関数直下の ローカル 変数（引数含む）, struct定義, enum定義
 // (関数:NULL)。 以降スコープがネストするたびに添え字が一つ増える。
 // また、structメンバの定義･アクセスにも一時的に使用される。
-Defs *def[NEST_MAX];
+extern Defs *def[NEST_MAX];
 
-Def *dfn;                 // 現在定義中の関数
-Def *dglobals_end;         // グローバル変数(出現順)
-Def *dstrlits;             // 文字列リテラル(出現逆順)
-Def *dstrlits_end;         // 文字列リテラル(出現順)
-int jmp_label_cnt;        // jmpラベル通し番号
-int str_label_cnt;        // 文字列リテラル ラベル通し番号
-int nest;                 // 現在のネストの深さ(0:global)
-int stcnest;              // 構造体のネストの深さ
-int breaklcnt[NEST_MAX];  // break対象ラベル番号
-int breaknest;            // breakネスト数
-int contilcnt[NEST_MAX];  // continue対象ラベル番号
-int continest;            // continueネスト数
-Node *sw[NEST_MAX];       // switch対象ノード
-int swnest;               // switchネスト数
-int fncnt;                // 関数通し番号(goto label 用)
+extern Def *dfn;                 // 現在定義中の関数
+extern Def *dglobals_end;        // グローバル変数(出現順)
+extern Def *dstrlits;            // 文字列リテラル(出現逆順)
+extern Def *dstrlits_end;        // 文字列リテラル(出現順)
+extern int jmp_label_cnt;        // jmpラベル通し番号
+extern int str_label_cnt;        // 文字列リテラル ラベル通し番号
+extern int nest;                 // 現在のネストの深さ(0:global)
+extern int stcnest;              // 構造体のネストの深さ
+extern int breaklcnt[NEST_MAX];  // break対象ラベル番号
+extern int breaknest;            // breakネスト数
+extern int contilcnt[NEST_MAX];  // continue対象ラベル番号
+extern int continest;            // continueネスト数
+extern Node *sw[NEST_MAX];       // switch対象ノード
+extern int swnest;               // switchネスト数
+extern int fncnt;                // 関数通し番号(goto label 用)
 
 #endif  // HEADER_H
 // util.c

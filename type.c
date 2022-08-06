@@ -1,5 +1,7 @@
 #include "9cc.h"
 
+size_t sizes[LEN_TYPE_KIND];
+
 void init_sizes() {
     sizes[CHAR] = 1;
     sizes[VOID] = sizes[CHAR];

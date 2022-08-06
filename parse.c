@@ -1,5 +1,13 @@
 #include "9cc.h"
 
+Def *dfn;
+Def *dstrlits;
+Node *statement[STMT_LEN];
+Defs *def[NEST_MAX];
+int breaklcnt[NEST_MAX];
+int contilcnt[NEST_MAX];
+Node *sw[NEST_MAX];
+
 Def *calloc_def(DefKind kind) {
     Def *d = calloc(1, sizeof(Def));
     if (kind == DK_VAR)
