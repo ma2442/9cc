@@ -302,6 +302,7 @@ int val(Node *node) {
     if (node->kind == ND_NUM) return node->val;
     if (node->kind == ND_IF_ELSE)
         return val(node->judge) ? val(node->lhs) : val(node->rhs);
+    if (node->kind == ND_BIT_NOT) return ~val(node->lhs);
     int l = val(node->lhs);
     int r = val(node->rhs);
     switch (node->kind) {
@@ -313,6 +314,16 @@ int val(Node *node) {
             return l < r;
         case ND_LESS_OR_EQUAL:
             return l <= r;
+        case ND_BIT_OR:
+            return l | r;
+        case ND_BIT_XOR:
+            return l ^ r;
+        case ND_BIT_AND:
+            return l & r;
+        case ND_BIT_SHIFT_L:
+            return l << r;
+        case ND_BIT_SHIFT_R:
+            return l >> r;
         case ND_ADD:
             return l + r;
         case ND_SUB:

@@ -198,7 +198,7 @@ int main_t7() {
     if (enm1 != 1000) return 2;
     enm1 = G * (4 + ((F + 2) == 3));
     if (enm1 + 1 != 11) return 3;
-    enum enm1 { E = 10, F, G } enm1 = E;
+    enum enm1 { E = ((16 >> 1) | (1 << 1) | 1 ^ 0) & ~1, F, G } enm1 = E;
     if (enm1 != E) return 4;
     if (enm1 != 10) return 5;
     return 0;
