@@ -47,17 +47,17 @@ int main(int argc, char **argv) {
 
     // 文字列リテラル部のコード生成
     printf(".data\n");
-    Def *glb = dglobals_end->prev;
-    while (glb) {
-        printf("%.*s:\n", glb->tok->len, glb->tok->str);
-        printf("  .zero %d\n", size(glb->var->type));
-        glb = glb->prev;
+    Def *dglb = dglobals_end->prev;
+    while (dglb) {
+        printf("%.*s:\n", dglb->tok->len, dglb->tok->str);
+        printf("  .zero %d\n", size(dglb->var->type));
+        dglb = dglb->prev;
     }
-    Def *strl = dstrlits_end->prev;
-    while (strl) {
-        printf("%s:\n", strl->strlit->label);
-        printf("  .string %.*s\n", strl->tok->len, strl->tok->str);
-        strl = strl->prev;
+    Def *dstrl = dstrlits_end->prev;
+    while (dstrl) {
+        printf("%s:\n", dstrl->strlit->label);
+        printf("  .string %.*s\n", dstrl->tok->len, dstrl->tok->str);
+        dstrl = dstrl->prev;
     }
 
     // 先頭の式から順にコード生成

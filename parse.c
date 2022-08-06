@@ -58,26 +58,26 @@ Node *new_node_defvar(Type *typ, Token *var_name) {
     //     error_at(var_name->str, "定義済みの変数です。");
     NodeKind kind = (nest ? ND_DEFLOCAL : ND_DEFGLOBAL);
     Node *node = new_node(kind, NULL, NULL);
-    Def *var = calloc_def(DK_VAR);
-    var->next = def[nest]->dvars;
-    var->tok = var_name;
-    var->var->islocal = nest;
-    var->var->type = typ;
-    node->def = var;
-    node->type = var->var->type;
-    if (def[nest]->dvars) def[nest]->dvars->prev = var;
-    def[nest]->dvars = var;
+    Def *dvar = calloc_def(DK_VAR);
+    dvar->next = def[nest]->dvars;
+    dvar->tok = var_name;
+    dvar->var->islocal = nest;
+    dvar->var->type = typ;
+    node->def = dvar;
+    node->type = dvar->var->type;
+    if (def[nest]->dvars) def[nest]->dvars->prev = dvar;
+    def[nest]->dvars = dvar;
     return node;
 }
 
 // 変数名として識別
 Node *new_node_var(Token *tok) {
-    Def *var = fit_def(tok, DK_VAR);
-    if (!var) return NULL;
-    NodeKind kind = (var->var->islocal ? ND_LVAR : ND_GVAR);
+    Def *dvar = fit_def(tok, DK_VAR);
+    if (!dvar) return NULL;
+    NodeKind kind = (dvar->var->islocal ? ND_LVAR : ND_GVAR);
     Node *node = new_node(kind, NULL, NULL);
-    node->def = var;
-    node->type = var->var->type;
+    node->def = dvar;
+    node->type = dvar->var->type;
     return node;
 }
 
@@ -85,15 +85,15 @@ Node *new_node_var(Token *tok) {
 Node *new_node_mem(Node *nd_stc, Token *tok) {
     member_in();
     def[nest]->dvars = nd_stc->type->dstc->stc->dmems;
-    Def *var = find_def(tok, DK_VAR);
+    Def *dvar = find_def(tok, DK_VAR);
     member_out();
-    if (!var) {
+    if (!dvar) {
         error_at(tok->str, "未定義のメンバです。");
         return NULL;
     }
     Node *node = new_node(ND_MEMBER, nd_stc, NULL);
-    node->def = var;
-    node->type = var->var->type;
+    node->def = dvar;
+    node->type = dvar->var->type;
     return node;
 }
 
@@ -119,26 +119,26 @@ Node *str_literal() {
     Node *node = new_node(ND_GVAR, NULL, NULL);
     node->type = array;
 
-    Def *strlit = calloc_def(DK_STRLIT);
-    strlit->tok = tok_str;
+    Def *dstrl = calloc_def(DK_STRLIT);
+    dstrl->tok = tok_str;
 
-    strlit->strlit->label = calloc(DIGIT_LEN + 4, sizeof(char));
-    sprintf(strlit->strlit->label, ".LC%d", str_label_cnt);
+    dstrl->strlit->label = calloc(DIGIT_LEN + 4, sizeof(char));
+    sprintf(dstrl->strlit->label, ".LC%d", str_label_cnt);
     str_label_cnt++;
-    node->def = strlit;
-    strlit->next = dstrlits;
-    dstrlits->prev = strlit;
-    dstrlits = strlit;
+    node->def = dstrl;
+    dstrl->next = dstrlits;
+    dstrlits->prev = dstrl;
+    dstrlits = dstrl;
     return node;
 }
 
 // 関数コールノード 引数は関数名
 Node *func_call(Token *tok) {
     Node *node = new_node(ND_FUNC_CALL, NULL, NULL);
-    Def *fn = fit_def(tok, DK_FUNC);
-    if (fn) {
-        node->def = fn;
-        node->type = fn->fn->type;
+    Def *dfn = fit_def(tok, DK_FUNC);
+    if (dfn) {
+        node->def = dfn;
+        node->type = dfn->fn->type;
     } else {
         node->def = calloc_def(DK_FUNC);
         node->def->tok = tok;
@@ -233,8 +233,8 @@ Node *primary() {
         return node;
     }
     // 列挙子として識別
-    Def *sym = fit_def(tok, DK_ENUMCONST);
-    if (sym) return new_node_num(sym->cst->val);
+    Def *dsym = fit_def(tok, DK_ENUMCONST);
+    if (dsym) return new_node_num(dsym->cst->val);
     //関数でも定数でもなければ変数
     return new_node_var(tok);
 }
@@ -683,10 +683,10 @@ Node *func(Type *typ, Token *func_name) {
     def[nest]->dfns = dfn;
     // ローカル変数のオフセットを計算
     int ofst = 0;
-    for (Def *lcl = dfn->fn->dvars; lcl; lcl = lcl->next) {
-        if (!lcl->var->type) continue;
-        int sz = size(lcl->var->type);
-        ofst = set_offset(lcl->var, ofst + sz);
+    for (Def *dlcl = dfn->fn->dvars; dlcl; dlcl = dlcl->next) {
+        if (!dlcl->var->type) continue;
+        int sz = size(dlcl->var->type);
+        ofst = set_offset(dlcl->var, ofst + sz);
     }
     // スタックサイズを8の倍数に揃える
     dfn->fn->stack_size = align(ofst, 8);
