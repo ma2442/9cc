@@ -1,6 +1,5 @@
 ### To Do
 
--   [ ] 文字列リテラルの配置を.rodata に変更して不変値にする
 -   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
 -   [ ] #include <..>, #include ".."
 -   [ ] #define
@@ -35,13 +34,14 @@
 
 ### Completed
 
-
+-   [x] 文字列リテラルの配置を.rodata に変更して不変値にする
 -   [x] extern 変数
 -   [x] 関数の引数の型をコール時に確定させる
 -   [x] 関数の返り値の型をコール時に確定させる
 
     -   [x] 外部関数（#include などで extern 宣言を導入）
     -   [x] 内部関数
+
 -   [x] 関数宣言, extern func
 -   [x] typedef Type Typename;
         enum や struct の型定義も同時に行える

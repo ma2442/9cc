@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
         printf("%.*s:\n", dglb->tok->len, dglb->tok->str);
         printf("  .zero %d\n", size(dglb->var->type));
     }
+    printf(".section .rodata\n");
     for (Def *dstrl = dstrlits_end->prev; dstrl; dstrl = dstrl->prev) {
         printf("%s:\n", dstrl->strlit->label);
         printf("  .string %.*s\n", dstrl->tok->len, dstrl->tok->str);
