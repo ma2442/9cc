@@ -49,14 +49,13 @@ int main(int argc, char **argv) {
 
     // アセンブリの前半部分を出力
     printf(".intel_syntax noprefix\n");
-    printf(".text\n");
-    printf(".globl main\n");
 
     // 文字列リテラル部のコード生成
     printf(".data\n");
 
     for (Def *dglb = dglobals_end->prev; dglb; dglb = dglb->prev) {
         if (!dglb->var->is_defined) continue;
+        printf(".globl %.*s\n", dglb->tok->len, dglb->tok->str);
         printf("%.*s:\n", dglb->tok->len, dglb->tok->str);
         printf("  .zero %d\n", size(dglb->var->type));
     }

@@ -302,6 +302,7 @@ bool gen_func(Node* node) {
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
+            printf(".globl %.*s\n", node->def->tok->len, node->def->tok->str);
             printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             // プロローグ
             // 変数分の領域を確保する

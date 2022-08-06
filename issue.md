@@ -1,5 +1,7 @@
 ### To Do
 
+-   [ ] 文字列リテラルの配置を.rodata に変更して不変値にする
+-   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
 -   [ ] #include <..>, #include ".."
 -   [ ] #define
 -   [ ] #ifdef, #endif, #ifndef
@@ -23,25 +25,23 @@
 
 ### Issue
 
--   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
--   [ ] 文字列リテラルの配置を.rodata に変更して不変値にする
--   [ ] 関数の引数の型をコール時に確定させる
 -   [ ] goto に対応する label が存在するかどうか関数内で判定
 
     -   新 node が ND_FUNC_CALL_ARGS のとき、
         node->type に グローバル変数 funcs より型を設定
-
--   [ ] 関数の返り値の型をコール時に確定させる
-
-    -   [ ] 外部関数（#include などで extern 宣言を導入）
-    -   [x] 内部関数
 
 -   [ ] find_struct, find_func, find_lvar を線形探索から二分探索に変更
         おそらく structs, funcs, locals を二分木にする必要あり
 
 ### Completed
 
+
 -   [x] extern 変数
+-   [x] 関数の引数の型をコール時に確定させる
+-   [x] 関数の返り値の型をコール時に確定させる
+
+    -   [x] 外部関数（#include などで extern 宣言を導入）
+    -   [x] 内部関数
 -   [x] 関数宣言, extern func
 -   [x] typedef Type Typename;
         enum や struct の型定義も同時に行える
