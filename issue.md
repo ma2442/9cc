@@ -1,8 +1,8 @@
 ### To Do
 
 -   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
--   [ ] #include <..>, #include ".."
 -   [ ] #define
+-   [ ] #include <..>
 -   [ ] #ifdef, #endif, #ifndef
 -   [ ] static
 -   [ ] const
@@ -24,6 +24,7 @@
 
 ### Issue
 
+-   [ ] #include ".." の includeディレクトリへの探索
 -   [ ] goto に対応する label が存在するかどうか関数内で判定
 
     -   新 node が ND_FUNC_CALL_ARGS のとき、
@@ -34,6 +35,7 @@
 
 ### Completed
 
+-   [x] #include ".." (但しソースと同じフォルダのみ)
 -   [x] 文字列リテラルの配置を.rodata に変更して不変値にする
 -   [x] extern 変数
 -   [x] 関数の引数の型をコール時に確定させる

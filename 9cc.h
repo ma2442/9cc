@@ -14,6 +14,7 @@
 #define STMT_LEN 100
 #define DIGIT_LEN 16  // ラベル番号の最大桁数
 #define NEST_MAX 128
+#define MATCH 0
 #define STR_INT "int"
 #define STR_CHAR "char"
 #define STR_BOOL "_Bool"
@@ -250,6 +251,7 @@ extern size_t sizes[LEN_TYPE_KIND];
 extern char *type_words[LEN_TYPE_KIND];
 
 extern char *filename;    // 入力ファイル名
+extern char *filedir;     // 入力ファイルのディレクトリ
 extern char *user_input;  // 入力ソース
 extern Token *token;
 extern Node *code[CODE_LEN];
@@ -281,6 +283,9 @@ extern int fncnt;                // 関数通し番号(goto label 用)
 // util.c
 bool sametok(Token *tok1, Token *tok2);
 bool eqtokstr(Token *tok, char *str);
+
+char *read_file(char *path);
+char *cpy_dirname(char *path);
 
 // error.c
 void error_at(char *loc, char *fmt, ...);

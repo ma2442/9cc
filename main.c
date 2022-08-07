@@ -1,13 +1,23 @@
 #include <errno.h>
 
 #include "9cc.h"
-
 char *filename;
+char *filedir;
 char *user_input;  // 入力プログラム
 Token *token;      // 現在着目しているトークン
 Node *code[CODE_LEN];
 Def *dglobals_end;
 Def *dstrlits_end;
+
+char *cpy_dirname(char *path) {
+    int len = 0;
+    for (int i = 0; path[i] != '\0'; i++) {
+        if (path[i] == '/') len = i + 1;
+    }
+    char *ret = calloc(255, sizeof(char));
+    strncpy(ret, path, len);
+    return ret;
+}
 
 // 指定されたファイルの内容を返す
 char *read_file(char *path) {
@@ -39,6 +49,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     filename = argv[1];
+
+    filedir = cpy_dirname(filename);
     user_input = read_file(filename);
     init_sizes();
 

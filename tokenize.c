@@ -53,14 +53,14 @@ char escape(char c) {
 bool read_comment(char **pp) {
     char *p = *pp;
     // 行コメントをスキップ
-    if (strncmp(p, "//", 2) == 0) {
+    if (strncmp(p, "//", 2) == MATCH) {
         p += 2;
         while (*p != '\n') p++;
         *pp = p;
         return true;
     }
     // ブロックコメントをスキップ
-    if (strncmp(p, "/*", 2) == 0) {
+    if (strncmp(p, "/*", 2) == MATCH) {
         char *q = strstr(p + 2, "*/");
         if (!q) error_at(p, "コメントが閉じられていません");
         *pp = q + 2;
@@ -113,7 +113,7 @@ bool read_reserved(char **pp, Token **tokp) {
                             ":",   "[",   "]",   "|",  "^",  "~"};
     for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
         int len = strlen(resv[i]);
-        if (!strncmp(resv[i], *pp, len)) {
+        if (strncmp(resv[i], *pp, len) == MATCH) {
             *tokp = new_token(TK_RESERVED, *tokp, *pp, len);
             *pp += len;
             return true;
@@ -209,7 +209,8 @@ bool read_controls(char **pp, Token **tokp, int len) {
                                   {TK_STRUCT, "struct"},
                                   {TK_ENUM, "enum"}};
     for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
-        if (len == strlen(kdwds[i].word) && !strncmp(*pp, kdwds[i].word, len)) {
+        if (len == strlen(kdwds[i].word) &&
+            strncmp(*pp, kdwds[i].word, len) == MATCH) {
             *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, len);
             *pp += len;
             return true;
@@ -218,18 +219,85 @@ bool read_controls(char **pp, Token **tokp, int len) {
     return false;
 }
 
+bool skip_nontoken_notLF(char **pp) {
+    for (bool done = false;; done = true) {
+        if (**pp != '\n' && isspace(**pp))
+            (*pp)++;
+        else if (read_comment(pp))
+            ;
+        else
+            return done;
+    }
+}
+
+char *read_innner_strlike(char **pp, char begin, char end) {
+    char *p = *pp;
+    if (*p == begin) {
+        int len = 1;
+        while (p[len] != end) {
+            if (p[len] == '\\')
+                len += 2;
+            else
+                len++;
+        }
+        len++;
+        *pp = p + len;
+        char *str = calloc(256, sizeof(char));
+        strncpy(str, p + 1, len - 2);
+        return str;
+    }
+    return NULL;
+}
+
+bool read_match(char **pp, char *str, int len) {
+    if (len == strlen(str) && strncmp(*pp, str, len) == MATCH) {
+        *pp += len;
+        return true;
+    }
+    return false;
+}
+
+char *make_abspath(char **pp) {
+    char *path = read_innner_strlike(pp, '"', '"');
+    if (!path) return NULL;
+    return strcat(cpy_dirname(filename), path);
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
+    Token *tok_inc = NULL;
     Token *cur = &head;
-
+    bool is_linehead = true;
     while (*p) {
-        if (isspace(*p)) {
+        if (skip_nontoken_notLF(&p)) continue;
+        if (*p == '\n') {
+            is_linehead = true;
             p++;
             continue;
         }
-        if (read_comment(&p)) continue;
+        if (is_linehead && *p == '#') {
+            p++;  // '#' の直後
+            skip_nontoken_notLF(&p);
+            int idtlen = read_ident(p);
+            if (read_match(&p, "include", idtlen)) {
+                skip_nontoken_notLF(&p);
+                char *path = make_abspath(&p);
+                if (path) {
+                    char *content = read_file(path);
+                    cur->next = tokenize(content);
+                    while (cur->next && cur->next->kind != TK_EOF)
+                        cur = cur->next;
+                }
+            } else {
+                error_at(p, "不明なプリプロセス命令です");
+            }
+            while (*p != '\n') p++;
+            continue;
+        }
+        is_linehead = false;
+        // 通常のトークン読み
         if (read_str(&p, &cur)) continue;
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;

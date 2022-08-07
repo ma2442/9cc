@@ -1,9 +1,4 @@
-int foo();
-int bar(int, int);
-int bar6(int, int, int, int, int, int);
-int alloc4(int **, int, int, int, int);
-int alloc4_2D(int ***, int, int, int, int);
-int printf(char *, ...);
+#include "test.h"
 
 // ローカル変数スタック長可変化テスト
 int main_t0() {
