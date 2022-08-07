@@ -220,6 +220,7 @@ struct Def {
         EnumConst *cst;
         StrLit *strlit;
         Type *defdtype;
+        Token *replace; // #defineされた置き換え内容
     };
 };
 

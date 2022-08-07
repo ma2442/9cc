@@ -875,6 +875,17 @@ int main_t43() {
     return 0;
 }
 
+// #define 置き換え
+int main_t44() {
+    if (ONE + 1 != TWO) return 1;
+    char *p = ABC;
+    if (p[1] != CHAR_B) return 2;
+    LL llx = 1LL << 60;
+    if(sizeof(llx) != 8) return 3;
+    if (llx != 1LL << 60) return 4;
+    return 0;
+}
+
 int main() {
     if (main_t0() != 1) return 0;
     if (main_t1()) return 1;
@@ -920,5 +931,6 @@ int main() {
     if (main_t41()) return 41;
     if (main_t42()) return 42;
     if (main_t43()) return 43;
+    if (main_t44()) return 44;
     return 255;
 }

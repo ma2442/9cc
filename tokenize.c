@@ -1,4 +1,11 @@
 #include "9cc.h"
+Def *dreplace;  // #define リスト
+Def *find_replace(Token *idt) {
+    for (Def *d = dreplace; d; d = d->next) {
+        if (sametok(d->tok, idt)) return d;
+    }
+    return NULL;
+}
 
 // Token の種類と予約語のペア構造体
 typedef struct KindWordPair KindWordPair;
@@ -6,6 +13,14 @@ struct KindWordPair {
     TokenKind tokenkind;
     char word[10];
 };
+
+Token *new_tok(TokenKind kind, char *str, int len) {
+    Token *tok = calloc(1, sizeof(Token));
+    tok->kind = kind;
+    tok->str = str;
+    tok->len = len;
+    return tok;
+}
 
 // 新しいトークンを作成してcurに繋げる
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
@@ -263,6 +278,33 @@ char *make_abspath(char **pp) {
     return strcat(cpy_dirname(filename), path);
 }
 
+// #define IDENT ________ のアンダーライン部分をトークナイズ
+Token *tokenize_predefine(char *p) {
+    Token head;
+    head.next = NULL;
+    Token *tok_inc = NULL;
+    Token *cur = &head;
+    while (*p != '\n') {
+        if (skip_nontoken_notLF(&p)) continue;
+        // 通常のトークン読み
+        if (read_str(&p, &cur)) continue;
+        if (read_char(&p, &cur)) continue;
+        if (read_reserved(&p, &cur)) continue;
+        if (read_num(&p, &cur)) continue;
+        //先頭から変数として読める部分の長さを取得
+        int idtlen = read_ident(p);
+        if (read_controls(&p, &cur, idtlen)) continue;
+        // 変数名 判定
+        if (idtlen > 0) {
+            cur = new_token(TK_IDENT, cur, p, idtlen);
+            p += idtlen;
+            continue;
+        }
+        error_at(p, "トークナイズできません");
+    }
+    return head.next;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
@@ -277,6 +319,7 @@ Token *tokenize(char *p) {
             p++;
             continue;
         }
+        // プリプロセス
         if (is_linehead && *p == '#') {
             p++;  // '#' の直後
             skip_nontoken_notLF(&p);
@@ -290,8 +333,17 @@ Token *tokenize(char *p) {
                     while (cur->next && cur->next->kind != TK_EOF)
                         cur = cur->next;
                 }
+            } else if (read_match(&p, "define", idtlen)) {
+                skip_nontoken_notLF(&p);
+                int deflen = read_ident(p);
+                Def *drep = calloc(1, sizeof(Def));
+                drep->tok = new_tok(TK_IDENT, p, deflen);
+                p += deflen;
+                drep->replace = tokenize_predefine(p);
+                drep->next = dreplace;
+                dreplace = drep;
             } else {
-                error_at(p, "不明なプリプロセス命令です");
+                error_at(p, "不正なプリプロセス命令です");
             }
             while (*p != '\n') p++;
             continue;
@@ -304,14 +356,22 @@ Token *tokenize(char *p) {
         if (read_num(&p, &cur)) continue;
 
         //先頭から変数として読める部分の長さを取得
-        int ident_len = read_ident(p);
-
-        if (read_controls(&p, &cur, ident_len)) continue;
+        int idtlen = read_ident(p);
+        // #define で定義された識別子を置き換え
+        Token *idt = new_tok(TK_IDENT, p, idtlen);
+        Def *drep = find_replace(idt);
+        if (drep) {
+            cur->next = drep->replace;
+            while (cur->next) cur = cur->next;
+            p += idtlen;
+            continue;
+        }
+        if (read_controls(&p, &cur, idtlen)) continue;
 
         // 変数名 判定
-        if (ident_len > 0) {
-            cur = new_token(TK_IDENT, cur, p, ident_len);
-            p += ident_len;
+        if (idtlen > 0) {
+            cur = new_token(TK_IDENT, cur, p, idtlen);
+            p += idtlen;
             continue;
         }
 
