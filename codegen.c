@@ -1,4 +1,4 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
 typedef enum AsmWord AsmWord;
 enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ };
@@ -169,13 +169,16 @@ void loop_judge_result(int num) {
 bool gen_ctrl(Node* node) {
     switch (node->kind) {
         case ND_RETURN:
+            printf("# return\n");
             gen(node->lhs);
             if (node->lhs) printf("  pop rax\n");
             printf("  mov rsp, rbp\n");
             printf("  pop rbp\n");
             printf("  ret\n");
+            printf("# return end\n");
             return true;
         case ND_IF_ELSE:
+            printf("# if else\n");
             gen(node->judge);
             printf("  pop rax\n");
             printf("  cmp rax, 0\n");
@@ -185,11 +188,15 @@ bool gen_ctrl(Node* node) {
             printf(".Lelse%d:\n", node->label_num);
             gen(node->rhs);
             printf(".Lend%d:\n", node->label_num);
+            printf("# if else end\n");
             return true;
         case ND_COND_EMPTY:
+            printf("# cond empty\n");
             printf("  push rax\n");
+            printf("# cond empty end\n");
             return true;
         case ND_SWITCH:
+            printf("# switch\n");
             gen(node->judge);
             printf("  pop rax\n");
             for (int i = 0; i < node->case_cnt; i++) {
@@ -203,6 +210,7 @@ bool gen_ctrl(Node* node) {
                 printf("  jmp .Lend%d\n", node->label_num);
             gen(node->lhs);
             printf(".Lend%d:\n", node->label_num);
+            printf("# switch end\n");
             return true;
         case ND_CASE:
             printf(".L%dcase%d:\n", node->sw_num, node->label_num);
@@ -225,6 +233,7 @@ bool gen_ctrl(Node* node) {
             gen(node->lhs);
             return true;
         case ND_DO:
+            printf("# do while\n");
             printf(".Lbegin%d:\n", node->label_num);
             gen(node->lhs);
             printf(".Lcontinue%d:\n", node->label_num);
@@ -232,8 +241,10 @@ bool gen_ctrl(Node* node) {
             loop_judge_result(node->label_num);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
+            printf("# do while end\n");
             return true;
         case ND_WHILE:
+            printf("# while\n");
             printf(".Lbegin%d:\n", node->label_num);
             printf(".Lcontinue%d:\n", node->label_num);
             gen(node->judge);
@@ -241,8 +252,10 @@ bool gen_ctrl(Node* node) {
             gen(node->lhs);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
+            printf("# while end\n");
             return true;
         case ND_FOR:
+            printf("# for\n");
             gen(node->init);
             printf(".Lbegin%d:\n", node->label_num);
             if (node->judge) {
@@ -254,12 +267,15 @@ bool gen_ctrl(Node* node) {
             gen(node->inc);
             printf("  jmp .Lbegin%d\n", node->label_num);
             printf(".Lend%d:\n", node->label_num);
+            printf("# for end\n");
             return true;
         case ND_BLOCK:
+            printf("# block\n");
             for (int i = 0; i <= BLOCK_LEN; i++) {
                 if (!node->block[i]) return true;
                 gen(node->block[i]);
             }
+            printf("# block end\n");
             return true;
         default:
             return false;
@@ -270,6 +286,8 @@ bool gen_func(Node* node) {
     char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
     switch (node->kind) {
         case ND_FUNC_CALL:
+            printf("# func call %.*s\n", node->def->tok->len,
+                   node->def->tok->str);
             gen(node->next_arg);  //実引数計算
             // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
             printf("  mov rbx, rsp\n");
@@ -291,18 +309,23 @@ bool gen_func(Node* node) {
                 expand_size(RAX, node->type);
                 printf("  push rax\n");
             }
+            printf("# func call %.*s end\n", node->def->tok->len,
+                   node->def->tok->str);
             return true;
         case ND_FUNC_CALL_ARG:
+            printf("# func call arg %d\n", node->arg_idx);
             gen(node->rhs);       // value of this arg
             gen(node->next_arg);  // next arg
             if (arg_storage[node->arg_idx][0] != '\0') {
                 printf("  pop %s\n", arg_storage[node->arg_idx]);
             }
+            printf("# func call arg %d end\n", node->arg_idx);
             return true;
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
             printf(".globl %.*s\n", node->def->tok->len, node->def->tok->str);
+            printf(".type %.*s, @function\n", node->def->tok->len, node->def->tok->str);
             printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             // プロローグ
             // 変数分の領域を確保する
@@ -321,10 +344,12 @@ bool gen_func(Node* node) {
             printf("  ret\n");
             return true;
         case ND_FUNC_DEFINE_ARG:
+            printf("# func def arg %d\n", node->arg_idx);
             gen_lval(node->lhs);
             printf("  push %s\n", arg_storage[node->arg_idx]);
             gen(node->next_arg);
             gen_store(node->lhs->type);
+            printf("# func def arg %d end\n", node->arg_idx);
             // printf("  push rcx\n");
             return true;
         default:
@@ -339,16 +364,19 @@ bool gen_assign(Node* node) {
             // 前置インクリメントと複合代入  ND_ASSIGN_COMPOSITE
             // ASSIGN L,  ADD L
             // addr,      addr =STACK TOP
+            printf("# assign\n");
             gen_lval(node->lhs);
             if (node->kind == ND_ASSIGN_COMPOSITE) copy_top();
             gen(node->rhs);
             gen_store(node->lhs->type);
             printf("  push rcx\n");
+            printf("# assign end\n");
             return true;
         case ND_ASSIGN_POST_INCDEC:
             // 後置インクリメント
             // POST INCDEC EVAL,   ASSIGN L,  ADD L
             // [addr],              addr,     addr =STACK TOP
+            printf("# assign post incdec\n");
             gen_lval(node->lhs);
             copy_top();
             gen_load(node->lhs->type);
@@ -356,6 +384,7 @@ bool gen_assign(Node* node) {
             copy_top();
             gen(node->rhs);
             gen_store(node->lhs->type);
+            printf("# assign post incdec end\n");
             return true;
         case ND_DEFGLOBAL:
         case ND_DEFLOCAL:
@@ -383,23 +412,31 @@ bool gen_unary(Node* node) {
             }
             return true;
         case ND_ADDR:
+            printf("# address\n");
             gen_lval(node->lhs);
             return true;
+            printf("# address end\n");
         case ND_DEREF:
+            printf("# dereference\n");
             gen(node->lhs);
             gen_load(node->type);
+            printf("# dereference end\n");
             return true;
         case ND_BIT_NOT:
+            printf("# bit not\n");
             gen(node->lhs);
             printf("  pop rax\n");
             printf("  not rax\n");
             printf("  push rax\n");
+            printf("# bit not end\n");
             return true;
         case ND_CAST:
+            printf("# cast\n");
             gen(node->lhs);
             printf("  pop rax\n");
             expand_size(RAX, node->type);
             printf("  push rax\n");
+            printf("# cast end\n");
             return true;
         default:
             return false;
@@ -421,7 +458,7 @@ void gen(Node* node) {
     if (gen_assign(node)) return;
     if (gen_func(node)) return;
     if (gen_unary(node)) return;
-
+    printf("# calc\n");
     // インクリメント･デクリメント･複合代入の場合は省略項の評価を遅らせる。
     if (node->lhs->kind == ND_OMITTED_TERM) {
         gen(node->rhs);
@@ -454,16 +491,24 @@ void gen(Node* node) {
             printf("  and rax, rcx\n");
             break;
         case ND_EQUAL:
+            printf("# calc ==\n");
             gen_cmp(RAX, "rcx", "sete", RAX);
+            printf("# calc == end\n");
             break;
         case ND_NOT_EQUAL:
+            printf("# calc !=\n");
             gen_cmp(RAX, "rcx", "setne", RAX);
+            printf("# calc != end\n");
             break;
         case ND_LESS_THAN:
+            printf("# calc <\n");
             gen_cmp(RAX, "rcx", "setl", RAX);
+            printf("# calc < end\n");
             break;
         case ND_LESS_OR_EQUAL:
+            printf("# calc <=\n");
             gen_cmp(RAX, "rcx", "setle", RAX);
+            printf("# calc <= end\n");
             break;
         case ND_BIT_SHIFT_L:
             printf("  shl rax, cl\n");
@@ -474,6 +519,7 @@ void gen(Node* node) {
             else
                 printf("  shr rax, cl\n");  // ゼロで埋める
             break;
+            printf("# calc >> \n");
         case ND_ADD:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
             printf("  add rax, rcx\n");
@@ -497,4 +543,5 @@ void gen(Node* node) {
     if (node->kind == ND_MOD) ans = RDX;
     expand_size(ans, node->type);
     printf("  push %s\n", just(ans));
+    printf("# calc end\n");
 }

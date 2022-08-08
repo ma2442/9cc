@@ -1,4 +1,4 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
 int jmp_label_cnt = 0;
 int str_label_cnt = 0;

@@ -1,4 +1,4 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
 Def *dfunc;
 Def *dstrlits;
@@ -180,7 +180,7 @@ Node *func_call(Token *tok) {
         } while (consume(","));
         expect(")");
     }
-    if (darg != dfn->fn->dargs)
+    if (darg != dfn->fn->dargs && dfn->fn->dargs->var->type->ty != VARIABLE)
         error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
     return node;
 }
@@ -474,7 +474,7 @@ Node *decla_var(Type *typ, Token *name) {
 
 Node *defvar(Type *typ, Token *tok) {
     decla_var_check(typ, tok);
-    return new_node_defvar(type_array(typ), tok);
+    return new_node_defvar(typ, tok);
 }
 
 Node *expr() { return assign(); }
@@ -504,7 +504,7 @@ Node *decla_and_assign() {
     Token *idt = consume_ident();
     if (!idt) return new_node(ND_NO_EVAL, NULL, NULL);
     voidcheck(typ, tok_void->str);
-    Node *node = defvar(typ, idt);
+    Node *node = defvar(type_array(typ), idt);
     if (consume("="))
         node->lhs = new_node(ND_ASSIGN, new_node_var(idt), assign());
     return node;
@@ -775,7 +775,7 @@ Node *func(Type *typ, Token *name) {
             typ = base_type();
             voidcheck(typ, tok_void->str);
             Token *tok = consume_ident();
-            Node *ln = defvar(typ, tok);
+            Node *ln = defvar(type_array(typ), tok);
             ln->kind = ND_LVAR;
             arg->next_arg = new_node(ND_FUNC_DEFINE_ARG, ln, NULL);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
@@ -824,9 +824,9 @@ void program() {
         if (!node) {
             voidcheck(typ, tok_void->str);
             if (is_decla)
-                node = decla_var(typ, idt);
+                node = decla_var(type_array(typ), idt);
             else
-                node = defvar(typ, idt);
+                node = defvar(type_array(typ), idt);
             expect(";");
         }
         code[i] = node;

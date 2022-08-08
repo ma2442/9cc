@@ -1,16 +1,16 @@
-#include "9cc.h"
+#include "9cc_manual.h"
 
 void error_undef(Token *tok, DefKind kind) {
-    if (kind == DK_VAR)
-        error_at(tok->str, "未定義の変数です");
-    else if (kind == DK_STRUCT)
-        error_at(tok->str, "未定義の構造体です");
+    if (kind == DK_VAR) {
+        error_at(tok->str, "undefined valiable");
+    } else if (kind == DK_STRUCT)
+        error_at(tok->str, "undefined struct");
     else if (kind == DK_ENUM)
-        error_at(tok->str, "未定義の列挙体です");
+        error_at(tok->str, "undefined enum");
     // else if (kind == DK_ENUMCONST)
     //     error_at(tok->str, "未定義の定数です");
     else if (kind == DK_FUNC)
-    error_at(tok->str, "未定義の関数です");
+        error_at(tok->str, "undefined function");
 }
 
 // 変数･関数･構造体･列挙体のいずれかを名前で検索する。
@@ -73,13 +73,13 @@ bool can_def_symbol(Token *sym) {
     if (!find_def(sym, DK_VAR) && !find_def(sym, DK_ENUMCONST) &&
         !find_def(sym, DK_FUNC) && !find_def(sym, DK_TYPE))
         return true;
-    error_at(sym->str, "定義済みのシンボルです");
+    error_at(sym->str, "symbol has already used");
     return false;
 }
 
 // 構造体、列挙体のタグが定義可能か
 bool can_def_tag(Token *tag) {
     if (!find_def(tag, DK_ENUM) && !find_def(tag, DK_STRUCT)) return true;
-    error_at(tag->str, "定義済みのタグです");
+    error_at(tag->str, "tag has already used");
     return false;
 }

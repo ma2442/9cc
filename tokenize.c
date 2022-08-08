@@ -1,4 +1,5 @@
-#include "9cc.h"
+#include "9cc_auto.h"
+
 Def *dreplace;  // #define リスト
 Def *find_replace(Token *idt) {
     for (Def *d = dreplace; d; d = d->next) {
@@ -305,6 +306,19 @@ Token *tokenize_predefine(char *p) {
     return head.next;
 }
 
+Token *cpy_alltoken(Token *from) {
+    Token head;
+    head.next = NULL;
+    Token *to = &head;
+    while (from) {
+        to->next = calloc(1, sizeof(Token));
+        *to->next = *from;
+        from = from->next;
+        to = to->next;
+    }
+    return head.next;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
@@ -361,7 +375,7 @@ Token *tokenize(char *p) {
         Token *idt = new_tok(TK_IDENT, p, idtlen);
         Def *drep = find_replace(idt);
         if (drep) {
-            cur->next = drep->replace;
+            cur->next = cpy_alltoken(drep->replace);
             while (cur->next) cur = cur->next;
             p += idtlen;
             continue;

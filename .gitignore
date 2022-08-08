@@ -5,4 +5,6 @@
 tmp*
 a.out
 9cc
+9cc_self
+shortenasm
 doc

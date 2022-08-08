@@ -1,4 +1,4 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
 bool sametok(Token *tok1, Token *tok2) {
     if (!tok1 || !tok2) return false;

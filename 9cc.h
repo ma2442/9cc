@@ -1,17 +1,10 @@
-// #include <assert.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#ifndef HEADER_H
+// #ifndef HEADER_H
 #define HEADER_H
-#define BLOCK_LEN 128
+#define BLOCK_LEN 1280
 #define CASE_LEN 128
-#define CODE_LEN 100
-#define STMT_LEN 100
+#define CODE_LEN 1280
+#define STMT_LEN 1280
 #define DIGIT_LEN 16  // ラベル番号の最大桁数
 #define NEST_MAX 128
 #define MATCH 0
@@ -140,7 +133,7 @@ typedef enum {
 struct Type {
     TypeKind ty;
     Type *ptr_to;
-    size_t array_size;
+    int array_size;
     Def *dstc;
     Def *denm;
 };
@@ -212,16 +205,15 @@ struct Def {
     Def *prev;
     Token *tok;  // 名前
     DefKind kind;
-    union {
-        Var *var;
-        Func *fn;
-        Struct *stc;
-        Enum *enm;
-        EnumConst *cst;
-        StrLit *strlit;
-        Type *defdtype;
-        Token *replace; // #defineされた置き換え内容
-    };
+
+    Var *var;
+    Func *fn;
+    Struct *stc;
+    Enum *enm;
+    EnumConst *cst;
+    StrLit *strlit;
+    Type *defdtype;
+    Token *replace;  // #defineされた置き換え内容
 };
 
 // 抽象構文木のノード
@@ -247,8 +239,7 @@ struct Node {
     int sw_num;     // caseの親switchラベル番号
     int case_cnt;   // switch内のcaseの数
 };
-
-extern size_t sizes[LEN_TYPE_KIND];
+extern int sizes[LEN_TYPE_KIND];
 extern char *type_words[LEN_TYPE_KIND];
 
 extern char *filename;    // 入力ファイル名
@@ -280,7 +271,7 @@ extern Node *sw[NEST_MAX];       // switch対象ノード
 extern int swnest;               // switchネスト数
 extern int fncnt;                // 関数通し番号(goto label 用)
 
-#endif  // HEADER_H
+// #endif  // HEADER_H
 // util.c
 bool sametok(Token *tok1, Token *tok2);
 bool eqtokstr(Token *tok, char *str);
@@ -359,12 +350,13 @@ int expect_numeric();
 bool at_eof();
 
 // find.c
+void error_undef(Token *tok, DefKind kind);
 Def *find_def(Token *tok, DefKind kind);
 Def *find_enumconst(Token *tok);
 Def *fit_def_noerr(Token *tok, DefKind kind);
 Def *fit_def(Token *tok, DefKind kind);
 bool can_def_symbol(Token *sym);
-bool can_def_tag(Token *sym);
+bool can_def_tag(Token *tag);
 
 // scope.c
 void scope_in();

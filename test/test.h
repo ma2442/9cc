@@ -11,3 +11,5 @@ int alloc4_2D(int ***, int, int, int, int);
 #define CHAR_B 'b'
 #define DEFINE_NONE
 #define LL long long
+
+extern int array[2];

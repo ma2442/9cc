@@ -1,6 +1,7 @@
 #include <errno.h>
 
-#include "9cc.h"
+#include "9cc_auto.h"
+
 char *filename;
 char *filedir;
 char *user_input;  // 入力プログラム

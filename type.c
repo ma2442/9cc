@@ -1,6 +1,6 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
-size_t sizes[LEN_TYPE_KIND];
+int sizes[LEN_TYPE_KIND];
 
 void init_sizes() {
     sizes[CHAR] = 1;
@@ -268,7 +268,7 @@ Type *def_struct(Token *tag) {
         voidcheck(typ, tok_void->str);
         Token *tok = consume_ident();
         // メンバ作成（メンバのノードは不要なので放置）
-        defvar(typ, tok);
+        defvar(type_array(typ), tok);
         expect(";");
         int sz = size(def[nest]->dvars->var->type);
         ofst = set_offset(def[nest]->dvars->var, ofst) + sz;

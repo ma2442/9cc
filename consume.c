@@ -1,4 +1,4 @@
-#include "9cc.h"
+#include "9cc_auto.h"
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
@@ -91,12 +91,18 @@ void expect(char *op) {
 // 次のトークンが数値の場合、トークンを1つ読み進めてその数値を返す。
 // それ以外の場合にはエラーを報告する。
 int expect_numeric() {
-    if (token->kind != TK_NUM && token->kind != TK_CHAR) {
-        error_at(token->str, "数ではありません");
+    if (token->kind == TK_NUM || token->kind == TK_CHAR) {
+        int val = token->val;
+        token = token->next;
+        return val;
+    } else if (token->kind == TK_IDENT) {
+        Def *dsym = fit_def(token, DK_ENUMCONST);
+        if (dsym) {
+            token = token->next;
+            return dsym->cst->val;
+        }
     }
-    int val = token->val;
-    token = token->next;
-    return val;
+    error_at(token->str, "数ではありません");
 }
 
 bool at_eof() { return token->kind == TK_EOF; }

@@ -1,10 +1,12 @@
 #!/bin/bash
 
+compiler="./9cc"
+
 assert() {
     expected="$1"
     input="$2"
     echo "$input" > test/tmp/tmp.c
-    ./9cc test/tmp/tmp.c > tmp.s
+    "$compiler" test/tmp/tmp.c > tmp.s
     cc -o tmp tmp.s testfuncs.o
     ./tmp
     actual="$?"
@@ -20,7 +22,7 @@ assert() {
 assertf(){
     expected="$1"
     input="$2"
-    ./9cc test/"$input" > tmp.s
+    "$compiler" test/"$input" > tmp.s
     cc -o tmp tmp.s testfuncs.o
     ./tmp
     actual="$?"
