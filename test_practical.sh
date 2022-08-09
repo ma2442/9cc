@@ -34,12 +34,12 @@ INPUT="$DIR"/"$NAME".c
 # tr -d < $INPUT '\n' > $TMPDIR/tmp.c
 # ./9cc "$(cat $TMPDIR/tmp.c)" > tmp.s 
 ./"$compiler" "$INPUT" > tmp.s 
-cc -o tmp tmp.s testfuncs.o
+cc -o tmp tmp.s test/testfuncs.o
 ./tmp > $YOUR_ANS
 
 OUTNAME="$TMPDIR"/tmpcc
 cc -S "$INPUT" -o "$OUTNAME".s -w
-cc -o "$OUTNAME" "$OUTNAME".s testfuncs.o
+cc -o "$OUTNAME" "$OUTNAME".s test/testfuncs.o
 $OUTNAME > $EXPECT_ANS
 judge
 }

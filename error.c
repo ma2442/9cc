@@ -31,10 +31,7 @@ void error_at2(char *loc, char *fmt, char *op) {
     // va_start(ap, fmt);
     // va_end(ap);
     // vfprintf(stderr, fmt, ap);
-    if (op)
-        fprintf(stderr, fmt, op);
-    else
-        fprintf(stderr, fmt);
+    fprintf(stderr, fmt, op);
     fprintf(stderr, "\n");
     exit(1);
 }
@@ -48,7 +45,7 @@ void error(char *fmt, ...) {
     // va_start(ap, fmt);
     // vfprintf(stderr, fmt, ap);
     // va_end(ap);
-    fprintf(stderr, fmt);
+    fprintf(stderr, fmt, NULL);
     fprintf(stderr, "\n");
     exit(1);
 }

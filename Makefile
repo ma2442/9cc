@@ -31,18 +31,18 @@ incld.o : incld.c
 
 test: test9cc testself
 
-test9cc: 9cc
+test9cc: 9cc test/testfuncs.o
 	./test.sh ./9cc
 
-testself: 9cc_self
+testself: 9cc_self test/testfuncs.o
 	./test.sh ./9cc_self
 
 testp: testp9cc testpself
 
-testp9cc: 9cc
+testp9cc: 9cc test/testfuncs.o
 	./test_practical.sh ./9cc
 
-testpself: 9cc_self
+testpself: 9cc_self test/testfuncs.o
 	./test_practical.sh ./9cc_self
 
 clean:
