@@ -14,6 +14,7 @@
 -   [ ] 共用体
 -   [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 -   [ ] {} 配列初期化
+-   [ ] char argstorage[][8] = {"rsi",..}; 形式の配列初期化式実装
 
 ### Optional To Do 未使用
 
@@ -23,6 +24,9 @@
 
 ### Issue
 
+-   [ ] main.c のセルフホスト(#include <error.h>)
+-   [ ] error.c のセルフホスト(vprintf, fprintf のインクルード)
+-   [ ] 二次元配列の初期化式を実装して、codegen.c の arg_storage を元に戻す
 -   [ ] 引数を取る #define 実装
 -   [ ] #include ".." の include ディレクトリへの探索
 -   [ ] goto に対応する label が存在するかどうか関数内で判定
