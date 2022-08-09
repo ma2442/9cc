@@ -1,4 +1,19 @@
-#include "9cc_auto.h"
+#include "9cc_manual.h"
+
+bool isspace_(char c) {
+    switch (c) {
+        case '\t':
+        case '\n':
+        case '\v':
+        case '\f':
+        case '\r':
+        case ' ':
+            return true;
+    }
+    return false;
+}
+bool isdigit_(char c) { return '0' <= c && c <= '9'; }
+bool isalpha_(char c) { return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'; }
 
 Def *dreplace;  // #define リスト
 Def *find_replace(Token *idt) {
@@ -12,7 +27,7 @@ Def *find_replace(Token *idt) {
 typedef struct KindWordPair KindWordPair;
 struct KindWordPair {
     TokenKind tokenkind;
-    char word[10];
+    char *word;
 };
 
 Token *new_tok(TokenKind kind, char *str, int len) {
@@ -61,6 +76,7 @@ char escape(char c) {
     if (c == 'b') return 8;   // BS (Back Space)
     if (c == 't') return 9;   // HT (Horizontal Tab)
     if (c == 'n') return 10;  // LF
+    if (c == 'v') return 11;  // VT (Vertical Tab)
     if (c == 'f') return 12;  // FF (Form Field)
     if (c == 'r') return 13;  // CR
     return c;
@@ -121,13 +137,55 @@ bool read_str(char **pp, Token **tokp) {
 }
 
 bool read_reserved(char **pp, Token **tokp) {
-    const char resv[][4] = {"...", "<<=", ">>=", "<<", ">>", "&&", "||", "++",
-                            "--",  "->",  "&=",  "^=", "|=", "+=", "-=", "*=",
-                            "/=",  "%=",  "<=",  ">=", "==", "!=", "=",  ".",
-                            ",",   "{",   "}",   ";",  "+",  "-",  "*",  "/",
-                            "%",   "(",   ")",   "<",  ">",  "&",  "!",  "?",
-                            ":",   "[",   "]",   "|",  "^",  "~"};
-    for (int i = 0; i < sizeof(resv) / sizeof(resv[0]); i++) {
+    int rlen = 0;
+    char *resv[100];
+    resv[rlen++] = "...";
+    resv[rlen++] = "<<=";
+    resv[rlen++] = ">>=";
+    resv[rlen++] = "<<";
+    resv[rlen++] = ">>";
+    resv[rlen++] = "&&";
+    resv[rlen++] = "||";
+    resv[rlen++] = "++";
+    resv[rlen++] = "--";
+    resv[rlen++] = "->";
+    resv[rlen++] = "&=";
+    resv[rlen++] = "^=";
+    resv[rlen++] = "|=";
+    resv[rlen++] = "+=";
+    resv[rlen++] = "-=";
+    resv[rlen++] = "*=";
+    resv[rlen++] = "/=";
+    resv[rlen++] = "%=";
+    resv[rlen++] = "<=";
+    resv[rlen++] = ">=";
+    resv[rlen++] = "==";
+    resv[rlen++] = "!=";
+    resv[rlen++] = "=";
+    resv[rlen++] = ".";
+    resv[rlen++] = ",";
+    resv[rlen++] = "{";
+    resv[rlen++] = "}";
+    resv[rlen++] = ";";
+    resv[rlen++] = "+";
+    resv[rlen++] = "-";
+    resv[rlen++] = "*";
+    resv[rlen++] = "/";
+    resv[rlen++] = "%";
+    resv[rlen++] = "(";
+    resv[rlen++] = ")";
+    resv[rlen++] = "<";
+    resv[rlen++] = ">";
+    resv[rlen++] = "&";
+    resv[rlen++] = "!";
+    resv[rlen++] = "?";
+    resv[rlen++] = ":";
+    resv[rlen++] = "[";
+    resv[rlen++] = "]";
+    resv[rlen++] = "|";
+    resv[rlen++] = "^";
+    resv[rlen++] = "~";
+    for (int i = 0; i < rlen; i++) {
         int len = strlen(resv[i]);
         if (strncmp(resv[i], *pp, len) == MATCH) {
             *tokp = new_token(TK_RESERVED, *tokp, *pp, len);
@@ -146,7 +204,7 @@ int read_numprefix(char **pp) {
         } else if ((*pp)[1] == 'b' || (*pp)[1] == 'B') {
             (*pp) += 2;
             return 2;
-        } else if (isdigit((*pp)[1])) {
+        } else if (isdigit_((*pp)[1])) {
             (*pp)++;
             return 8;
         }
@@ -186,45 +244,73 @@ void read_numsuffix(char **pp, Token **tokp) {
 }
 
 bool read_num(char **pp, Token **tokp) {
-    if (!isdigit(**pp)) return false;
+    if (!isdigit_(**pp)) return false;
     *tokp = new_token(TK_NUM, *tokp, *pp, 1);
     int base = read_numprefix(pp);
     (*tokp)->val = strtoll(*pp, pp, base);
     (*tokp)->len = *pp - (*tokp)->str;
     read_numsuffix(pp, tokp);
-    if (isdigit(**pp) || isalpha(**pp))
+    if (isdigit_(**pp) || isalpha_(**pp))
         error_at(*pp, "不正な%d進定数です", base);
     return true;
 }
 
 // 制御構文if else while for等 判定
 bool read_controls(char **pp, Token **tokp, int len) {
-    const KindWordPair kdwds[] = {{TK_CTRL, "if"},
-                                  {TK_CTRL, "else"},
-                                  {TK_CTRL, "switch"},
-                                  {TK_CTRL, "case"},
-                                  {TK_CTRL, "default"},
-                                  {TK_CTRL, "break"},
-                                  {TK_CTRL, "continue"},
-                                  {TK_CTRL, "goto"},
-                                  {TK_CTRL, "while"},
-                                  {TK_CTRL, "do"},
-                                  {TK_CTRL, "for"},
-                                  {TK_CTRL, "typedef"},
-                                  {TK_CTRL, "extern"},
-                                  {TK_RETURN, "return"},
-                                  {TK_SIZEOF, "sizeof"},
-                                  {TK_TYPE, STR_VOID},
-                                  {TK_TYPE, STR_INT},
-                                  {TK_TYPE, STR_CHAR},
-                                  {TK_TYPE, STR_BOOL},
-                                  {TK_TYPEQ_SIGN, STR_SIGNED},
-                                  {TK_TYPEQ_SIGN, STR_UNSIGNED},
-                                  {TK_TYPEQ_LENGTH, STR_LONG},
-                                  {TK_TYPEQ_LENGTH, STR_SHORT},
-                                  {TK_STRUCT, "struct"},
-                                  {TK_ENUM, "enum"}};
-    for (int i = 0; i < sizeof(kdwds) / sizeof(kdwds[0]); i++) {
+    int klen = 0;
+    KindWordPair kdwds[100];
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "if";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "else";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "switch";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "case";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "default";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "break";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "continue";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "goto";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "while";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "do";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "for";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "typedef";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "extern";
+    kdwds[klen].tokenkind = TK_RETURN;
+    kdwds[klen++].word = "return";
+    kdwds[klen].tokenkind = TK_SIZEOF;
+    kdwds[klen++].word = "sizeof";
+    kdwds[klen].tokenkind = TK_TYPE;
+    kdwds[klen++].word = STR_VOID;
+    kdwds[klen].tokenkind = TK_TYPE;
+    kdwds[klen++].word = STR_INT;
+    kdwds[klen].tokenkind = TK_TYPE;
+    kdwds[klen++].word = STR_CHAR;
+    kdwds[klen].tokenkind = TK_TYPE;
+    kdwds[klen++].word = STR_BOOL;
+    kdwds[klen].tokenkind = TK_TYPEQ_SIGN;
+    kdwds[klen++].word = STR_SIGNED;
+    kdwds[klen].tokenkind = TK_TYPEQ_SIGN;
+    kdwds[klen++].word = STR_UNSIGNED;
+    kdwds[klen].tokenkind = TK_TYPEQ_LENGTH;
+    kdwds[klen++].word = STR_LONG;
+    kdwds[klen].tokenkind = TK_TYPEQ_LENGTH;
+    kdwds[klen++].word = STR_SHORT;
+    kdwds[klen].tokenkind = TK_STRUCT;
+    kdwds[klen++].word = "struct";
+    kdwds[klen].tokenkind = TK_ENUM;
+    kdwds[klen++].word = "enum";
+
+    for (int i = 0; i < klen; i++) {
         if (len == strlen(kdwds[i].word) &&
             strncmp(*pp, kdwds[i].word, len) == MATCH) {
             *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, len);
@@ -237,7 +323,7 @@ bool read_controls(char **pp, Token **tokp, int len) {
 
 bool skip_nontoken_notLF(char **pp) {
     for (bool done = false;; done = true) {
-        if (**pp != '\n' && isspace(**pp))
+        if (**pp != '\n' && isspace_(**pp))
             (*pp)++;
         else if (read_comment(pp))
             ;

@@ -288,7 +288,7 @@ bool gen_ctrl(Node* node) {
 }
 
 bool gen_func(Node* node) {
-    char *arg_storage[6];
+    char* arg_storage[6];
     arg_storage[0] = "rdi";
     arg_storage[1] = "rsi";
     arg_storage[2] = "rdx";
@@ -465,10 +465,25 @@ bool gen_unary(Node* node) {
 
 // ポインタ加減算時のサイズ調整
 void gen_addsub_sizing(Type* l, Type* r) {
-    if (can_deref(l)) {
+    bool lcan = can_deref(l);
+    bool rcan = can_deref(r);
+    if (lcan && rcan) return;
+    if (lcan) {
         printf("  imul rcx, %d\n", size(l->ptr_to));
-    } else if (can_deref(r)) {
+        return;
+    }
+    if (rcan) {
         printf("  imul rax, %d\n", size(r->ptr_to));
+        return;
+    }
+}
+
+// ポインタ減算時のサイズ調整
+void gen_sub_ans_sizing(Type* l, Type* r) {
+    if (can_deref(l) && can_deref(r)) {
+        printf("  cqo\n");
+        printf("  mov rcx, %d\n", size(l->ptr_to));
+        printf("  idiv rcx\n");
     }
 }
 
@@ -547,6 +562,7 @@ void gen(Node* node) {
         case ND_SUB:
             gen_addsub_sizing(node->lhs->type, node->rhs->type);
             printf("  sub rax, rcx\n");
+            gen_sub_ans_sizing(node->lhs->type, node->rhs->type);
             break;
         case ND_MUL:
             printf("  imul rax, rcx\n");

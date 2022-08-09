@@ -3,7 +3,7 @@
 # -static スタティックリンクする
 CFLAGS=-std=c11 -g -static
 SRCS=$(wildcard *.c)
-ASEMS=find.s nest.s parse.s type.s util.s consume.s codegen.s main.s error.s
+ASEMS=find.s nest.s parse.s type.s util.s consume.s codegen.s main.s error.s tokenize.s
 OBJS=$(filter-out $(ASEMS:.s=.o), $(SRCS:.c=.o))
 ASEMS_SELF=$(ASEMS:.s=_self.s)
 

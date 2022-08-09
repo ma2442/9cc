@@ -17,18 +17,14 @@ extern FILE *stderr; /* Standard error output stream.  */
 #define stdout stdout
 #define stderr stderr
 
-// typedef __builtin_va_list __gnuc_va_list;
-// typedef __gnuc_va_list va_list;
-// int vfprintf(FILE *__stream, char *__fmt, __gnuc_va_list __ap);
-// #define va_start(v, l) __builtin_va_start(v, l)
-// #define va_end(v) __builtin_va_end(v)
-
 size_t strlen(char *__s);
 int strncmp(char *__s1, char *__s2, size_t __n);
 char *strncpy(char *__dest, char *__src, size_t __n);
+char *strstr(char *__haystack, char *__needle);
+char *strcat(char *__dest, char *__src);
+long long int strtoll(char *__nptr, char **__endptr, int __base);
 void *calloc(size_t __nmemb, size_t __size);
 void free(void *__ptr);
-
 /* The possibilities for the third argument to `fseek'.
    These values should not be changed.  */
 #define SEEK_SET 0 /* Seek from beginning of file.  */

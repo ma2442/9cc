@@ -881,8 +881,23 @@ int main_t44() {
     char *p = ABC;
     if (p[1] != CHAR_B) return 2;
     LL llx = 1LL << 60;
-    if(sizeof(llx) != 8) return 3;
+    if (sizeof(llx) != 8) return 3;
     if (llx != 1LL << 60) return 4;
+    return 0;
+}
+
+// ポインタ同士の減算
+int main_t45() {
+    unsigned long long lla[10];
+    unsigned long long *llp;
+    llp = lla + 3;
+    for (int i = 0; i < 10; i++) {
+        lla[i] = 990 + i;
+    }
+    if (llp[0] != 993) return 1;
+    // printf("llpointer(3):%llu, %llu, %llu\n", llp - lla, llp, lla);
+    if (llp - lla != 3) return 2;
+    
     return 0;
 }
 
@@ -932,5 +947,6 @@ int main() {
     if (main_t42()) return 42;
     if (main_t43()) return 43;
     if (main_t44()) return 44;
+    if (main_t45()) return 45;
     return 255;
 }

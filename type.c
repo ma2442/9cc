@@ -71,6 +71,7 @@ bool can_cast(Type *to, Type *from) {
     if (to->ty == VOID || from->ty == VOID) return false;
     if (to->ty == VARIABLE) return true;
     if (can_cast_ptr(to, from)) return true;
+    if (is_basic_numeric(to) && can_deref(from)) return true;
     if (is_basic_numeric(to) && is_basic_numeric(from)) return true;
     return eqtype(to, from);
 }
@@ -149,6 +150,8 @@ Type *implicit_type(Type *lt, Type *rt) {
 
 //ノードに型情報を付与
 void typing(Node *node) {
+    bool lcan;
+    bool rcan;
     switch (node->kind) {
         case ND_DEREF:
             if (can_deref(node->lhs->type)) {
@@ -163,10 +166,14 @@ void typing(Node *node) {
             break;
         case ND_ADD:
         case ND_SUB:
-            if (can_deref(node->lhs->type)) {
+            lcan = can_deref(node->lhs->type);
+            rcan = can_deref(node->rhs->type);
+            if (lcan && rcan) { // ptr - ptr -> int
+                node->type = new_type(INT);
+            } else if (lcan) {
                 node->type = new_type(PTR);
                 node->type->ptr_to = node->lhs->type->ptr_to;
-            } else if (can_deref(node->rhs->type)) {
+            } else if (rcan) {
                 node->type = new_type(PTR);
                 node->type->ptr_to = node->rhs->type->ptr_to;
             } else {  // 両オペランド共ポインタでない
