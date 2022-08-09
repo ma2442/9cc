@@ -256,7 +256,6 @@ extern Node *statement[STMT_LEN];
 extern Defs *def[NEST_MAX];
 
 extern Def *dfunc;               // 現在定義中の関数
-extern Def *dglobals_end;        // グローバル変数(出現順)
 extern Def *dstrlits;            // 文字列リテラル(出現逆順)
 extern Def *dstrlits_end;        // 文字列リテラル(出現順)
 extern int jmp_label_cnt;        // jmpラベル通し番号

@@ -5,7 +5,6 @@ char *filedir;
 char *user_input;  // 入力プログラム
 Token *token;      // 現在着目しているトークン
 Node *code[CODE_LEN];
-Def *dglobals_end;
 Def *dstrlits_end;
 
 char *cpy_dirname(char *path) {

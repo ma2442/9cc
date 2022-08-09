@@ -812,7 +812,6 @@ void program() {
     int i = 0;
     scope_in();
     def[nest]->dvars = calloc_def(DK_VAR);
-    dglobals_end = def[nest]->dvars;
     dstrlits = calloc_def(DK_STRLIT);
     dstrlits_end = dstrlits;
     while (!at_eof()) {
