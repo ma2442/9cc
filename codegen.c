@@ -1,4 +1,4 @@
-#include "9cc_auto.h"
+#include "9cc_manual.h"
 
 typedef enum AsmWord AsmWord;
 enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ, SIZE_SEGMENT };
@@ -288,7 +288,13 @@ bool gen_ctrl(Node* node) {
 }
 
 bool gen_func(Node* node) {
-    char arg_storage[][8] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    char *arg_storage[6];
+    arg_storage[0] = "rdi";
+    arg_storage[1] = "rsi";
+    arg_storage[2] = "rdx";
+    arg_storage[3] = "rcx";
+    arg_storage[4] = "r8";
+    arg_storage[5] = "r9";
     switch (node->kind) {
         case ND_FUNC_CALL:
             printf("# func call %.*s\n", node->def->tok->len,
