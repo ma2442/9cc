@@ -1,7 +1,7 @@
 #include "9cc_auto.h"
 
 typedef enum AsmWord AsmWord;
-enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ };
+enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ, SIZE_SEGMENT };
 
 // レジスタや命令を扱うサイズごとに適切な名前に変換する
 char* cnvword(AsmWord word, int byte) {
@@ -41,6 +41,11 @@ char* cnvword(AsmWord word, int byte) {
             if (byte == 2) return "movzx";  // movzx 8 byte, 2 byte
             if (byte == 1) return "movzx";  // movzx 8 byte, 1 byte
             return "mov";                   // mov 8 byte, 8 byte
+        case SIZE_SEGMENT:
+            if (byte == 4) return ".long";
+            if (byte == 2) return ".value";
+            if (byte == 1) return ".byte";
+            return ".qword";
     }
 }
 
@@ -386,6 +391,14 @@ bool gen_assign(Node* node) {
             printf("# assign post incdec end\n");
             return true;
         case ND_DEFGLOBAL:
+            printf(".globl %.*s\n", node->def->tok->len, node->def->tok->str);
+            printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
+            if (node->val)
+                printf("  %s %lld\n",
+                       cnvword(SIZE_SEGMENT, size(node->def->var->type)), node->val);
+            else
+                printf("  .zero %d\n", size(node->def->var->type));
+            return true;
         case ND_DEFLOCAL:
             if (node->lhs) gen(node->lhs);
             return true;

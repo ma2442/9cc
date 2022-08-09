@@ -47,11 +47,7 @@ judge
 ######################################################################
 # テスト実行部
 
-compiler="./9cc"
-runtest nqueen
-echo
-
-compiler="./9cc_self"
+compiler="$1"
 runtest nqueen
 echo
 

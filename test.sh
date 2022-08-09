@@ -33,33 +33,16 @@ assertf(){
     fi
 }
 
-compiler="./9cc"
-echo "--  9cc made by cc test --"
+compiler="$1"
+echo "--" "$compiler" "test --"
 assertf 255 test1.c
 assertf 255 test2.c
-assertf 255 tmp.c
 assertf 255 test3.c
 assertf 1 comment.c
 assertf 255 test_quick.c
 assertf 255 test4.c
 assertf 255 test5.c
-echo "[9cc COMPLETE]"
-echo
 
-compiler="./9cc_self"
-echo "--  9cc_self made by 9cc test --"
-assertf 255 test1.c
-assertf 255 test2.c
-assertf 255 tmp.c
-assertf 255 test3.c
-assertf 1 comment.c
-assertf 255 test_quick.c
-assertf 255 test4.c
-assertf 255 test5.c
+echo "[ OK ]" "$compiler"
+echo
 exit 0
-echo "[9cc_self COMPLETE]"
-echo
-
-echo OK
-echo
-

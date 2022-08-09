@@ -451,8 +451,13 @@ Node *assign() {
 
 // 宣言できる変数でなければエラー
 void decla_var_check(Type *typ, Token *name) {
-    if (can_def_symbol(name)) return;
-    Def *ddecla = fit_def_noerr(name, DK_VAR);
+    // 変数以外で宣言されていたらエラー
+    if (find_def(name, DK_ENUMCONST) || find_def(name, DK_FUNC) ||
+        find_def(name, DK_TYPE))
+        error_at(name->str, "symbol has already used");
+    // 同スコープにおいて同名で定義済みならエラー
+    //                   違う型で宣言のみされていたらエラー
+    Def *ddecla = find_def(name, DK_VAR);
     if (ddecla && ddecla->var->is_defined)
         error_at(name->str, "定義済みの変数です");
     if (ddecla && !eqtype(typ, ddecla->var->type))
@@ -823,10 +828,13 @@ void program() {
         Node *node = func(typ, idt);
         if (!node) {
             voidcheck(typ, tok_void->str);
-            if (is_decla)
+            if (is_decla) {
                 node = decla_var(type_array(typ), idt);
-            else
+            } else {
                 node = defvar(type_array(typ), idt);
+                node->val = 0;
+                if (consume("=")) node->val = val(expr());
+            }
             expect(";");
         }
         code[i] = node;

@@ -63,24 +63,20 @@ int main(int argc, char **argv) {
     // アセンブリの前半部分を出力
     printf(".intel_syntax noprefix\n");
 
-    // 文字列リテラル部のコード生成
+    // gen global var code
     printf(".data\n");
-
-    for (Def *dglb = dglobals_end->prev; dglb; dglb = dglb->prev) {
-        if (!dglb->var->is_defined) continue;
-        printf(".globl %.*s\n", dglb->tok->len, dglb->tok->str);
-        printf("%.*s:\n", dglb->tok->len, dglb->tok->str);
-        printf("  .zero %d\n", size(dglb->var->type));
+    for (int i = 0; code[i] != NULL; i++) {
+        if (code[i]->kind == ND_DEFGLOBAL) gen(code[i]);
     }
+    // 文字列リテラル部のコード生成
     printf(".section .rodata\n");
     for (Def *dstrl = dstrlits_end->prev; dstrl; dstrl = dstrl->prev) {
         printf("%s:\n", dstrl->strlit->label);
         printf("  .string %.*s\n", dstrl->tok->len, dstrl->tok->str);
     }
-
     // 先頭の式から順にコード生成
     for (int i = 0; code[i] != NULL; i++) {
-        gen(code[i]);
+        if (code[i]->kind != ND_DEFGLOBAL) gen(code[i]);
     }
 
     return 0;
