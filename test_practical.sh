@@ -13,11 +13,11 @@ sed -z -i 's/\r//g' $YOUR_ANS
 sed -z -i 's/\r//g' $EXPECT_ANS
 d=$(diff $EXPECT_ANS $YOUR_ANS)
 if test "$d" == "" ; then
-    echo "[ OK! ]"
+    echo "[ OK! ]" "$compiler"
     cat $YOUR_ANS
     echo
 else
-    echo "[ WRONG ANSWER! ]"
+    echo "[ WRONG ANSWER! ]" "$compiler"
     echo "expected answer : "
     cat $EXPECT_ANS
     echo "your answer : "
@@ -33,7 +33,7 @@ echo ----- test "$NAME" -----
 INPUT="$DIR"/"$NAME".c
 # tr -d < $INPUT '\n' > $TMPDIR/tmp.c
 # ./9cc "$(cat $TMPDIR/tmp.c)" > tmp.s 
-./9cc "$INPUT" > tmp.s 
+./"$compiler" "$INPUT" > tmp.s 
 cc -o tmp tmp.s testfuncs.o
 ./tmp > $YOUR_ANS
 
@@ -46,5 +46,14 @@ judge
 
 ######################################################################
 # テスト実行部
+
+compiler="./9cc"
 runtest nqueen
+echo
+
+compiler="./9cc_self"
+runtest nqueen
+echo
+
 echo "all done."
+echo

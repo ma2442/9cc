@@ -8,7 +8,7 @@ void error_undef(Token *tok, DefKind kind) {
     else if (kind == DK_ENUM)
         error_at(tok->str, "undefined enum");
     // else if (kind == DK_ENUMCONST)
-    //     error_at(tok->str, "未定義の定数です");
+    //     error_at(tok->str, "undefined constant");
     else if (kind == DK_FUNC)
         error_at(tok->str, "undefined function");
 }

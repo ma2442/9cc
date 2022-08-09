@@ -12,7 +12,7 @@ ASEMS_SELF=find_self.s
 # link
 # 9cc: $(OBJS)
 # 	$(CC) -o 9cc $(OBJS) $(LDFLAGS)
-9cc_self: $(ASEMS_SELF)
+9cc_self: $(ASEMS_SELF) 9cc
 	$(CC) -o 9cc_self $(ASEMS_SELF) $(OBJS) $(LDFLAGS)
 
 find_self.s: 9cc 9cc_manual.h 9cc.h
@@ -41,7 +41,7 @@ testp: 9cc_self
 	./test_practical.sh
 
 clean:
-	rm -f 9cc *.o *~ tmp* find.s find_self.s 9cc_self
+	rm -f 9cc *.o *~ tmp* find.s  9cc_self find_self.s
 
 .PHONY: test testp clean
 
