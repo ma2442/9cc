@@ -6,6 +6,23 @@ typedef void FILE;
 typedef long unsigned int size_t;
 int printf(char *, ...);
 int sprintf(char *__s, char *__format, ...);
+int fprintf(FILE *__stream, char *__fmt, ...);
+
+/* Standard streams.  */
+extern FILE *stdin;  /* Standard input stream.  */
+extern FILE *stdout; /* Standard output stream.  */
+extern FILE *stderr; /* Standard error output stream.  */
+/* C89/C99 say they're macros.  Make them happy.  */
+#define stdin stdin
+#define stdout stdout
+#define stderr stderr
+
+// typedef __builtin_va_list __gnuc_va_list;
+// typedef __gnuc_va_list va_list;
+// int vfprintf(FILE *__stream, char *__fmt, __gnuc_va_list __ap);
+// #define va_start(v, l) __builtin_va_start(v, l)
+// #define va_end(v) __builtin_va_end(v)
+
 size_t strlen(char *__s);
 int strncmp(char *__s1, char *__s2, size_t __n);
 char *strncpy(char *__dest, char *__src, size_t __n);
@@ -24,6 +41,7 @@ FILE *fopen(char *__filename, char *__modes);
 size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
 int fclose(FILE *__stream);
 int *__errno_location();
-
 // #define errno (*__errno_location())
+void exit(int __status);
+
 #include "9cc.h"

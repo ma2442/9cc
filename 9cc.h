@@ -280,6 +280,7 @@ char *read_file(char *path);
 char *cpy_dirname(char *path);
 
 // error.c
+void error_at2(char *loc, char *fmt, char *op);
 void error_at(char *loc, char *fmt, ...);
 void error(char *fmt, ...);
 

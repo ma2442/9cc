@@ -776,6 +776,7 @@ Node *func(Type *typ, Token *name) {
         node->arg_idx = -1;
         Node *arg = node;
         do {
+            if (consume("...")) break;
             Token *tok_void = token;
             typ = base_type();
             voidcheck(typ, tok_void->str);

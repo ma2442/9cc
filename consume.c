@@ -82,7 +82,7 @@ int consume_compo_assign() {
 void expect(char *op) {
     if ((token->kind != TK_RESERVED && token->kind != TK_CTRL) ||
         !eqtokstr(token, op)) {
-        error_at(token->str, "'%s'ではありません", op);
+        error_at2(token->str, "'%s'ではありません", op);
     }
     token = token->next;
     return;

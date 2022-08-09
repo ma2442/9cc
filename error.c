@@ -1,11 +1,11 @@
-#include "9cc_auto.h"
+#include "9cc_manual.h"
 
 // エラーの起きた場所を報告するための関数
 // 下のようなフォーマットでエラーメッセージを表示する
 //
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
-void error_at(char *loc, char *fmt, ...) {
+void error_at2(char *loc, char *fmt, char *op) {
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;
@@ -26,21 +26,29 @@ void error_at(char *loc, char *fmt, ...) {
     int pos = loc - line + indent;
     fprintf(stderr, "%*s", pos, "");  // pos個の空白を出力
     fprintf(stderr, "^ ");
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
+
+    // va_list ap;
+    // va_start(ap, fmt);
+    // va_end(ap);
+    // vfprintf(stderr, fmt, ap);
+    if (op)
+        fprintf(stderr, fmt, op);
+    else
+        fprintf(stderr, fmt);
     fprintf(stderr, "\n");
     exit(1);
 }
 
+void error_at(char *loc, char *fmt, ...) { error_at2(loc, fmt, ""); }
+
 // エラーを報告するための関数
 // printfと同じ引数を取る
 void error(char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    // va_list ap;
+    // va_start(ap, fmt);
+    // vfprintf(stderr, fmt, ap);
+    // va_end(ap);
+    fprintf(stderr, fmt);
     fprintf(stderr, "\n");
-    va_end(ap);
     exit(1);
 }

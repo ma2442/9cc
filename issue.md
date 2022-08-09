@@ -6,6 +6,9 @@
 -   [ ] static
 -   [ ] const
 -   [ ] restrict
+-   [ ] va_list
+-   [ ] va_start
+-   [ ] va_end
 
 ### Essential To Do 使用中かつ代替不可能
 
@@ -24,8 +27,7 @@
 
 ### Issue
 
--   [ ] main.c のセルフホスト(#include <error.h>)
--   [ ] error.c のセルフホスト(vprintf, fprintf のインクルード)
+-   [ ] 可変長引数の関数定義実装 (とりあえず ", ..." は無視している)
 -   [ ] 二次元配列の初期化式を実装して、codegen.c の arg_storage を元に戻す
 -   [ ] 引数を取る #define 実装
 -   [ ] #include ".." の include ディレクトリへの探索
