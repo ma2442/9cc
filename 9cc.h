@@ -338,7 +338,7 @@ bool consume(char *op);
 Token *consume_numeric();
 Token *consume_str();
 Token *consume_typeq();
-Token *consume_tag_without_def();
+Token *consume_tag_without_def(TokenKind kind);
 Token *consume_enum_tag();
 Token *consume_typecore();
 Token *consume_ident();
