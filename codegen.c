@@ -295,20 +295,21 @@ bool gen_func(Node* node) {
                    node->def->tok->str);
             gen(node->next_arg);  //実引数計算
             // rsp - mod(rsp, 16) を計算してrspを16バイト境界に揃える。
+
             printf("  mov rax, rsp\n");
             printf("  and rax, 0x0f\n");
-            printf("  sub rsp, rax\n");
-            printf("  push rax\n");
-
+            printf("  sub rsp, rax\n");  // 16k
+            printf("  push rax\n");      // 16k + 8
+            printf("  sub rsp, 8\n");    // 16(k+1)
             // 可変長引数関数に渡す浮動小数 = 0個
             printf("  mov al, 0\n");
             // 関数呼び出し
             printf("  call %.*s\n", node->def->tok->len, node->def->tok->str);
 
             // rspを16バイト境界揃えから元に戻す
-            printf("  pop rcx\n");
+            printf("  add rsp, 8\n");  // 16k + 8
+            printf("  pop rcx\n");     // 16k
             printf("  add rsp, rcx\n");
-
             // 返り値をスタックに保存
             if (node->type->ty != VOID) {
                 expand_size(RAX, node->type);
@@ -395,7 +396,8 @@ bool gen_assign(Node* node) {
             printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             if (node->val)
                 printf("  %s %lld\n",
-                       cnvword(SIZE_SEGMENT, size(node->def->var->type)), node->val);
+                       cnvword(SIZE_SEGMENT, size(node->def->var->type)),
+                       node->val);
             else
                 printf("  .zero %d\n", size(node->def->var->type));
             return true;

@@ -53,9 +53,13 @@ bool is_basic_numeric(Type *typ) {
     return false;
 }
 
-// ポインタ同士か？その上キャスト可能か
+// キャスト先がポインタか？ その場合にキャスト可能か？
 bool can_cast_ptr(Type *to, Type *from) {
     if (!to || !from) return false;
+    if (to->ty != PTR) return false;
+    if (to->ty == PTR && from->ty == ARRAY)
+        return eqtype(to->ptr_to, from->ptr_to);
+    if (to->ty == PTR && is_basic_numeric(from)) return true;
     if (to->ty != PTR || from->ty != PTR) return false;
     if (to->ptr_to->ty == VOID || from->ptr_to->ty == VOID) return true;
     return can_cast(to->ptr_to, from->ptr_to);
@@ -66,8 +70,6 @@ bool can_cast(Type *to, Type *from) {
     if (!to || !from) return false;
     if (to->ty == VOID || from->ty == VOID) return false;
     if (to->ty == VARIABLE) return true;
-    if (to->ty == PTR && from->ty == ARRAY)
-        return eqtype(to->ptr_to, from->ptr_to);
     if (can_cast_ptr(to, from)) return true;
     if (is_basic_numeric(to) && is_basic_numeric(from)) return true;
     return eqtype(to, from);

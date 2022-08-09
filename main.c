@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     init_sizes();
 
     // トークナイズする
-    token = tokenize(user_input);
+    token = tokenize(user_input, filename);
 
     program();
 

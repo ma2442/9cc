@@ -34,11 +34,12 @@ Def *find_def(Token *tok, DefKind kind) {
     return NULL;
 }
 
-// 列挙体定数を名前で検索する。 見つからなかった場合はNULLを返す。
+// 列挙子を名前で検索する。 見つからなかった場合はNULLを返す。
 Def *find_enumconst(Token *tok) {
     for (Def *denm = def[nest]->denms; denm; denm = denm->next) {
-        for (Def *dcst = denm->enm->dconsts; dcst && dcst->tok;
+        for (Def *dcst = denm->enm->dconsts; dcst;
              dcst = dcst->next) {
+            if(!dcst->tok) continue;
             if (sametok(dcst->tok, tok)) return dcst;
         }
     }

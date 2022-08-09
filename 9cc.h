@@ -285,7 +285,7 @@ void error(char *fmt, ...);
 
 // tokenize.c
 Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-Token *tokenize(char *p);
+Token *tokenize(char *p, char *filepath);
 
 // parse.c
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);

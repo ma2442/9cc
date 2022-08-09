@@ -273,10 +273,38 @@ bool read_match(char **pp, char *str, int len) {
     return false;
 }
 
-char *make_abspath(char **pp) {
+char *make_abspath(char **pp, char *dir) {
     char *path = read_innner_strlike(pp, '"', '"');
     if (!path) return NULL;
-    return strcat(cpy_dirname(filename), path);
+    char *abs = strcat(cpy_dirname(dir), path);
+    int len = strlen(abs);
+    char *rev = calloc(len + 2, sizeof(char));
+    int ir = 0;
+    int skip_cnt = 0;
+    int i = len;
+    while (i >= 0) {
+        int ichk = i - 3;
+        if (ichk >= 0 && strncmp(abs + ichk, "/../", 4) == MATCH) {
+            skip_cnt++;
+            i = ichk;
+            continue;
+        }
+        if (skip_cnt) {
+            i--;
+            while (i >= 0 && abs[i] != '/') i--;
+            skip_cnt--;
+            continue;
+        }
+        rev[ir] = abs[i];
+        ir++;
+        i--;
+    }
+    for (; ir >= 0; ir--) {
+        abs[i] = rev[ir];
+        i++;
+    }
+
+    return abs;
 }
 
 // #define IDENT ________ のアンダーライン部分をトークナイズ
@@ -320,7 +348,7 @@ Token *cpy_alltoken(Token *from) {
 }
 
 // 入力文字列pをトークナイズしてそれを返す
-Token *tokenize(char *p) {
+Token *tokenize(char *p, char *filepath) {
     Token head;
     head.next = NULL;
     Token *tok_inc = NULL;
@@ -340,13 +368,10 @@ Token *tokenize(char *p) {
             int idtlen = read_ident(p);
             if (read_match(&p, "include", idtlen)) {
                 skip_nontoken_notLF(&p);
-                char *path = make_abspath(&p);
-                if (path) {
-                    char *content = read_file(path);
-                    cur->next = tokenize(content);
-                    while (cur->next && cur->next->kind != TK_EOF)
-                        cur = cur->next;
-                }
+                char *incpath = make_abspath(&p, filepath);
+                char *content = read_file(incpath);
+                cur->next = tokenize(content, incpath);
+                while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
             } else if (read_match(&p, "define", idtlen)) {
                 skip_nontoken_notLF(&p);
                 int deflen = read_ident(p);
