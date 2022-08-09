@@ -1,10 +1,9 @@
-#include "9cc_auto.h"
+#include "9cc_manual.h"
 
 bool sametok(Token *tok1, Token *tok2) {
     if (!tok1 || !tok2) return false;
     if (tok1->len != tok2->len) return false;
-    if (strncmp(tok1->str, tok2->str, tok1->len) != MATCH)
-        return false;
+    if (strncmp(tok1->str, tok2->str, tok1->len) != MATCH) return false;
     return true;
 }
 
