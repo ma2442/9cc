@@ -9,6 +9,7 @@
 -   [ ] va_list
 -   [ ] va_start
 -   [ ] va_end
+-   [ ] デバッグ情報出力機能実装
 
 ### Essential To Do 使用中かつ代替不可能
 

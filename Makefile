@@ -2,40 +2,57 @@
 # -g デバッグ情報出力
 # -static スタティックリンクする
 CFLAGS=-std=c11 -g -static
-SRCS=$(wildcard *.c)
-ASEMS=find.s nest.s parse.s type.s util.s consume.s codegen.s main.s error.s tokenize.s
-OBJS=$(filter-out $(ASEMS:.s=.o), $(SRCS:.c=.o))
+SRCS=$(filter-out src/incld.c, $(wildcard src/*.c))
+FILES=$(notdir $(SRCS))
+OBJS=incld.o
+ASEMS=$(addprefix asm/, $(FILES:.c=.s))
 ASEMS_SELF=$(ASEMS:.s=_self.s)
+ASEMS_SELF2=$(ASEMS:.s=_self2.s)
+all:
+	@echo $(ASEMS_SELF2)
 
 9cc: $(ASEMS) $(OBJS)
-	$(CC) -o 9cc $(ASEMS) $(OBJS) $(LDFLAGS)
-
-$(OBJS): 9cc_auto.h 9cc.h
+	$(CC) -o $@ $(ASEMS) $(OBJS) $(LDFLAGS)
 
 9cc_self: $(ASEMS_SELF) 9cc
-	$(CC) -o 9cc_self $(ASEMS_SELF) $(OBJS) $(LDFLAGS)
+	$(CC) -o $@ $(ASEMS_SELF) $(OBJS) $(LDFLAGS)
 
-$(ASEMS): 9cc_manual.h 9cc.h
-$(ASEMS_SELF): 9cc 9cc_manual.h 9cc.h
-%_self.s: %.c
+9cc_self2: $(ASEMS_SELF2) 9cc_self
+	$(CC) -o $@ $(ASEMS_SELF2) $(OBJS) $(LDFLAGS)
+
+$(OBJS): src/9cc_auto.h src/9cc.h
+$(ASEMS): src/9cc_manual.h src/9cc.h
+$(ASEMS_SELF): 9cc src/9cc_manual.h src/9cc.h
+$(ASEMS_SELF2): 9cc_self src/9cc_manual.h src/9cc.h
+
+asm/%_self.s: src/%.c 9cc
 	./"9cc" $< > $@; if [ $$? -ne 0 ]; then rm $@; fi
-	./support/shortenasm $@ > tmpself.s
-	mv tmpself.s $@
-	
+	./support/shortenasm $@ > asm/_self.s
+	mv asm/_self.s $@
 
-%.s: %.c
+asm/%_self2.s: src/%.c 9cc_self
+	./"9cc_self" $< > $@; if [ $$? -ne 0 ]; then rm $@; fi
+	./support/shortenasm $@ > asm/_self2.s
+	cmp asm/_self2.s asm/$*_self.s
+	mv asm/_self2.s $@
+	rm asm/$*_self.s
+
+asm/%.s: src/%.c
 	cc $(CFLAGS) -S $< -o $@  -masm=intel 
 
-incld.o : incld.c
-	gcc $(CFLAGS) -c -o incld.o incld.c
+%.o : src/%.c
+	gcc $(CFLAGS) -c $< -o $@
 
-test: test9cc testself
+test: test9cc testself testself2
 
 test9cc: 9cc test/testfuncs.o
 	./test.sh ./9cc
 
 testself: 9cc_self test/testfuncs.o
 	./test.sh ./9cc_self
+
+testself2: 9cc_self2
+	cmp 9cc_self2 9cc_self
 
 testp: testp9cc testpself
 
@@ -46,7 +63,7 @@ testpself: 9cc_self test/testfuncs.o
 	./test_practical.sh ./9cc_self
 
 clean:
-	rm -f 9cc *.o *~ tmp* 9cc_self $(ASEMS) $(ASEMS_SELF)
+	rm -f 9cc 9cc_self *.o *~ tmp* $(ASEMS) $(ASEMS_SELF) $(ASEMS_SELF2)
 
-.PHONY: test testp test9cc testp9cc testself testpself clean
+.PHONY: test testp test9cc testp9cc testself testself2 testpself clean
 

@@ -1,3 +1,4 @@
+.doc
 .vscode
 *~
 *.s
@@ -6,5 +7,7 @@ tmp*
 a.out
 9cc
 9cc_self
+9cc_self2
 shortenasm
 doc
+asm
