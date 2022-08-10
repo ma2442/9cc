@@ -468,7 +468,7 @@ Token *tokenize(char *p, char *filepath) {
                 drep->next = dreplace;
                 dreplace = drep;
             } else {
-                error_at(p, "不正なプリプロセス命令です");
+                // ディレクティブでない 読み飛ばす
             }
             while (*p != '\n') p++;
             continue;

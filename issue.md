@@ -28,6 +28,7 @@
 
 ### Issue
 
+-   [ ] __builtin_va_list の実装
 -   [ ] vfprintf 組み込み関数の include
 -   [ ] isspace 組み込み関数の include
 -   [ ] エスケープシーケンス ¥ooo 8 進数の文字コードを持つ文字

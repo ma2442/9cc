@@ -1,4 +1,5 @@
 #include "test.h"
+# 143 "/usr/include/x86_64-linux-gnu/bits/types.h" 2 3 4
 
 // ローカル変数スタック長可変化テスト
 int main_t0() {
@@ -897,7 +898,7 @@ int main_t45() {
     if (llp[0] != 993) return 1;
     // printf("llpointer(3):%llu, %llu, %llu\n", llp - lla, llp, lla);
     if (llp - lla != 3) return 2;
-    
+
     return 0;
 }
 
