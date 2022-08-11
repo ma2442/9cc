@@ -1,6 +1,7 @@
 #include "9cc_manual.h"
 
 Def *dreplace;      // #define リスト
+bool skip = false;  // プリプロセスのif失敗中
 
 Def *find_replace(Token *idt) {
     for (Def *d = dreplace; d; d = d->next) {
@@ -420,6 +421,59 @@ Token *cpy_alltoken(Token *from) {
     return head.next;
 }
 
+bool preproc(char **pp, Token **tokp, char *filepath) {
+    char *p = *pp;
+    Token *cur = *tokp;
+    if (*p != '#') {
+        if (!skip)
+            return false;
+        else
+            goto END;
+    }
+    p++;  // '#' の直後
+    skip_nontoken_notLF(&p);
+    // ディレクティブの長さ取得
+    int drctlen = read_ident(p);
+    if (read_match(&p, "else", drctlen)) {
+        skip = !skip;
+    } else if (skip) {
+        if (read_match(&p, "endif", drctlen)) {
+            skip = false;
+        }
+    } else if (read_match(&p, "include", drctlen)) {
+        skip_nontoken_notLF(&p);
+        char *incpath = make_abspath(&p, filepath);
+        char *content = read_file(incpath);
+        cur->next = tokenize(content, incpath);
+        while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
+    } else if (read_match(&p, "define", drctlen)) {
+        skip_nontoken_notLF(&p);
+        int len = read_ident(p);
+        Token *idt = new_tok(TK_IDENT, p, len);
+        if (find_replace(idt)) error_at(p, ERRNO_PREPROC_DEF);
+        Def *drep = calloc(1, sizeof(Def));
+        drep->tok = new_tok(TK_IDENT, p, len);
+        p += len;
+        drep->replace = tokenize_predefine(p);
+        drep->next = dreplace;
+        dreplace = drep;
+    } else if (read_match(&p, "ifdef", drctlen) ||
+               read_match(&p, "ifndef", drctlen)) {
+        skip_nontoken_notLF(&p);
+        int len = read_ident(p);
+        Token *idt = new_tok(TK_IDENT, p, len);
+        if (!find_replace(idt)) skip = true;
+        if (drctlen == 6) skip = !skip;  // ifndef
+    } else {
+        // ディレクティブでない 読み飛ばす
+    }
+END:
+    while (*p != '\n') p++;
+    *pp = p;
+    *tokp = cur;
+    return true;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p, char *filepath) {
     Token head;
@@ -430,37 +484,15 @@ Token *tokenize(char *p, char *filepath) {
     while (*p) {
         if (skip_nontoken_notLF(&p)) continue;
         if (*p == '\n') {
-            is_linehead = true;
             p++;
+            is_linehead = true;
             continue;
         }
         // プリプロセス
-        if (is_linehead && *p == '#') {
-            p++;  // '#' の直後
-            skip_nontoken_notLF(&p);
-            int idtlen = read_ident(p);
-            if (read_match(&p, "include", idtlen)) {
-                skip_nontoken_notLF(&p);
-                char *incpath = make_abspath(&p, filepath);
-                char *content = read_file(incpath);
-                cur->next = tokenize(content, incpath);
-                while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
-            } else if (read_match(&p, "define", idtlen)) {
-                skip_nontoken_notLF(&p);
-                int deflen = read_ident(p);
-                Def *drep = calloc(1, sizeof(Def));
-                drep->tok = new_tok(TK_IDENT, p, deflen);
-                p += deflen;
-                drep->replace = tokenize_predefine(p);
-                drep->next = dreplace;
-                dreplace = drep;
-            } else {
-                // ディレクティブでない 読み飛ばす
-            }
-            while (*p != '\n') p++;
-            continue;
-        }
+        if (is_linehead && preproc(&p, &cur, filepath)) continue;
+
         is_linehead = false;
+        if (skip) continue;
         // 通常のトークン読み
         if (read_str(&p, &cur)) continue;
         if (read_char(&p, &cur)) continue;

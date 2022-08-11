@@ -27,6 +27,7 @@ assertf 1 comment.c
 assertf 255 test_quick.c
 assertf 255 test4.c
 assertf 255 test5.c
+assertf 255 test6.c
 
 echo "[ OK ]" "$compiler"
 echo

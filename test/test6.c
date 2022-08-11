@@ -1,0 +1,64 @@
+#include "test.h"
+
+int main_t1() {
+    int x = 0;
+#ifdef TEST1
+    return 1;
+#endif
+
+#ifdef TEST1
+    return 2;
+#else
+    x = 1;
+#endif
+    if (x != 1) return 3;
+    printf("%d\n", x);
+
+#ifndef TEST1
+    x = 2;
+#endif
+    if (x != 2) return 4;
+    printf("%d\n", x);
+
+#ifndef TEST1
+    x = 3;
+#else
+    return 5;
+#endif
+    if (x != 3) return 7;
+    printf("%d\n", x);
+
+#define TEST1
+#ifdef TEST1
+    x = 4;
+#endif
+    if (x != 4) return 8;
+    printf("%d\n", x);
+
+#ifdef TEST1
+    x = 5;
+#else
+    return 6;
+#endif
+    if (x != 5) return 9;
+    printf("%d\n", x);
+
+#ifndef TEST1
+    return 10;
+#endif
+
+#ifndef TEST1
+    return 11;
+#else
+    x = 6;
+#endif
+    if (x != 6) return 12;
+    printf("%d\n", x);
+
+    return 0;
+}
+
+int main() {
+    if (main_t1()) return 1;
+    return 255;
+}
