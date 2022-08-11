@@ -94,7 +94,7 @@ Node *new_node_mem(Node *nd_stc, Token *tok) {
     Def *dvar = find_def(tok, DK_VAR);
     member_out();
     if (!dvar) {
-        error_at(tok->str, "未定義のメンバです。");
+        error_at(tok->str, ERRNO_FIT_MEMBER);
         return NULL;
     }
     Node *node = new_node(ND_MEMBER, nd_stc, NULL);
@@ -141,14 +141,14 @@ Node *str_literal() {
 // 関数シグネチャ一致確認
 bool eq_signature(Def *dfn1, Def *dfn2, bool check_rettype) {
     if (check_rettype && !eqtype(dfn1->fn->type, dfn2->fn->type))
-        error_at(dfn2->tok->str, ERR_MSG_MISMATCH_SIGNATURE);
+        error_at(dfn2->tok->str, ERRNO_SIGNATURE);
     Def *darg1 = dfn1->fn->darg0->prev;
     Def *darg2 = dfn2->fn->darg0->prev;
     while (darg1 || darg2) {
         if (darg1 && darg1->var->type->ty == VARIABLE) return true;
         if (darg2 && darg2->var->type->ty == VARIABLE) return true;
         if (!darg1 || !darg2 || !eqtype(darg1->var->type, darg2->var->type))
-            error_at(dfn2->tok->str, ERR_MSG_MISMATCH_SIGNATURE);
+            error_at(dfn2->tok->str, ERRNO_SIGNATURE);
         darg1 = darg1->prev;
         darg2 = darg2->prev;
     }
@@ -170,18 +170,18 @@ Node *func_call(Token *tok) {
         do {
             if (!darg->var->type || darg->var->type->ty != VARIABLE)
                 darg = darg->prev;
-            if (!darg) error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
+            if (!darg) error_at(token->str, ERRNO_SIGNATURE);
             arg->next_arg = new_node(ND_FUNC_CALL_ARG, NULL, expr());
             arg->next_arg->type = darg->var->type;
             if (!can_cast(arg->next_arg->type, arg->next_arg->rhs->type))
-                error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
+                error_at(token->str, ERRNO_SIGNATURE);
             arg->next_arg->arg_idx = arg->arg_idx + 1;
             arg = arg->next_arg;
         } while (consume(","));
         expect(")");
     }
     if (darg != dfn->fn->dargs && dfn->fn->dargs->var->type->ty != VARIABLE)
-        error_at(token->str, ERR_MSG_MISMATCH_SIGNATURE);
+        error_at(token->str, ERRNO_SIGNATURE);
     return node;
 }
 
@@ -252,7 +252,7 @@ Node *primary() {
     if (consume("(")) {
         node = func_call(tok);
         if (node->type->ty == VOID)
-            error_at(tok->str, "void型は評価できません");
+            error_at(tok->str, ERRNO_VOID);
         return node;
     }
     // 列挙子として識別
@@ -277,10 +277,11 @@ Node *unary() {
         return node;
     }
     if (consume("sizeof")) {
+        Token *tok_typ = token;
         Type *typ = base_type();
         if (!typ) typ = unary()->type;
         if (typ == NULL) {
-            error("sizeof:不明な型です");
+            error_at(tok_typ->str, ERRNO_PARSE_TYPE);
         }
         return new_node_num(size(typ));
     }
@@ -454,14 +455,14 @@ void decla_var_check(Type *typ, Token *name) {
     // 変数以外で宣言されていたらエラー
     if (find_def(name, DK_ENUMCONST) || find_def(name, DK_FUNC) ||
         find_def(name, DK_TYPE))
-        error_at(name->str, "symbol has already used");
+        error_at(name->str, ERRNO_DEF_SYMBOL);
     // 同スコープにおいて同名で定義済みならエラー
     //                   違う型で宣言のみされていたらエラー
     Def *ddecla = find_def(name, DK_VAR);
     if (ddecla && ddecla->var->is_defined)
-        error_at(name->str, "定義済みの変数です");
+        error_at(name->str, ERRNO_DECLA_VAR);
     if (ddecla && !eqtype(typ, ddecla->var->type))
-        error_at(name->str, "宣言時の型と一致しません");
+        error_at(name->str, ERRNO_PARSE_TYPE);
 }
 
 Node *decla_var(Type *typ, Token *name) {
@@ -526,7 +527,7 @@ Node *stmt() {
     if (consume("return")) {
         if (dfunc->fn->type->ty != VOID) {
             node = expr();
-            if (!node) error_at(token->str, "返却値がありません");
+            if (!node) error_at(token->str, ERRNO_RETURN);
         }
         node = new_node(ND_RETURN, node, NULL);
         expect(";");
@@ -534,7 +535,7 @@ Node *stmt() {
     }
     if (consume("break")) {
         if (breaknest == -1)
-            error_at(token->str, "breakがswitch, while, forの外側にあります");
+            error_at(token->str, ERRNO_BREAK);
         node = new_node(ND_GOTO, NULL, NULL);
         node->label = calloc(1, sizeof(Token));
         node->label->str = calloc(DIGIT_LEN + strlen(".Lend"), sizeof(char));
@@ -544,7 +545,7 @@ Node *stmt() {
     }
     if (consume("continue")) {
         if (continest == -1)
-            error_at(token->str, "continueがwhile, forの外側にあります");
+            error_at(token->str, ERRNO_CONTINUE);
         node = new_node(ND_GOTO, NULL, NULL);
         node->label = calloc(1, sizeof(Token));
         node->label->str =
@@ -714,7 +715,7 @@ bool decla_func(Type *typ, Token *name) {
             } else {
                 Token *tok_void = token;
                 typ = base_type();
-                if (!typ) error_at(tok_void->str, "型ではありません");
+                if (!typ) error_at(tok_void->str, ERRNO_PARSE_TYPE);
                 voidcheck(typ, tok_void->str);
                 consume_ident();
             }
@@ -736,7 +737,7 @@ bool decla_func(Type *typ, Token *name) {
         goto REGISTER;
     }
     // 定義済関数の宣言はエラーとする
-    if (ddecla->fn->is_defined) error_at(name->str, "定義済みの関数です");
+    if (ddecla->fn->is_defined) error_at(name->str, ERRNO_DECLA_FUNC);
 
     // 既存宣言とのシグネチャ一致確認
     if (!eq_signature(ddecla, dfunc, true)) return false;

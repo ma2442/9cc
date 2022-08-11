@@ -300,7 +300,7 @@ Type *type_struct() {
     Type *typ = def_struct(tag);
     if (typ) return typ;
     // 既存struct型を返す
-    if (!tag) error_at(token->str, "構造体タグがありません");
+    if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(STRUCT);
     typ->dstc = fit_def(tag, DK_STRUCT);
     return typ;
@@ -392,7 +392,7 @@ Type *type_enum() {
     Type *typ = def_enum(tag);
     if (typ) return typ;
     // 既存enum型を返す
-    if (!tag) error_at(token->str, "列挙体タグがありません");
+    if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(ENUM);
     typ->denm = fit_def(tag, DK_ENUM);
     return typ;
@@ -428,7 +428,7 @@ Node *typdef() {
     typ = base_type();  // 定義済み or 同時定義の型
 GET_IDENT:
     idt = consume_ident();
-    if (!typ || !idt) error_at(save->str, "typedefが不正です");
+    if (!typ || !idt) error_at(save->str, ERRNO_PARSE_TYPEDEF);
     deftype(type_array(typ), idt);
     expect(";");
     return new_node(ND_NO_EVAL, NULL, NULL);
@@ -445,10 +445,10 @@ LenSpec lenspec(Token *qlen, Token *qlen2) {
     if (!qlen) return LENSPEC_NONE;
     if (eqtokstr(qlen, STR_LONG) && eqtokstr(qlen2, STR_LONG))
         return LENSPEC_LL;
-    if (qlen2) error_at(qlen2->str, ERR_MSG_TYPEQ);
+    if (qlen2) error_at(qlen2->str, ERRNO_PARSE_TYPEQ);
     if (eqtokstr(qlen, STR_LONG)) return LENSPEC_LONG;
     if (eqtokstr(qlen, STR_SHORT)) return LENSPEC_SHORT;
-    error_at(qlen->str, ERR_MSG_TYPEQ);
+    error_at(qlen->str, ERRNO_PARSE_TYPEQ);
 }
 
 TypeKind attach_qsign(TypeKind kind, Token *qsign) {
@@ -475,7 +475,7 @@ Type *base_type() {
     for (Token *q = NULL; q = consume_typeq();) {
         if (q->kind == TK_TYPEQ_SIGN && qsign ||
             q->kind == TK_TYPEQ_LENGTH && qlen && qlen2)
-            error_at(q->str, ERR_MSG_TYPEQ);
+            error_at(q->str, ERRNO_PARSE_TYPEQ);
         else if (q->kind == TK_TYPEQ_SIGN && !qsign)
             qsign = q;
         else if (q->kind == TK_TYPEQ_LENGTH && !qlen)
@@ -508,7 +508,7 @@ Type *base_type() {
     }
 
     // (signed|unsigned|long|short)* int
-    if (core && !eqtokstr(core, STR_INT)) error_at(core->str, "不正な型です");
+    if (core && !eqtokstr(core, STR_INT)) error_at(core->str, ERRNO_PARSE_TYPE);
     if (lenspc == LENSPEC_LL) {
         typ->ty = attach_qsign(LL, qsign);
     } else if (lenspc == LENSPEC_SHORT) {
@@ -520,7 +520,7 @@ Type *base_type() {
 }
 
 void voidcheck(Type *typ, char *pos) {
-    if (typ->ty == VOID) error_at(pos, "void型は定義できません");
+    if (typ->ty == VOID) error_at(pos, ERRNO_VOID);
 }
 
 Type *type_array(Type *typ) {

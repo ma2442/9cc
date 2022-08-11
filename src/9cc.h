@@ -16,8 +16,6 @@
 #define STR_UNSIGNED "unsigned"
 #define STR_SHORT "short"
 #define STR_LONG "long"
-#define ERR_MSG_TYPEQ "型修飾子が不正です"
-#define ERR_MSG_MISMATCH_SIGNATURE "関数シグネチャが宣言と一致しません"
 
 typedef struct Token Token;
 typedef struct Node Node;
@@ -239,6 +237,39 @@ struct Node {
     int sw_num;     // caseの親switchラベル番号
     int case_cnt;   // switch内のcaseの数
 };
+
+typedef enum {
+    ERRNO_ERRDEFAULT = 1,
+    ERRNO_TOKENIZE,
+    ERRNO_TOKENIZE_NUMSUFFIX,
+    ERRNO_TOKENIZE_COMMENT,
+    ERRNO_TOKENIZE_CONST,
+    ERRNO_EXPECT,
+    ERRNO_PARSE_NUM,
+    ERRNO_PARSE_TAG,
+    ERRNO_PARSE_TYPEQ,
+    ERRNO_PARSE_TYPE,
+    ERRNO_PARSE_TYPEDEF,
+    ERRNO_FIT_VAR,
+    ERRNO_FIT_STRUCT,
+    ERRNO_FIT_ENUM,
+    ERRNO_FIT_CONSTANT,
+    ERRNO_FIT_FUNC,
+    ERRNO_FIT_MEMBER,
+    ERRNO_DEF_SYMBOL,
+    ERRNO_DEF_TAG,
+    ERRNO_DECLA_VAR,
+    ERRNO_DECLA_FUNC,
+    ERRNO_SIGNATURE,
+    ERRNO_TYPE,
+    ERRNO_VOID,
+    ERRNO_RETURN,
+    ERRNO_BREAK,
+    ERRNO_CONTINUE,
+    LEN_ERRNO
+} ErrNo;
+
+extern char *errmsg[LEN_ERRNO];
 extern int sizes[LEN_TYPE_KIND];
 extern char *type_words[LEN_TYPE_KIND];
 
@@ -279,8 +310,9 @@ char *read_file(char *path);
 char *cpy_dirname(char *path);
 
 // error.c
-void error_at2(char *loc, char *fmt, char *op);
-void error_at(char *loc, char *fmt, ...);
+void init_errmsg();
+void error_at2(char *loc, ErrNo no, char *op);
+void error_at(char *loc, ErrNo no, ...);
 void error(char *fmt, ...);
 
 // tokenize.c

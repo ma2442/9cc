@@ -82,7 +82,7 @@ int consume_compo_assign() {
 void expect(char *op) {
     if ((token->kind != TK_RESERVED && token->kind != TK_CTRL) ||
         !eqtokstr(token, op)) {
-        error_at2(token->str, "'%s'ではありません", op);
+        error_at2(token->str, ERRNO_EXPECT, op);
     }
     token = token->next;
     return;
@@ -102,7 +102,7 @@ int expect_numeric() {
             return dsym->cst->val;
         }
     }
-    error_at(token->str, "数ではありません");
+    error_at(token->str, ERRNO_PARSE_NUM);
 }
 
 bool at_eof() { return token->kind == TK_EOF; }

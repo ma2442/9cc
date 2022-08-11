@@ -94,7 +94,7 @@ bool read_comment(char **pp) {
     // ブロックコメントをスキップ
     if (strncmp(p, "/*", 2) == MATCH) {
         char *q = strstr(p + 2, "*/");
-        if (!q) error_at(p, "コメントが閉じられていません");
+        if (!q) error_at(p, ERRNO_TOKENIZE_COMMENT);
         *pp = q + 2;
         return true;
     }
@@ -237,7 +237,7 @@ void read_numsuffix(char **pp, Token **tokp) {
     }
     if (*pp == p) return;
     if (cnt_lenlit > 1 || cnt_signlit > 1)
-        error_at(p - 1, "不正な定数接尾辞です");
+        error_at(p - 1, ERRNO_TOKENIZE_NUMSUFFIX);
     *tokp = new_token(TK_NUMSUFFIX, *tokp, *pp, p - *pp);
     (*tokp)->val = is_unsigned ? lenspec & ~SIGNED : lenspec;
     *pp = p;
@@ -250,8 +250,9 @@ bool read_num(char **pp, Token **tokp) {
     (*tokp)->val = strtoll(*pp, pp, base);
     (*tokp)->len = *pp - (*tokp)->str;
     read_numsuffix(pp, tokp);
-    if (isdigit_(**pp) || isalpha_(**pp))
-        error_at(*pp, "不正な%d進定数です", base);
+    if (isdigit_(**pp) || isalpha_(**pp)){
+        error_at(*pp, ERRNO_TOKENIZE_CONST);
+        }
     return true;
 }
 
@@ -415,7 +416,7 @@ Token *tokenize_predefine(char *p) {
             p += idtlen;
             continue;
         }
-        error_at(p, "トークナイズできません");
+        error_at(p, ERRNO_TOKENIZE);
     }
     return head.next;
 }
@@ -500,7 +501,7 @@ Token *tokenize(char *p, char *filepath) {
             continue;
         }
 
-        error_at(p, "トークナイズできません");
+        error_at(p, ERRNO_TOKENIZE);
     }
 
     new_token(TK_EOF, cur, p, 1);

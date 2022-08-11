@@ -1,11 +1,44 @@
 #include "9cc_manual.h"
 
+char *errmsg[LEN_ERRNO];
+
+void init_errmsg() {
+    errmsg[0] = "";
+    errmsg[ERRNO_ERRDEFAULT] = "";
+    errmsg[ERRNO_TOKENIZE] = "トークナイズできません";
+    errmsg[ERRNO_TOKENIZE_COMMENT] = "コメントが閉じられていません";
+    errmsg[ERRNO_TOKENIZE_NUMSUFFIX] = "定数接尾辞ではありません";
+    errmsg[ERRNO_TOKENIZE_CONST] = "整数定数ではありません";
+    errmsg[ERRNO_EXPECT] = "%sではありません";
+    errmsg[ERRNO_PARSE_NUM] = "数ではありません";
+    errmsg[ERRNO_PARSE_TAG] = "タグがありません";
+    errmsg[ERRNO_PARSE_TYPE] = "型ではありません";
+    errmsg[ERRNO_PARSE_TYPEQ] = "型修飾子が不正です";
+    errmsg[ERRNO_PARSE_TYPEDEF] = "typedefが不正です";
+    errmsg[ERRNO_FIT_VAR] = "undefined valiable";
+    errmsg[ERRNO_FIT_STRUCT] = "undefined struct";
+    errmsg[ERRNO_FIT_ENUM] = "undefined enum";
+    errmsg[ERRNO_FIT_CONSTANT] = "undefined constant";
+    errmsg[ERRNO_FIT_FUNC] = "undefined function";
+    errmsg[ERRNO_FIT_MEMBER] = "未定義のメンバです";
+    errmsg[ERRNO_DEF_SYMBOL] = "symbol has already used";
+    errmsg[ERRNO_DEF_TAG] = "tag has already used";
+    errmsg[ERRNO_DECLA_VAR] = "定義済みの変数です";
+    errmsg[ERRNO_DECLA_FUNC] = "定義済みの関数です";
+    errmsg[ERRNO_SIGNATURE] = "関数シグネチャが宣言と一致しません";
+    errmsg[ERRNO_TYPE] = "宣言時の型と一致しません";
+    errmsg[ERRNO_VOID] = "void型は評価できません";
+    errmsg[ERRNO_RETURN] = "返却値がありません";
+    errmsg[ERRNO_BREAK] = "breakがswitch, while, forの外側にあります";
+    errmsg[ERRNO_CONTINUE] = "continueがswitch, while, forの外側にあります";
+}
+
 // エラーの起きた場所を報告するための関数
 // 下のようなフォーマットでエラーメッセージを表示する
 //
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
-void error_at2(char *loc, char *fmt, char *op) {
+void error_at2(char *loc, ErrNo no, char *op) {
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;
@@ -31,12 +64,12 @@ void error_at2(char *loc, char *fmt, char *op) {
     // va_start(ap, fmt);
     // va_end(ap);
     // vfprintf(stderr, fmt, ap);
-    fprintf(stderr, fmt, op);
+    fprintf(stderr, errmsg[no], op);
     fprintf(stderr, "\n");
-    exit(1);
+    exit(no);
 }
 
-void error_at(char *loc, char *fmt, ...) { error_at2(loc, fmt, ""); }
+void error_at(char *loc, ErrNo no, ...) { error_at2(loc, no, ""); }
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -47,5 +80,5 @@ void error(char *fmt, ...) {
     // va_end(ap);
     fprintf(stderr, fmt, NULL);
     fprintf(stderr, "\n");
-    exit(1);
+    exit(ERRNO_ERRDEFAULT);
 }

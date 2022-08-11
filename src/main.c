@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
     filedir = cpy_dirname(filename);
     user_input = read_file(filename);
     init_sizes();
+    init_errmsg();
 
     // トークナイズする
     token = tokenize(user_input, filename);

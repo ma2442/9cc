@@ -1,26 +1,11 @@
 #!/bin/bash
 
-assert() {
-    expected="$1"
-    input="$2"
-    echo "$input" > test/tmp/tmp.c
-    "$compiler" test/tmp/tmp.c > tmp.s
-    cc -o tmp tmp.s test/testfuncs.o
-    ./tmp
-    actual="$?"
-
-    if [ "$actual" = "$expected" ]; then
-        echo "$input => $actual"
-    else
-        echo "$input => $expected expected, but got $actual"
-        exit 1
-    fi
-}
-
 assertf(){
     expected="$1"
     input="$2"
     "$compiler" test/"$input" > tmp.s
+    res="$?"
+    if [ "$res" -ne 0 ]; then exit "$res"; fi
     cc -o tmp tmp.s test/testfuncs.o
     ./tmp
     actual="$?"
