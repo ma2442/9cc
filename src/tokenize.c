@@ -1,21 +1,7 @@
 #include "9cc_manual.h"
 
-bool isspace_(char c) {
-    switch (c) {
-        case '\t':
-        case '\n':
-        case '\v':
-        case '\f':
-        case '\r':
-        case ' ':
-            return true;
-    }
-    return false;
-}
-bool isdigit_(char c) { return '0' <= c && c <= '9'; }
-bool isalpha_(char c) { return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'; }
+Def *dreplace;      // #define リスト
 
-Def *dreplace;  // #define リスト
 Def *find_replace(Token *idt) {
     for (Def *d = dreplace; d; d = d->next) {
         if (sametok(d->tok, idt)) return d;
@@ -204,7 +190,7 @@ int read_numprefix(char **pp) {
         } else if ((*pp)[1] == 'b' || (*pp)[1] == 'B') {
             (*pp) += 2;
             return 2;
-        } else if (isdigit_((*pp)[1])) {
+        } else if (isdigit((*pp)[1])) {
             (*pp)++;
             return 8;
         }
@@ -244,15 +230,15 @@ void read_numsuffix(char **pp, Token **tokp) {
 }
 
 bool read_num(char **pp, Token **tokp) {
-    if (!isdigit_(**pp)) return false;
+    if (!isdigit(**pp)) return false;
     *tokp = new_token(TK_NUM, *tokp, *pp, 1);
     int base = read_numprefix(pp);
     (*tokp)->val = strtoll(*pp, pp, base);
     (*tokp)->len = *pp - (*tokp)->str;
     read_numsuffix(pp, tokp);
-    if (isdigit_(**pp) || isalpha_(**pp)){
+    if (isdigit(**pp) || isalpha(**pp)) {
         error_at(*pp, ERRNO_TOKENIZE_CONST);
-        }
+    }
     return true;
 }
 
@@ -324,7 +310,7 @@ bool read_controls(char **pp, Token **tokp, int len) {
 
 bool skip_nontoken_notLF(char **pp) {
     for (bool done = false;; done = true) {
-        if (**pp != '\n' && isspace_(**pp))
+        if (**pp != '\n' && isspace(**pp))
             (*pp)++;
         else if (read_comment(pp))
             ;

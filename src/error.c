@@ -5,6 +5,7 @@ char *errmsg[LEN_ERRNO];
 void init_errmsg() {
     errmsg[0] = "";
     errmsg[ERRNO_ERRDEFAULT] = "";
+    errmsg[ERRNO_PREPROC_DEF] = "プリプロセス:定義済みの識別子です";
     errmsg[ERRNO_TOKENIZE] = "トークナイズできません";
     errmsg[ERRNO_TOKENIZE_COMMENT] = "コメントが閉じられていません";
     errmsg[ERRNO_TOKENIZE_NUMSUFFIX] = "定数接尾辞ではありません";

@@ -39,5 +39,8 @@ int fclose(FILE *__stream);
 int *__errno_location();
 // #define errno (*__errno_location())
 void exit(int __status);
+int isspace(int);
+int isdigit(int);
+int isalpha(int);
 
 #include "9cc.h"
