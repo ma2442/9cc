@@ -1,3 +1,5 @@
+#ifndef HEADER_H
+#define HEADER_H
 #define bool _Bool
 #define true 1
 #define false 0
@@ -44,3 +46,4 @@ int isdigit(int);
 int isalpha(int);
 
 #include "9cc.h"
+#endif  // HEADER_H

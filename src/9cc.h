@@ -1,6 +1,3 @@
-
-// #ifndef HEADER_H
-#define HEADER_H
 #define BLOCK_LEN 1280
 #define CASE_LEN 128
 #define CODE_LEN 1280
@@ -302,7 +299,6 @@ extern Node *sw[NEST_MAX];       // switch対象ノード
 extern int swnest;               // switchネスト数
 extern int fncnt;                // 関数通し番号(goto label 用)
 
-// #endif  // HEADER_H
 // util.c
 bool sametok(Token *tok1, Token *tok2);
 bool eqtokstr(Token *tok, char *str);
