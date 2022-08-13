@@ -553,9 +553,6 @@ Token *tokenize_param(char **pp) {
     char *p = *pp;
     Token head;
     Token *cur = &head;
-    Token *prev = &head;
-    cur->next = calloc(1, sizeof(Token));
-    cur = cur->next;
     int inner = 0;
     while (inner || !eqtokstr(cur, ",") && !eqtokstr(cur, ")")) {
         if (eqtokstr(cur, "(")) {
@@ -565,12 +562,11 @@ Token *tokenize_param(char **pp) {
         }
         cur->next = tokenize_next(&p);
         cur = cur->next;
-        prev = prev->next;
     }
     cur->str = "";  // 最後の"," or ")" を "" に変更
     cur->len = 0;
     *pp = p - 1;  // ',' or ')'
-    return head.next->next;
+    return head.next;
 }
 
 bool read_macro(char **pp, Token **tokp) {
