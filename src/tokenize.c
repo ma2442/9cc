@@ -602,9 +602,10 @@ Token *tokenize_macro_if(char *p) {
             continue;
         }
         if (read_macro(&p, &cur)) continue;
-        // 変数名 判定
         if (idtlen > 0) {
-            cur = new_token(TK_IDENT, cur, p, idtlen);
+            // 未定義のマクロは0として評価する
+            cur = new_token(TK_NUM, cur, "0", 1);
+            cur->val = 0;
             p += idtlen;
             continue;
         }

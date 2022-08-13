@@ -135,13 +135,30 @@ int main_t9() {
 
 #define MA_t10 a
 #define MB_t10 b
-#define MC_t10(x) M ## x ## _t10 + 1
+#define MC_t10(x) M##x##_t10 + 1
 
 int main_t10() {
     int a = 10;
     int b = 20;
     if (MC_t10(A) != 11) return 1;
     if (MC_t10(B) != 21) return 2;
+    return 0;
+}
+
+int main_t11() {
+    int x = 0;
+#if UNDEFINED == 0
+    x = 1;
+#endif
+    if (x != 1) return 1;
+#if UNDEFINED == 1
+    return 2;
+#endif
+#if 0
+#elif UNDEFINED == 0
+    x = 2;
+#endif
+    if (x != 2) return 2;
     return 0;
 }
 
@@ -156,5 +173,6 @@ int main() {
     if (MULTIPLE_LINES2(3, 4) != 7) return 8;
     if (main_t9()) return 9;
     if (main_t10()) return 10;
+    if (main_t11()) return 11;
     return 255;
 }
