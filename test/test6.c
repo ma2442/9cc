@@ -126,6 +126,25 @@ int main_t6() __asm__((10), (20)) { return 0; }
  x \  
  + y
 
+#define M_t9 1##2
+
+int main_t9() {
+    if (M_t9 != 12) return 9;
+    return 0;
+}
+
+#define MA_t10 a
+#define MB_t10 b
+#define MC_t10(x) M ## x ## _t10 + 1
+
+int main_t10() {
+    int a = 10;
+    int b = 20;
+    if (MC_t10(A) != 11) return 1;
+    if (MC_t10(B) != 21) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t1()) return 1;
     if (main_t2()) return 2;
@@ -135,5 +154,7 @@ int main() {
     if (main_t6()) return 6;
     if (MULTIPLE_LINES != 3) return 7;
     if (MULTIPLE_LINES2(3, 4) != 7) return 8;
+    if (main_t9()) return 9;
+    if (main_t10()) return 10;
     return 255;
 }

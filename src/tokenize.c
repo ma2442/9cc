@@ -1,5 +1,6 @@
 #include "9cc_manual.h"
 
+bool read_macro(char **pp, Token **tokp);
 typedef struct Macro Macro;
 // #define macro
 struct Macro {
@@ -320,6 +321,15 @@ bool read_controls(char **pp, Token **tokp, int len) {
     return false;
 }
 
+bool read_merge(char **pp, Token **tokp) {
+    if ((*pp)[0] == '#' && (*pp)[1] == '#') {
+        *tokp = new_token(TK_MERGE, *tokp, (*pp), 2);
+        (*pp) += 2;
+        return true;
+    }
+    return false;
+}
+
 bool skip_nontoken_except(char **pp, char excpt) {
     for (bool done = false;; done = true) {
         if (**pp == '\\') {
@@ -341,7 +351,7 @@ bool skip_nontoken_except(char **pp, char excpt) {
 bool skip_nontoken(char **pp) { return skip_nontoken_except(pp, '\0'); }
 bool skip_nontoken_notLF(char **pp) { return skip_nontoken_except(pp, '\n'); }
 
-char *read_innner_strlike(char **pp, char begin, char end) {
+char *read_inner_strlike(char **pp, char begin, char end) {
     char *p = *pp;
     if (*p == begin) {
         int len = 1;
@@ -369,9 +379,18 @@ bool read_match(char **pp, char *str, int len) {
 }
 
 char *make_abspath(char **pp, char *dir) {
-    char *path = read_innner_strlike(pp, '"', '"');
+    bool is_curdir = true;
+    char *path = read_inner_strlike(pp, '"', '"');
+    if (!path) {
+        path = read_inner_strlike(pp, '<', '>');
+        is_curdir = false;
+    }
     if (!path) return NULL;
-    char *abs = strcat(cpy_dirname(dir), path);
+    char *abs;
+    if (is_curdir)
+        abs = strcat(cpy_dirname(dir), path);
+    else
+        abs = strcat(cpy_dirname("/usr/include/"), path);
     int len = strlen(abs);
     char *rev = calloc(len + 2, sizeof(char));
     int ir = 0;
@@ -400,6 +419,32 @@ char *make_abspath(char **pp, char *dir) {
     }
 
     return abs;
+}
+
+Token *try_tokenize_next(char **pp) {
+    char *p = *pp;
+    skip_nontoken_notLF(&p);
+    Token head;
+    Token *cur = &head;
+    do {
+        // if (read_merge(&p, &cur)) break;
+        if (read_str(&p, &cur)) break;
+        if (read_char(&p, &cur)) break;
+        if (read_reserved(&p, &cur)) break;
+        if (read_num(&p, &cur)) break;
+        if (read_macro(&p, &cur)) break;
+        //先頭から変数として読める部分の長さを取得
+        int idtlen = read_ident(p);
+        if (read_controls(&p, &cur, idtlen)) break;
+        // 変数名 判定
+        if (idtlen > 0) {
+            cur = new_token(TK_IDENT, cur, p, idtlen);
+            p += idtlen;
+            break;
+        }
+    } while (0);
+    *pp = p;
+    return head.next;
 }
 
 Token *find_param(Token *idt, Token **params, int pcnt) {
@@ -434,21 +479,56 @@ Macro *make_macro_from_token(Token *tok, Token **params, int pcnt) {
 }
 
 Token *make_token_from_macro(Macro *mcr) {
-    Token head;
-    head.next = NULL;
-    Token *to = &head;
-
-    for (int i = 0; i < mcr->ccnt; i++) {
-        to->next = calloc(1, sizeof(Token));
-        *to->next = *mcr->ctts[i];
-        if (eqtokstr(to->next, "")) continue;
-        to = to->next;
+    if (mcr->ccnt <= 0) return NULL;
+    Token **ctts = calloc(mcr->ccnt, sizeof(Token *));
+    int ccnt = 0;
+    char buf[1000];
+    int bcnt = 0;
+    Token *pre = NULL;
+    Token *cur = mcr->ctts[0];
+    for (int i = 1; i < mcr->ccnt; i++) {
+        pre = cur;
+        cur = mcr->ctts[i];
+        if (cur->kind == TK_MERGE && !bcnt) {  // not(##) ##
+            strncpy(buf + bcnt, pre->str, pre->len);
+            bcnt += pre->len;
+        }
+        if (pre->kind == TK_MERGE) {  // ## not(##)
+            strncpy(buf + bcnt, cur->str, cur->len);
+            bcnt += cur->len;
+        }
+        if (pre->kind != TK_MERGE && cur->kind != TK_MERGE ||
+            i == mcr->ccnt - 1) {
+            //  not(##) not(##)
+            if (bcnt) {
+                buf[bcnt] = '\0';
+                char *p = calloc(bcnt + 1, sizeof(char));
+                strncpy(p, buf, bcnt + 1);
+                ctts[ccnt] = tokenize(p, NULL);
+                bcnt = 0;
+            } else {
+                ctts[ccnt] = calloc(1, sizeof(Token));
+                *ctts[ccnt] = *pre;
+            }
+            if (!eqtokstr(ctts[ccnt], "")) ccnt++;
+        }
     }
-    to->next = NULL;
+
+    if (!pre || pre->kind != TK_MERGE && cur->kind != TK_MERGE) {
+        ctts[ccnt] = calloc(1, sizeof(Token));
+        *ctts[ccnt] = *cur;
+        if (!eqtokstr(ctts[ccnt], "")) ccnt++;
+    }
+
+    Token head;
+    cur = &head;
+    for (int i = 0; i < ccnt; i++) {
+        cur->next = ctts[i];
+        cur = cur->next;
+    }
+    cur->next = NULL;
     return head.next;
 }
-
-bool read_macro(char **pp, Token **tokp);
 
 // #define IDENT ________ のアンダーライン部分をトークナイズ
 Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
@@ -457,7 +537,7 @@ Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
     Token *cur = &head;
     while (*p != '\n') {
         if (skip_nontoken_notLF(&p)) continue;
-        // 通常のトークン読み
+        if (read_merge(&p, &cur)) continue;
         if (read_str(&p, &cur)) continue;
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;
@@ -465,8 +545,19 @@ Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
 
         int len = read_ident(p);
         // パラメータと同じ識別子ならマクロ展開をしない
+        // 前後のトークンどちらかが##ならマクロ展開しない
         Token *idt = new_tok(TK_IDENT, p, len);
-        if (!find_param(idt, params, pcnt) && read_macro(&p, &cur)) continue;
+        Token *cur1 = cur;
+        char *p1 = p;
+        if (!find_param(idt, params, pcnt) && cur->kind != TK_MERGE &&
+            read_macro(&p1, &cur1)) {
+            char *tmp = p1;
+            Token *mrg = try_tokenize_next(&tmp);
+            if (mrg && mrg->kind == TK_MERGE) return false;
+            p = p1;
+            cur = cur1;
+            continue;
+        }
         if (read_controls(&p, &cur, len)) continue;
         // 変数名 判定
         if (len > 0) {
@@ -522,32 +613,6 @@ Token *tokenize_macro_if(char *p) {
     return head.next;
 }
 
-Token *tokenize_next(char **pp) {
-    char *p = *pp;
-    skip_nontoken(&p);
-    Token head;
-    Token *cur = &head;
-    do {
-        if (read_str(&p, &cur)) break;
-        if (read_char(&p, &cur)) break;
-        if (read_reserved(&p, &cur)) break;
-        if (read_num(&p, &cur)) break;
-        if (read_macro(&p, &cur)) break;
-        //先頭から変数として読める部分の長さを取得
-        int idtlen = read_ident(p);
-        if (read_controls(&p, &cur, idtlen)) break;
-        // 変数名 判定
-        if (idtlen > 0) {
-            cur = new_token(TK_IDENT, cur, p, idtlen);
-            p += idtlen;
-            break;
-        }
-        error_at(p, ERRNO_TOKENIZE);
-    } while (0);
-    *pp = p;
-    return head.next;
-}
-
 Token *tokenize_param(char **pp) {
     char *p = *pp;
     Token head;
@@ -559,7 +624,8 @@ Token *tokenize_param(char **pp) {
         } else if (inner && eqtokstr(cur, ")")) {
             inner--;
         }
-        cur->next = tokenize_next(&p);
+        cur->next = try_tokenize_next(&p);
+        if (!cur->next) error_at(p, ERRNO_TOKENIZE);
         cur = cur->next;
     }
     cur->str = "";  // 最後の"," or ")" を "" に変更

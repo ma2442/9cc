@@ -28,6 +28,7 @@ typedef struct Def Def;
 
 // トークンの種類
 typedef enum {
+    TK_MERGE = 1,     // マクロ ## トークン連結演算子
     TK_RESERVED,      // 記号
     TK_TYPE,          // 型
     TK_TYPEQ_SIGN,    // 型修飾子 signed unsigned
