@@ -480,6 +480,49 @@ Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
     return head.next;
 }
 
+// #if ________ のアンダーライン部分をトークナイズ
+Token *tokenize_macro_if(char *p) {
+    Token head;
+    head.next = NULL;
+    Token *cur = &head;
+    while (*p != '\n') {
+        if (skip_nontoken_notLF(&p)) continue;
+        if (read_str(&p, &cur)) continue;
+        if (read_char(&p, &cur)) continue;
+        if (read_reserved(&p, &cur)) continue;
+        if (read_num(&p, &cur)) continue;
+
+        int idtlen = read_ident(p);
+        Token *idt = new_tok(TK_IDENT, p, idtlen);
+        if (eqtokstr(idt, "defined")) {
+            p += idtlen;
+            skip_nontoken_notLF(&p);
+            bool inner = false;
+            if (*p == '(') {
+                p++;
+                inner = true;
+                skip_nontoken_notLF(&p);
+            }
+            int len = read_ident(p);
+            Token *mcridt = new_tok(TK_IDENT, p, len);
+            cur = new_token(TK_NUM, cur, p, 1);
+            cur->val = find_macro(mcridt) ? 1 : 0;
+            p += len;
+            if (inner && *p == ')') p++;
+            continue;
+        }
+        if (read_macro(&p, &cur)) continue;
+        // 変数名 判定
+        if (idtlen > 0) {
+            cur = new_token(TK_IDENT, cur, p, idtlen);
+            p += idtlen;
+            continue;
+        }
+        error_at(p, ERRNO_TOKENIZE);
+    }
+    return head.next;
+}
+
 Token *tokenize_next(char **pp) {
     char *p = *pp;
     skip_nontoken(&p);
@@ -581,6 +624,11 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
     } else if (skip) {
         if (read_match(&p, "endif", drctlen)) {
             skip = false;
+        } else if (read_match(&p, "elif", drctlen)) {
+            Token *save = token;
+            token = tokenize_macro_if(p);
+            if (val(expr())) skip = false;
+            token = save;
         }
     } else if (read_match(&p, "include", drctlen)) {
         skip_nontoken_notLF(&p);
@@ -635,6 +683,11 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
         Token *idt = new_tok(TK_IDENT, p, len);
         if (!find_macro(idt)) skip = true;
         if (drctlen == 6) skip = !skip;  // ifndef
+    } else if (read_match(&p, "if", drctlen)) {
+        Token *save = token;
+        token = tokenize_macro_if(p);
+        if (!val(expr())) skip = true;
+        token = save;
     } else {
         // ディレクティブでない 読み飛ばす
     }

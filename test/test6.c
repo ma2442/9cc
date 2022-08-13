@@ -94,11 +94,33 @@ int main_t4() {
     return 0;
 }
 
+int main_t5() {
+    int x = 0;
+#if defined A_t4 && A_t4(1) < 100
+    x = 1;
+#endif
+    if (x != 1) return 1;
+#if !defined A_t4
+    return 2;
+#else
+    x = 2;
+#endif
+    if (x != 2) return 2;
+#if !defined(NOT_DEFINED) && !defined STRING
+    return 3;
+#elif defined(STRING) && A_t4(1) > 0
+    x = 3;
+#endif
+    if (x != 3) return 3;
+
+    return 0;
+}
+
 int main() {
     if (main_t1()) return 1;
     if (main_t2()) return 2;
     if (main_t3()) return 3;
     if (main_t4()) return 4;
-
+    if (main_t5()) return 5;
     return 255;
 }

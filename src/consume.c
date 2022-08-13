@@ -3,6 +3,7 @@
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op) {
+    if(!token) return false;
     switch (token->kind) {
         case TK_RESERVED:
         case TK_SIZEOF:
@@ -19,9 +20,8 @@ bool consume(char *op) {
 }
 
 Token *consume_if_kind_is(TokenKind tk) {
-    if (token->kind != tk) {
-        return NULL;
-    }
+    if (!token) return NULL;
+    if (token->kind != tk) return NULL;
     Token *this = token;
     token = token->next;
     return this;

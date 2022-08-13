@@ -1,41 +1,37 @@
 ### To Do
 
--   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
 -   [ ] #include <..>
--   [ ] #ifdef, #endif, #ifndef
--   [ ] static
--   [ ] const
--   [ ] restrict
--   [ ] va_list
--   [ ] va_start
--   [ ] va_end
 -   [ ] デバッグ情報出力機能実装
 
 ### Essential To Do 使用中かつ代替不可能
 
 ### Want To Do 使用中だが代替可能
 
+-   [ ] 可変長引数の関数定義実装 (とりあえず ", ..." は無視している)
+-   [ ] vfprintf 組み込み関数の include
+-   [ ] 文字型配列の定義と文字列リテラルによる初期化（char を一つずつスタックに入れる）実装
+-   [ ] va_list
+-   [ ] va_start
+-   [ ] va_end
 -   [ ] 共用体
--   [ ] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 -   [ ] {} 配列初期化
 -   [ ] char argstorage[][8] = {"rsi",..}; 形式の配列初期化式実装
 
 ### Optional To Do 未使用
 
+-   [ ] \_\_builtin_va_list
+-   [ ] static
+-   [ ] const
+-   [ ] restrict
+-   [ ] エスケープシーケンス ¥ooo 8 進数の文字コードを持つ文字
+-   [ ] エスケープシーケンス ¥xhh 16 進数の文字コードを持つ文字
 -   [ ] ,
 -   [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
 -   [ ] (int\* p)[10] のような入れ子になっている型定義
 
 ### Issue
 
--   [ ] __builtin_va_list の実装
--   [ ] vfprintf 組み込み関数の include
--   [ ] isspace 組み込み関数の include
--   [ ] エスケープシーケンス ¥ooo 8 進数の文字コードを持つ文字
--   [ ] エスケープシーケンス ¥xhh 16 進数の文字コードを持つ文字
--   [ ] 可変長引数の関数定義実装 (とりあえず ", ..." は無視している)
 -   [ ] 二次元配列の初期化式を実装して、codegen.c の arg_storage を元に戻す
--   [ ] 引数を取る #define 実装
 -   [ ] #include ".." の include ディレクトリへの探索
 -   [ ] goto に対応する label が存在するかどうか関数内で判定
 
@@ -47,6 +43,11 @@
 
 ### Completed
 
+-   [x] #if, #elif, defined マクロキーワード
+-   [x] 引数を取る #define 実装
+-   [x] #ifdef, #else #endif, #ifndef
+-   [x] isspace 組み込み関数の include
+-   [x] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
 -   [x] find.c のみのセルフコンパイルだと定義前変数への代入エラーが表示されず落ちる
 -   [x] find.c のみのセルフコンパイルだと int i=0; のような初期化が動かない(0 が push されない)
 -   [x] #define (但し引数を取らない)
