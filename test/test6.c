@@ -116,11 +116,15 @@ int main_t5() {
     return 0;
 }
 
+#define __asm__(x, y)
+int main_t6() __asm__((10), (20)) { return 0; }
+
 int main() {
     if (main_t1()) return 1;
     if (main_t2()) return 2;
     if (main_t3()) return 3;
     if (main_t4()) return 4;
     if (main_t5()) return 5;
+    if (main_t6()) return 6;
     return 255;
 }

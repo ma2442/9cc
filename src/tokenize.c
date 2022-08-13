@@ -557,15 +557,16 @@ Token *tokenize_param(char **pp) {
     cur->next = calloc(1, sizeof(Token));
     cur = cur->next;
     int inner = 0;
-    do {
+    while (inner || !eqtokstr(cur, ",") && !eqtokstr(cur, ")")) {
+        if (eqtokstr(cur, "(")) {
+            inner++;
+        } else if (inner && eqtokstr(cur, ")")) {
+            inner--;
+        }
         cur->next = tokenize_next(&p);
         cur = cur->next;
         prev = prev->next;
-        if (eqtokstr(cur, "("))
-            inner++;
-        else if (inner && eqtokstr(cur, ")"))
-            inner--;
-    } while (inner || !eqtokstr(cur, ",") && !eqtokstr(cur, ")"));
+    }
     cur->str = "";  // 最後の"," or ")" を "" に変更
     cur->len = 0;
     *pp = p - 1;  // ',' or ')'
