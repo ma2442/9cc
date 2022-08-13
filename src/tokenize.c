@@ -320,9 +320,16 @@ bool read_controls(char **pp, Token **tokp, int len) {
     return false;
 }
 
-bool skip_nontoken_notLF(char **pp) {
+bool skip_nontoken_except(char **pp, char excpt) {
     for (bool done = false;; done = true) {
-        if (**pp != '\n' && isspace(**pp))
+        if (**pp == '\\') {
+            (*pp)++;
+            while (**pp != '\n' && isspace(**pp)) (*pp)++;
+            if (**pp == '\n')
+                (*pp)++;
+            else
+                return true;
+        } else if (**pp != excpt && isspace(**pp))
             (*pp)++;
         else if (read_comment(pp))
             ;
@@ -331,16 +338,8 @@ bool skip_nontoken_notLF(char **pp) {
     }
 }
 
-bool skip_nontoken(char **pp) {
-    for (bool done = false;; done = true) {
-        if (isspace(**pp))
-            (*pp)++;
-        else if (read_comment(pp))
-            ;
-        else
-            return done;
-    }
-}
+bool skip_nontoken(char **pp) { return skip_nontoken_except(pp, '\0'); }
+bool skip_nontoken_notLF(char **pp) { return skip_nontoken_except(pp, '\n'); }
 
 char *read_innner_strlike(char **pp, char begin, char end) {
     char *p = *pp;
@@ -689,7 +688,10 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
         // ディレクティブでない 読み飛ばす
     }
 END:
-    while (*p != '\n') p++;
+    while (*p != '\n') {  // 行送り
+        if (skip_nontoken_notLF(&p)) continue;
+        p++;
+    }
     *pp = p;
     *tokp = cur;
     return true;

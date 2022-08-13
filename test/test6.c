@@ -119,6 +119,13 @@ int main_t5() {
 #define __asm__(x, y)
 int main_t6() __asm__((10), (20)) { return 0; }
 
+#define MULTIPLE_LINES 1 + 2
+#define MULTIPLE_LINES2(x,\  
+ y) \
+    \ 
+ x \  
+ + y
+
 int main() {
     if (main_t1()) return 1;
     if (main_t2()) return 2;
@@ -126,5 +133,7 @@ int main() {
     if (main_t4()) return 4;
     if (main_t5()) return 5;
     if (main_t6()) return 6;
+    if (MULTIPLE_LINES != 3) return 7;
+    if (MULTIPLE_LINES2(3, 4) != 7) return 8;
     return 255;
 }
