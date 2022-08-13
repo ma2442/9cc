@@ -8,7 +8,7 @@ typedef long unsigned int size_t;
 void *calloc(size_t __nmemb, size_t __size);
 
 #define ONE 1
-#define TWO 2
+#define TWO 1 + 1
 #define ABC "abc"
 #define CHAR_B 'b'
 #define DEFINE_NONE

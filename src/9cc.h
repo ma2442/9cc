@@ -200,7 +200,6 @@ struct Def {
     Def *prev;
     Token *tok;  // 名前
     DefKind kind;
-
     Var *var;
     Func *fn;
     Struct *stc;
@@ -208,7 +207,6 @@ struct Def {
     EnumConst *cst;
     StrLit *strlit;
     Type *defdtype;
-    Token *replace;  // #defineされた置き換え内容
 };
 
 // 抽象構文木のノード
@@ -238,6 +236,7 @@ struct Node {
 typedef enum {
     ERRNO_ERRDEFAULT = 1,
     ERRNO_PREPROC_DEF,
+    ERRNO_PREPROC_PARAMCNT,
     ERRNO_TOKENIZE,
     ERRNO_TOKENIZE_NUMSUFFIX,
     ERRNO_TOKENIZE_COMMENT,

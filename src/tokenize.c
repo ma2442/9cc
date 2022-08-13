@@ -1,11 +1,22 @@
 #include "9cc_manual.h"
 
-Def *dreplace;      // #define リスト
-bool skip = false;  // プリプロセスのif失敗中
+typedef struct Macro Macro;
+// #define macro
+struct Macro {
+    Macro *next;
+    Token *tok;
+    Token **params;  // パラメタリスト
+    int pcnt;        // パラメタ数
+    Token **ctts;    // 内容リスト
+    int ccnt;        // 内容 トークン数
+};
 
-Def *find_replace(Token *idt) {
-    for (Def *d = dreplace; d; d = d->next) {
-        if (sametok(d->tok, idt)) return d;
+Macro *macro = NULL;  // #define リスト
+bool skip = false;    // プリプロセスのif失敗中
+
+Macro *find_macro(Token *idt) {
+    for (Macro *m = macro; m; m = m->next) {
+        if (sametok(m->tok, idt)) return m;
     }
     return NULL;
 }
@@ -320,6 +331,17 @@ bool skip_nontoken_notLF(char **pp) {
     }
 }
 
+bool skip_nontoken(char **pp) {
+    for (bool done = false;; done = true) {
+        if (isspace(**pp))
+            (*pp)++;
+        else if (read_comment(pp))
+            ;
+        else
+            return done;
+    }
+}
+
 char *read_innner_strlike(char **pp, char begin, char end) {
     char *p = *pp;
     if (*p == begin) {
@@ -381,11 +403,58 @@ char *make_abspath(char **pp, char *dir) {
     return abs;
 }
 
-// #define IDENT ________ のアンダーライン部分をトークナイズ
-Token *tokenize_predefine(char *p) {
+Token *find_param(Token *idt, Token **params, int pcnt) {
+    for (int ip = 0; ip < pcnt; ip++) {
+        if (sametok(params[ip], idt)) return params[ip];
+    }
+    return NULL;
+}
+
+Macro *make_macro_from_token(Token *tok, Token **params, int pcnt) {
+    Macro *mcr = calloc(1, sizeof(Macro));
+    int ccnt = 0;
+    Token *save = tok;
+    while (tok) {
+        tok = tok->next;
+        ccnt++;
+    }
+    tok = save;
+    mcr->pcnt = pcnt;
+    mcr->params = params;
+    Token **ctts = calloc(ccnt, sizeof(Token *));
+    for (int i = 0; i < ccnt; i++) {
+        // パラメタと同じトークンならパラメータのポインタを入れる
+        Token *par = find_param(tok, params, pcnt);
+        ctts[i] = tok;
+        if (par) ctts[i] = par;
+        tok = tok->next;
+    }
+    mcr->ctts = ctts;
+    mcr->ccnt = ccnt;
+    return mcr;
+}
+
+Token *make_token_from_macro(Macro *mcr) {
     Token head;
     head.next = NULL;
-    Token *tok_inc = NULL;
+    Token *to = &head;
+
+    for (int i = 0; i < mcr->ccnt; i++) {
+        to->next = calloc(1, sizeof(Token));
+        *to->next = *mcr->ctts[i];
+        if (eqtokstr(to->next, "")) continue;
+        to = to->next;
+    }
+    to->next = NULL;
+    return head.next;
+}
+
+bool read_macro(char **pp, Token **tokp);
+
+// #define IDENT ________ のアンダーライン部分をトークナイズ
+Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
+    Token head;
+    head.next = NULL;
     Token *cur = &head;
     while (*p != '\n') {
         if (skip_nontoken_notLF(&p)) continue;
@@ -394,13 +463,16 @@ Token *tokenize_predefine(char *p) {
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;
         if (read_num(&p, &cur)) continue;
-        //先頭から変数として読める部分の長さを取得
-        int idtlen = read_ident(p);
-        if (read_controls(&p, &cur, idtlen)) continue;
+
+        int len = read_ident(p);
+        // パラメータと同じ識別子ならマクロ展開をしない
+        Token *idt = new_tok(TK_IDENT, p, len);
+        if (!find_param(idt, params, pcnt) && read_macro(&p, &cur)) continue;
+        if (read_controls(&p, &cur, len)) continue;
         // 変数名 判定
-        if (idtlen > 0) {
-            cur = new_token(TK_IDENT, cur, p, idtlen);
-            p += idtlen;
+        if (len > 0) {
+            cur = new_token(TK_IDENT, cur, p, len);
+            p += len;
             continue;
         }
         error_at(p, ERRNO_TOKENIZE);
@@ -408,17 +480,87 @@ Token *tokenize_predefine(char *p) {
     return head.next;
 }
 
-Token *cpy_alltoken(Token *from) {
+Token *tokenize_next(char **pp) {
+    char *p = *pp;
+    skip_nontoken(&p);
     Token head;
-    head.next = NULL;
-    Token *to = &head;
-    while (from) {
-        to->next = calloc(1, sizeof(Token));
-        *to->next = *from;
-        from = from->next;
-        to = to->next;
-    }
+    Token *cur = &head;
+    do {
+        if (read_str(&p, &cur)) break;
+        if (read_char(&p, &cur)) break;
+        if (read_reserved(&p, &cur)) break;
+        if (read_num(&p, &cur)) break;
+        if (read_macro(&p, &cur)) break;
+        //先頭から変数として読める部分の長さを取得
+        int idtlen = read_ident(p);
+        if (read_controls(&p, &cur, idtlen)) break;
+        // 変数名 判定
+        if (idtlen > 0) {
+            cur = new_token(TK_IDENT, cur, p, idtlen);
+            p += idtlen;
+            break;
+        }
+        error_at(p, ERRNO_TOKENIZE);
+    } while (0);
+    *pp = p;
     return head.next;
+}
+
+Token *tokenize_param(char **pp) {
+    char *p = *pp;
+    Token head;
+    Token *cur = &head;
+    Token *prev = &head;
+    cur->next = calloc(1, sizeof(Token));
+    cur = cur->next;
+    int inner = 0;
+    do {
+        cur->next = tokenize_next(&p);
+        cur = cur->next;
+        prev = prev->next;
+        if (eqtokstr(cur, "("))
+            inner++;
+        else if (inner && eqtokstr(cur, ")"))
+            inner--;
+    } while (inner || !eqtokstr(cur, ",") && !eqtokstr(cur, ")"));
+    cur->str = "";  // 最後の"," or ")" を "" に変更
+    cur->len = 0;
+    *pp = p - 1;  // ',' or ')'
+    return head.next->next;
+}
+
+bool read_macro(char **pp, Token **tokp) {
+    char *p = *pp;
+    Token *cur = *tokp;
+    int len = read_ident(p);
+    Token *idt = new_tok(TK_IDENT, p, len);
+    p += len;
+    Macro *mcr = find_macro(idt);
+    if (!mcr) return false;
+
+    Token **params = mcr->params;
+    if (mcr->pcnt == -1) {  // パラメタを持たないマクロ
+    } else {
+        skip_nontoken(&p);
+        if (*p != '(') return false;
+        // マクロの識別子の後のパラメタ部分(..)を読む
+        int pcnt = 0;
+        do {
+            p++;  // '(' or ','
+            Token *prm = tokenize_param(&p);
+            if (prm) *params[pcnt] = *prm;
+            pcnt++;
+        } while (*p != ')');
+        p++;
+        if (pcnt == 1 && params[0]->len == 0) pcnt = 0;
+        if (!(mcr->pcnt == 1 && pcnt == 0) && mcr->pcnt != pcnt)
+            error_at(p, ERRNO_PREPROC_PARAMCNT);
+    }
+    cur->next = make_token_from_macro(mcr);
+    while (cur->next) cur = cur->next;
+    *pp = p;
+    *tokp = cur;
+    return true;
 }
 
 bool preproc(char **pp, Token **tokp, char *filepath) {
@@ -450,19 +592,48 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
         skip_nontoken_notLF(&p);
         int len = read_ident(p);
         Token *idt = new_tok(TK_IDENT, p, len);
-        if (find_replace(idt)) error_at(p, ERRNO_PREPROC_DEF);
-        Def *drep = calloc(1, sizeof(Def));
-        drep->tok = new_tok(TK_IDENT, p, len);
+        if (find_macro(idt)) error_at(p, ERRNO_PREPROC_DEF);
         p += len;
-        drep->replace = tokenize_predefine(p);
-        drep->next = dreplace;
-        dreplace = drep;
+        // マクロの識別子の後のパラメタ部分(..)を読む
+        Token *ps[100];
+        Token **params = NULL;
+        int pcnt = -1;
+        if (*p == '(') {
+            pcnt++;
+            do {
+                p++;
+                skip_nontoken_notLF(&p);
+                int plen = read_ident(p);
+                if (!plen) break;
+                ps[pcnt] = new_tok(TK_IDENT, p, plen);
+                p += plen;
+                pcnt++;
+                skip_nontoken_notLF(&p);
+            } while (*p == ',');
+            skip_nontoken_notLF(&p);
+            if (*p != ')') error_at(p, ERRNO_TOKENIZE);
+            p++;
+        }
+        if (pcnt > 0) {
+            params = calloc(pcnt, sizeof(Token *));
+            for (int i = 0; i < pcnt; i++) {
+                params[i] = ps[i];
+            }
+        } else {
+            params = calloc(1, sizeof(Token *));
+            params[0] = new_tok(TK_IDENT, "", 0);
+        }
+        Token *ctts = tokenize_macro_ctts(p, params, pcnt);
+        Macro *mcr = make_macro_from_token(ctts, params, pcnt);
+        mcr->tok = idt;
+        mcr->next = macro;
+        macro = mcr;
     } else if (read_match(&p, "ifdef", drctlen) ||
                read_match(&p, "ifndef", drctlen)) {
         skip_nontoken_notLF(&p);
         int len = read_ident(p);
         Token *idt = new_tok(TK_IDENT, p, len);
-        if (!find_replace(idt)) skip = true;
+        if (!find_macro(idt)) skip = true;
         if (drctlen == 6) skip = !skip;  // ifndef
     } else {
         // ディレクティブでない 読み飛ばす
@@ -498,18 +669,11 @@ Token *tokenize(char *p, char *filepath) {
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;
         if (read_num(&p, &cur)) continue;
-
+        // #define で定義された識別子を置き換え
+        if (read_macro(&p, &cur)) continue;
         //先頭から変数として読める部分の長さを取得
         int idtlen = read_ident(p);
-        // #define で定義された識別子を置き換え
         Token *idt = new_tok(TK_IDENT, p, idtlen);
-        Def *drep = find_replace(idt);
-        if (drep) {
-            cur->next = cpy_alltoken(drep->replace);
-            while (cur->next) cur = cur->next;
-            p += idtlen;
-            continue;
-        }
         if (read_controls(&p, &cur, idtlen)) continue;
 
         // 変数名 判定

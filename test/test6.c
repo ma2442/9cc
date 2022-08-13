@@ -58,7 +58,47 @@ int main_t1() {
     return 0;
 }
 
+#define ZERO() 0
+#define MINUS_ONE(x) x - 1
+#define FUNCNAME func_t2
+
+int func_t2() { return 15; }
+
+int main_t2() {
+    int ZERO = 10;
+    if (ZERO()) return 0;
+    if (ZERO != 10) return 1;
+    int x = 10;
+    if (MINUS_ONE(10) != 9) return 2;
+    if (MINUS_ONE() != -1) return 3;
+    if (TWO != 2) return 4;
+    if (FUNCNAME() != 15) return 5;
+    return 0;
+}
+
+#define abc "def"
+#define STRING(x) "abc"[0] == 'a' && x[0] == '1' && abc[0] == 'd'
+
+int main_t3() {
+    if (abc[0] != 'd') return 1;
+    if (!(STRING("123"))) return 2;
+    return 0;
+}
+
+#define A_t4(x) 10 - x
+#define B_t4(y) A_t4(y) + A_t4(y)
+
+int main_t4() {
+    if (A_t4(1) != 9) return 1;
+    if (B_t4(1) != 18) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t1()) return 1;
+    if (main_t2()) return 2;
+    if (main_t3()) return 3;
+    if (main_t4()) return 4;
+
     return 255;
 }
