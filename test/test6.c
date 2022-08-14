@@ -58,6 +58,22 @@ int main_t1() {
     return 0;
 }
 
+// #if ネスト
+int main_t1b() {
+#if 0
+return 1;
+#if 1
+return 2;
+#elif 2
+return 3;
+#else
+return 4;
+#endif
+return 5;
+#endif
+    return 0;
+}
+
 #define ZERO() 0
 #define MINUS_ONE(x) x - 1
 #define FUNCNAME func_t2
@@ -162,8 +178,28 @@ int main_t11() {
     return 0;
 }
 
+int main_t12() {
+    int x = 0;
+#define DEFINED 1
+#ifdef DEFINED
+    x = 1;
+#endif
+    if (x != 1) return 1;
+#undef DEFINED
+#ifdef DEFINED
+    return 2;
+#endif
+#define DEFINED 2
+#if DEFINED == 2
+    x = 2;
+#endif
+    if (x != 2) return 2;
+    return 0;
+}
+
 int main() {
     if (main_t1()) return 1;
+    if (main_t1b()) return 1;
     if (main_t2()) return 2;
     if (main_t3()) return 3;
     if (main_t4()) return 4;
@@ -174,5 +210,6 @@ int main() {
     if (main_t9()) return 9;
     if (main_t10()) return 10;
     if (main_t11()) return 11;
+    if (main_t12()) return 12;
     return 255;
 }

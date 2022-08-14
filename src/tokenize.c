@@ -14,6 +14,8 @@ struct Macro {
 
 Macro *macro = NULL;  // #define リスト
 bool skip = false;    // プリプロセスのif失敗中
+int nestif = 0;       // #if のネスト
+int nestskip = -1;     // skip中のifネスト
 
 Macro *find_macro(Token *idt) {
     for (Macro *m = macro; m; m = m->next) {
@@ -682,23 +684,52 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
     skip_nontoken_notLF(&p);
     // ディレクティブの長さ取得
     int drctlen = read_ident(p);
-    if (read_match(&p, "else", drctlen)) {
-        skip = !skip;
-    } else if (skip) {
-        if (read_match(&p, "endif", drctlen)) {
-            skip = false;
-        } else if (read_match(&p, "elif", drctlen)) {
+    if (read_match(&p, "ifdef", drctlen) || read_match(&p, "ifndef", drctlen)) {
+        nestif++;
+        if (!skip) {
+            skip_nontoken_notLF(&p);
+            int len = read_ident(p);
+            Token *idt = new_tok(TK_IDENT, p, len);
+            if (!find_macro(idt)) skip = true;
+            if (drctlen == 6) skip = !skip;  // ifndef
+            if (skip) nestskip == nestif;
+            nestskip = nestif;
+        }
+    } else if (read_match(&p, "if", drctlen)) {
+        nestif++;
+        if (!skip) {
+            Token *save = token;
+            token = tokenize_macro_if(p);
+            if (!val(expr())) skip = true;
+            token = save;
+            if (skip) nestskip == nestif;
+            nestskip = nestif;
+        }
+    } else if (read_match(&p, "endif", drctlen)) {
+        if (nestskip == nestif) skip = false;
+        nestif--;
+    } else if (read_match(&p, "else", drctlen)) {
+        if (nestskip == nestif) skip = !skip;
+    } else if (read_match(&p, "elif", drctlen)) {
+        if (nestskip == nestif && skip) {
             Token *save = token;
             token = tokenize_macro_if(p);
             if (val(expr())) skip = false;
             token = save;
         }
+    } else if (skip) {
     } else if (read_match(&p, "include", drctlen)) {
         skip_nontoken_notLF(&p);
         char *incpath = make_abspath(&p, filepath);
         char *content = read_file(incpath);
         cur->next = tokenize(content, incpath);
         while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
+    } else if (read_match(&p, "undef", drctlen)) {
+        skip_nontoken_notLF(&p);
+        int len = read_ident(p);
+        Token *idt = new_tok(TK_IDENT, p, len);
+        Macro *mcr = find_macro(idt);
+        if (mcr) mcr->tok = NULL;
     } else if (read_match(&p, "define", drctlen)) {
         skip_nontoken_notLF(&p);
         int len = read_ident(p);
@@ -739,18 +770,6 @@ bool preproc(char **pp, Token **tokp, char *filepath) {
         mcr->tok = idt;
         mcr->next = macro;
         macro = mcr;
-    } else if (read_match(&p, "ifdef", drctlen) ||
-               read_match(&p, "ifndef", drctlen)) {
-        skip_nontoken_notLF(&p);
-        int len = read_ident(p);
-        Token *idt = new_tok(TK_IDENT, p, len);
-        if (!find_macro(idt)) skip = true;
-        if (drctlen == 6) skip = !skip;  // ifndef
-    } else if (read_match(&p, "if", drctlen)) {
-        Token *save = token;
-        token = tokenize_macro_if(p);
-        if (!val(expr())) skip = true;
-        token = save;
     } else {
         // ディレクティブでない 読み飛ばす
     }
