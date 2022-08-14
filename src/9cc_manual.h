@@ -1,5 +1,11 @@
 #ifndef HEADER_H
 #define HEADER_H
+#undef __x86_64__
+#define __x86_64__
+#undef __LP64__
+#define __LP64__
+#undef __ILP32__
+#include <errno.h>
 #define bool _Bool
 #define true 1
 #define false 0
