@@ -15,7 +15,7 @@ struct Macro {
 Macro *macro = NULL;  // #define リスト
 bool skip = false;    // プリプロセスのif失敗中
 int nestif = 0;       // #if のネスト
-int nestskip = -1;     // skip中のifネスト
+int nestskip = -1;    // skip中のifネスト
 
 Macro *find_macro(Token *idt) {
     for (Macro *m = macro; m; m = m->next) {
@@ -389,10 +389,13 @@ char *make_abspath(char **pp, char *dir) {
     }
     if (!path) return NULL;
     char *abs;
-    if (is_curdir)
+    if (is_curdir) {
         abs = strcat(cpy_dirname(dir), path);
-    else
+    } else {
         abs = strcat(cpy_dirname("/usr/include/"), path);
+        if (!fopen(abs, "r"))
+            abs = strcat(cpy_dirname("/usr/include/x86_64-linux-gnu/"), path);
+    }
     int len = strlen(abs);
     char *rev = calloc(len + 2, sizeof(char));
     int ir = 0;
