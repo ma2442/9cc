@@ -711,8 +711,8 @@ bool decla_func(Type *typ, Token *name) {
             } else {
                 Token *tok_void = token;
                 typ = base_type();
-                if (typ->ty == VOID) break;
                 if (!typ) error_at(tok_void->str, ERRNO_PARSE_TYPE);
+                if (typ->ty == VOID) break;
                 voidcheck(typ, tok_void->str);
                 consume_ident();
             }
@@ -777,6 +777,7 @@ Node *func(Type *typ, Token *name) {
             if (consume("...")) break;
             Token *tok_void = token;
             typ = base_type();
+            if (typ->ty == VOID) break;
             voidcheck(typ, tok_void->str);
             Token *tok = consume_ident();
             Node *ln = defvar(type_array(typ), tok);
