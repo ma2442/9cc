@@ -1,6 +1,6 @@
 ### To Do
 
--   [ ] #include <..>
+-   [ ] 文字列化演算子 #
 -   [ ] デバッグ情報出力機能実装
 
 ### Essential To Do 使用中かつ代替不可能
@@ -43,6 +43,7 @@
 
 ### Completed
 
+-   [x] #include <..>
 -   [x] #if, #elif, defined マクロキーワード
 -   [x] 引数を取る #define 実装
 -   [x] #ifdef, #else #endif, #ifndef

@@ -1,3 +1,4 @@
+#define __DEBUG__READ__FILE__
 #define BLOCK_LEN 1280
 #define CASE_LEN 128
 #define CODE_LEN 1280
@@ -29,6 +30,7 @@ typedef struct Def Def;
 // トークンの種類
 typedef enum {
     TK_MERGE = 1,     // マクロ ## トークン連結演算子
+    TK_STRINGIZE,     // マクロ # 文字列化演算子
     TK_RESERVED,      // 記号
     TK_TYPE,          // 型
     TK_TYPEQ_SIGN,    // 型修飾子 signed unsigned
@@ -311,6 +313,7 @@ void init_errmsg();
 void error_at2(char *loc, ErrNo no, char *op);
 void error_at(char *loc, ErrNo no, ...);
 void error(char *fmt, ...);
+void error2(char *fmt, char *p1, char *p2);
 
 // tokenize.c
 Token *new_token(TokenKind kind, Token *cur, char *str, int len);

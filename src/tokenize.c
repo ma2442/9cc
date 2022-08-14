@@ -332,6 +332,15 @@ bool read_merge(char **pp, Token **tokp) {
     return false;
 }
 
+bool read_stringize(char **pp, Token **tokp) {
+    if ((*pp)[0] == '#') {
+        *tokp = new_token(TK_STRINGIZE, *tokp, (*pp), 1);
+        (*pp) += 1;
+        return true;
+    }
+    return false;
+}
+
 bool skip_nontoken_except(char **pp, char excpt) {
     for (bool done = false;; done = true) {
         if (**pp == '\\') {
@@ -395,6 +404,9 @@ char *make_abspath(char **pp, char *dir) {
         abs = strcat(cpy_dirname("/usr/include/"), path);
         if (!fopen(abs, "r"))
             abs = strcat(cpy_dirname("/usr/include/x86_64-linux-gnu/"), path);
+        if (!fopen(abs, "r"))
+            abs = strcat(
+                cpy_dirname("/usr/lib/gcc/x86_64-linux-gnu/9/include/"), path);
     }
     int len = strlen(abs);
     char *rev = calloc(len + 2, sizeof(char));
@@ -543,6 +555,7 @@ Token *tokenize_macro_ctts(char *p, Token **params, int pcnt) {
     while (*p != '\n') {
         if (skip_nontoken_notLF(&p)) continue;
         if (read_merge(&p, &cur)) continue;
+        if (read_stringize(&p, &cur)) continue;
         if (read_str(&p, &cur)) continue;
         if (read_char(&p, &cur)) continue;
         if (read_reserved(&p, &cur)) continue;

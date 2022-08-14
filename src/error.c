@@ -84,3 +84,11 @@ void error(char *fmt, ...) {
     fprintf(stderr, "\n");
     exit(ERRNO_ERRDEFAULT);
 }
+
+// エラーを報告するための関数
+// printfと同じ引数を取る
+void error2(char *fmt, char *p1, char *p2) {
+    fprintf(stderr, fmt, p1, p2);
+    fprintf(stderr, "\n");
+    exit(ERRNO_ERRDEFAULT);
+}

@@ -251,8 +251,7 @@ Node *primary() {
     // 関数名として識別
     if (consume("(")) {
         node = func_call(tok);
-        if (node->type->ty == VOID)
-            error_at(tok->str, ERRNO_VOID);
+        if (node->type->ty == VOID) error_at(tok->str, ERRNO_VOID);
         return node;
     }
     // 列挙子として識別
@@ -459,8 +458,7 @@ void decla_var_check(Type *typ, Token *name) {
     // 同スコープにおいて同名で定義済みならエラー
     //                   違う型で宣言のみされていたらエラー
     Def *ddecla = find_def(name, DK_VAR);
-    if (ddecla && ddecla->var->is_defined)
-        error_at(name->str, ERRNO_DECLA_VAR);
+    if (ddecla && ddecla->var->is_defined) error_at(name->str, ERRNO_DECLA_VAR);
     if (ddecla && !eqtype(typ, ddecla->var->type))
         error_at(name->str, ERRNO_PARSE_TYPE);
 }
@@ -534,8 +532,7 @@ Node *stmt() {
         return node;
     }
     if (consume("break")) {
-        if (breaknest == -1)
-            error_at(token->str, ERRNO_BREAK);
+        if (breaknest == -1) error_at(token->str, ERRNO_BREAK);
         node = new_node(ND_GOTO, NULL, NULL);
         node->label = calloc(1, sizeof(Token));
         node->label->str = calloc(DIGIT_LEN + strlen(".Lend"), sizeof(char));
@@ -544,8 +541,7 @@ Node *stmt() {
         return node;
     }
     if (consume("continue")) {
-        if (continest == -1)
-            error_at(token->str, ERRNO_CONTINUE);
+        if (continest == -1) error_at(token->str, ERRNO_CONTINUE);
         node = new_node(ND_GOTO, NULL, NULL);
         node->label = calloc(1, sizeof(Token));
         node->label->str =
@@ -715,6 +711,7 @@ bool decla_func(Type *typ, Token *name) {
             } else {
                 Token *tok_void = token;
                 typ = base_type();
+                if (typ->ty == VOID) break;
                 if (!typ) error_at(tok_void->str, ERRNO_PARSE_TYPE);
                 voidcheck(typ, tok_void->str);
                 consume_ident();
