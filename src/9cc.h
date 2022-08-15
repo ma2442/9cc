@@ -29,8 +29,6 @@ typedef struct Def Def;
 
 // トークンの種類
 typedef enum {
-    TK_MERGE = 1,     // マクロ ## トークン連結演算子
-    TK_STRINGIZE,     // マクロ # 文字列化演算子
     TK_RESERVED,      // 記号
     TK_TYPE,          // 型
     TK_TYPEQ_SIGN,    // 型修飾子 signed unsigned
@@ -44,6 +42,7 @@ typedef enum {
     TK_RETURN,        // return
     TK_CTRL,  // if, else, while, for等 制御構文を表すトークン
     TK_STR,   // 文字列リテラルを表すトークン
+    TK_DEFAULT_PATH,  // <..> include path
     TK_STRUCT,
     TK_ENUM
 } TokenKind;
@@ -55,6 +54,9 @@ struct Token {
     unsigned long long val;  // kindがTK_NUMの場合、その数値
     char *str;               // トークン文字列
     int len;                 // トークンの長さ
+    bool has_space;          // うしろにスペースがあるか
+    bool is_linehead;        // 行頭のトークン
+    bool need_merge;  // 後ろにトークン連結演算子 ## があったか
 };
 
 // 抽象構文木のノードの種類
@@ -317,7 +319,8 @@ void error2(char *fmt, char *p1, char *p2);
 
 // tokenize.c
 Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-Token *tokenize(char *p, char *filepath);
+Token *tokenize(char *p);
+Token *preproc(Token *tok, char *filepath);
 
 // parse.c
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
@@ -366,6 +369,8 @@ int priority(Type *typ);
 Type *type_array(Type *typ);
 
 // consume.c
+Token *consume_identpp();
+bool current_is(char *op);
 bool consume(char *op);
 Token *consume_numeric();
 Token *consume_str();

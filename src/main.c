@@ -21,9 +21,6 @@ char *cpy_dirname(char *path) {
 char *read_file(char *path) {
     // ファイルを開く
     FILE *fp = fopen(path, "r");
-#ifdef __DEBUG__READ__FILE__
-    fprintf(stderr, "open %s\n", path);
-#endif
     if (!fp) {
         error2("cannot open %s: %s", path, strerror(errno));
     }
@@ -59,7 +56,8 @@ int main(int argc, char **argv) {
     init_errmsg();
 
     // トークナイズする
-    token = tokenize(user_input, filename);
+    token = tokenize(user_input);
+    token = preproc(token, filename);
 
     program();
 

@@ -1,17 +1,36 @@
 #include "9cc_manual.h"
 
+// プリプロセッサ用 for,while, int, signed などもひっくるめて識別子と認識
+Token *consume_identpp() {
+    if (!token) return NULL;
+    switch (token->kind) {
+        case TK_CHAR:
+        case TK_NUM:
+        case TK_STR:
+        case TK_DEFAULT_PATH:
+        case TK_NUMSUFFIX:
+        case TK_RESERVED:
+            return NULL;
+    }
+    Token *this = token;
+    token = token->next;
+    return this;
+}
+
+bool current_is(char *op) {
+    if (!token) return false;
+    if (!eqtokstr(token, op)) return false;
+    return true;
+}
+
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
 bool consume(char *op) {
-    if(!token) return false;
+    if (!token) return false;
     switch (token->kind) {
-        case TK_RESERVED:
-        case TK_SIZEOF:
-        case TK_RETURN:
-        case TK_CTRL:
-        case TK_STRUCT:
-            break;
-        default:
+        case TK_STR:
+        case TK_CHAR:
+        case TK_NUM:
             return false;
     }
     if (!eqtokstr(token, op)) return false;
@@ -26,6 +45,7 @@ Token *consume_if_kind_is(TokenKind tk) {
     token = token->next;
     return this;
 }
+
 Token *consume_numeric() {
     Token *tok = consume_if_kind_is(TK_CHAR);
     if (tok) return tok;

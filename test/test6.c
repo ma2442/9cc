@@ -77,6 +77,7 @@ return 5;
 #define ZERO() 0
 #define MINUS_ONE(x) x - 1
 #define FUNCNAME func_t2
+#define MINUS_ONE2 (-1)
 
 int func_t2() { return 15; }
 
@@ -89,6 +90,7 @@ int main_t2() {
     if (MINUS_ONE() != -1) return 3;
     if (TWO != 2) return 4;
     if (FUNCNAME() != 15) return 5;
+    if (MINUS_ONE2 != -1) return 6;
     return 0;
 }
 
@@ -197,6 +199,17 @@ int main_t12() {
     return 0;
 }
 
+#define MA_t13 MB_t13
+#define MB_t13 MC_t13
+#define MC_t13 MD_t13
+#define MD_t13 d
+
+int main_t13(){
+    int d=123;
+    if(MA_t13 != 123) return 1;
+    return 0;
+}
+
 int main() {
     if (main_t1()) return 1;
     if (main_t1b()) return 1;
@@ -211,5 +224,6 @@ int main() {
     if (main_t10()) return 10;
     if (main_t11()) return 11;
     if (main_t12()) return 12;
+    if (main_t13()) return 13;
     return 255;
 }
