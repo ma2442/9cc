@@ -24,9 +24,11 @@
 // char *strcat(char *__dest, char *__src);
 // typedef long unsigned int size_t;
 
-#define bool _Bool
-#define true 1
-#define false 0
+#include <stdbool.h>
+// #define bool _Bool
+// #define true 1
+// #define false 0
+
 typedef void FILE;
 
 int printf(char *, ...);
