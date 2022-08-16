@@ -41,6 +41,10 @@ void init_errmsg() {
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
 void error_at2(char *loc, ErrNo no, char *op) {
+    fprintf(stderr, "error : ");
+    fprintf(stderr, errmsg[no], op);
+    fprintf(stderr, "\n");
+    
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;
@@ -60,14 +64,12 @@ void error_at2(char *loc, ErrNo no, char *op) {
     // エラー箇所を"^"で指し示して、エラーメッセージを表示
     int pos = loc - line + indent;
     fprintf(stderr, "%*s", pos, "");  // pos個の空白を出力
-    fprintf(stderr, "^ ");
+    fprintf(stderr, "^\n");
 
     // va_list ap;
     // va_start(ap, fmt);
     // va_end(ap);
     // vfprintf(stderr, fmt, ap);
-    fprintf(stderr, errmsg[no], op);
-    fprintf(stderr, "\n");
     exit(no);
 }
 

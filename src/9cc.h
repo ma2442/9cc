@@ -57,6 +57,7 @@ struct Token {
     bool has_space;          // うしろにスペースがあるか
     bool is_linehead;        // 行頭のトークン
     bool need_merge;  // 後ろにトークン連結演算子 ## があったか
+    bool forbid_expand;  //マクロ展開可能か
 };
 
 // 抽象構文木のノードの種類

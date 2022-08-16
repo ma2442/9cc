@@ -6,10 +6,11 @@ typedef struct Macro Macro;
 struct Macro {
     Macro *next;
     Token *tok;
-    Token **params;  // パラメタリスト
-    int pcnt;        // パラメタ数
-    Token **body;    // 内容リスト
-    int bcnt;        // 内容 トークン数
+    Token **params;      // パラメタリスト
+    int pcnt;            // パラメタ数
+    Token **body;        // 内容リスト
+    int bcnt;            // 内容 トークン数
+    bool forbid_expand;  // 展開禁止か
 };
 
 Macro *macro = NULL;  // #define リスト
@@ -17,6 +18,8 @@ bool skip = false;    // プリプロセスのif失敗中
 int nestif = 0;       // #if のネスト
 int nestskip = -1;    // skip中のifネスト
 
+// 展開可能なマクロを探す
+// マクロ展開中は自分自身を再帰展開不可
 Macro *find_macro(Token *idt) {
     for (Macro *m = macro; m; m = m->next) {
         if (sametok(m->tok, idt)) return m;
@@ -39,6 +42,7 @@ Token *new_tok(TokenKind kind, char *str, int len) {
     tok->has_space = false;
     tok->need_merge = false;
     tok->is_linehead = false;
+    tok->forbid_expand = false;
     return tok;
 }
 
@@ -51,6 +55,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     tok->has_space = false;
     tok->need_merge = false;
     tok->is_linehead = eqtokstr(cur, "\n");
+    tok->forbid_expand = false;
     cur->next = tok;
     return tok;
 }
@@ -367,7 +372,7 @@ bool skip_nontoken(char **pp) { return skip_nontoken_except(pp, '\0'); }
 bool skip_nontoken_notLF(char **pp) { return skip_nontoken_except(pp, '\n'); }
 
 void newline() {
-    while (!token || !consume("\n")) token = token->next;
+    while (token && !consume("\n")) token = token->next;
 }
 
 // <..> または ".." のパスの内容を読んでプリプロセッサにかけた
@@ -491,8 +496,10 @@ Token *merge_tokens(Token *tok) {
             strncpy(buf + len, t->str, t->len);
             len += t->len;
             buf[len] = '\0';
+            char *str = calloc(len + 1, sizeof(char));
+            strncpy(str, buf, len + 1);
             len = 0;
-            cur->next = preproc(tokenize(buf), NULL);
+            cur->next = tokenize(str);
             while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
             cur->next = NULL;
         } else {
@@ -511,7 +518,7 @@ Token *make_token_from_macro(Macro *mcr) {
         cur->next = cpy_tokens(mcr->body[i]);
         while (cur->next) cur = cur->next;
     }
-    return merge_tokens(head.next);
+    return head.next;
 }
 
 // #define  ___ ________ のアンダーライン部分を読んでマクロ作成
@@ -561,11 +568,12 @@ Macro *pp_define() {
     mcr->params = calloc(pcnt, sizeof(Token *));
     for (int i = 0; i < pcnt; i++) mcr->params[i] = params[i];
     mcr->pcnt = pcnt;
+    mcr->forbid_expand = false;
     return mcr;
 }
 
-// #if ________ のアンダーライン部分をトークナイズ
-Token *pp_if() {
+// #if ________ のアンダーライン部分をトークナイズ, 評価
+bool pp_if() {
     Token head;
     Token *cur = &head;
     while (!current_is("\n")) {
@@ -600,7 +608,11 @@ Token *pp_if() {
         token = token->next;
         continue;
     }
-    return head.next;
+    Token *save = token;
+    token = head.next;
+    bool ret = val(expr());
+    token = save;
+    return ret;
 }
 
 Token *pp_param() {
@@ -625,24 +637,27 @@ Token *pp_param() {
     return head.next;
 }
 
+// tokenを引数の内容に戻してNULLを返す
+void *NULL_rewind(Token *rewind) {
+    token = rewind;
+    return NULL;
+}
+
+Token *pp_tiny(Token *tok);
+
 Token *pp_macro() {
     Token *save = token;
     Token *idt = consume_identpp();
     if (!idt) return NULL;
+    if (idt->forbid_expand) return NULL_rewind(save);
     Macro *mcr = find_macro(idt);
-    if (!mcr) {
-        token = save;
-        return NULL;
-    }
+    if (!mcr) return NULL_rewind(save);
 
     Token **prms = mcr->params;
     if (mcr->pcnt == -1) {  // パラメタを持たないマクロ
     } else {
         // マクロの識別子の後のパラメタ部分(..)を読む
-        if (!consume("(")) {
-            token = save;
-            return NULL;
-        }
+        if (!consume("(")) return NULL_rewind(save);
         if (mcr->pcnt == 0) {
             expect(")");
         } else if (mcr->pcnt == 1 && consume(")")) {
@@ -656,12 +671,43 @@ Token *pp_macro() {
             expect(")");
         }
     }
+    // マクロ展開禁止なら識別子トークンを展開する代わりにフラグを立てる
+    if (mcr->forbid_expand) {
+        idt->forbid_expand = true;
+        return NULL_rewind(save);
+    }
+    mcr->forbid_expand = true;  // 自分自身を再帰展開しないようにする
     Token head;
     Token *cur = &head;
     cur->next = make_token_from_macro(mcr);
+    cur->next = merge_tokens(cur->next);
+    cur->next = pp_tiny(cur->next);
+    mcr->forbid_expand = false;
     while (cur->next) cur = cur->next;
     cur->next = token;
     token = head.next;
+    return head.next;
+}
+
+// マクロ再帰展開に使用
+Token *pp_tiny(Token *tok) {
+    Token *token0 = token;
+    token = tok;
+    Token head;
+    Token *cur = &head;
+    while (token) {
+        Token *mtok = pp_macro();
+        if (mtok) {
+            token = mtok;
+        } else {
+            cur->next = token;
+            cur = cur->next;
+            token = token->next;
+        }
+        continue;
+    }
+    cur->next = token;
+    token = token0;
     return head.next;
 }
 
@@ -671,7 +717,7 @@ Token *preproc(Token *tok, char *filepath) {
     Token head;
     Token *cur = &head;
 
-    while (!at_eof()) {
+    while (token && !at_eof()) {
         if (consume("\n")) continue;
         if (!consume("#")) {
             if (skip) {
@@ -701,11 +747,7 @@ Token *preproc(Token *tok, char *filepath) {
         } else if (consume("if")) {
             nestif++;
             if (!skip) {
-                Token *body = pp_if();
-                Token *save = token;
-                token = body;
-                if (!val(expr())) skip = true;
-                token = save;
+                if (!pp_if()) skip = true;
                 if (skip) nestskip = nestif;
             }
         } else if (consume("endif")) {
@@ -714,13 +756,8 @@ Token *preproc(Token *tok, char *filepath) {
         } else if (consume("else")) {
             if (nestskip == nestif) skip = !skip;
         } else if (consume("elif")) {
-            if (nestskip == nestif && skip) {
-                Token *body = pp_if();
-                Token *save = token;
-                token = body;
-                if (val(expr())) skip = false;
-                token = save;
-            }
+            if (nestskip == nestif && skip)
+                if (pp_if()) skip = false;
         } else if (skip) {
         } else if (consume("include")) {
             pp_include(filepath);

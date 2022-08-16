@@ -204,9 +204,59 @@ int main_t12() {
 #define MC_t13 MD_t13
 #define MD_t13 d
 
-int main_t13(){
-    int d=123;
-    if(MA_t13 != 123) return 1;
+int main_t13() {
+    int d = 123;
+    if (MA_t13 != 123) return 1;
+    return 0;
+}
+
+#define m1(x) m2(x)(m3(x))
+#define m2(x) m##x
+#define m3(x) x + 2
+#define m4(x) 10 + x
+int main_t14() {
+    if (m1(4) != 10 + 4 + 2) return 1;
+    return 0;
+}
+
+#undef m1
+#define m1(x,y) f2(x)(m##x##1(y))(10)
+#define f2(x) n##x
+#define m41(x) x
+#define n4(x) m##x
+#define mm41(x) f##x
+#define n10 100
+
+int main_t15() {
+    if (m1(4,2) != 100) return 1;
+    return 0;
+}
+
+#undef m1
+#define m1(x) m##x
+#define m2(x) m##x
+#define m3(x) m##x
+// define はみだし再帰確認
+int main_t16() {
+    // m1 = 10
+    int m1(1) = 10;
+    // m1 != 10 ?
+    if (m1(1)(1) != 10) return 1;
+    // m3 = 30
+    int m3(3) = 30;
+    // m3 != 30 ?
+    if (m2(1)(2)(1)(1)(2)(3) != 30) return 2;
+    return 0;
+}
+
+//define マクロ展開内 再帰ロック確認
+int main_t17(){
+#define lock_recur lock_recur
+    int lock_recur = 40;
+    if (lock_recur != 40) return 1;
+#undef lock_recur
+#define lock_recur lock_recur + 1
+    if (lock_recur != 41) return 2;
     return 0;
 }
 
@@ -225,5 +275,9 @@ int main() {
     if (main_t11()) return 11;
     if (main_t12()) return 12;
     if (main_t13()) return 13;
+    if (main_t14()) return 14;
+    if (main_t15()) return 15;
+    if (main_t16()) return 16;
+    if (main_t17()) return 17;
     return 255;
 }

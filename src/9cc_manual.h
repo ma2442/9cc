@@ -21,9 +21,9 @@ extern FILE *stdin;  /* Standard input stream.  */
 extern FILE *stdout; /* Standard output stream.  */
 extern FILE *stderr; /* Standard error output stream.  */
 /* C89/C99 say they're macros.  Make them happy.  */
-// #define stdin stdin
-// #define stdout stdout
-// #define stderr stderr
+#define stdin stdin
+#define stdout stdout
+#define stderr stderr
 
 size_t strlen(char *__s);
 int strncmp(char *__s1, char *__s2, size_t __n);
