@@ -735,29 +735,39 @@ Token *preproc(Token *tok, char *filepath) {
             continue;
         }
 
-        int drctlen = token->len;
-        if (consume("ifdef") || consume("ifndef")) {
+        if (consume("ifdef")) {
             nestif++;
             if (!skip) {
                 Token *idt = consume_identpp();
-                if (!find_macro(idt)) skip = true;
-                if (drctlen == 6) skip = !skip;  // ifndef
-                if (skip) nestskip = nestif;
+                skip = !find_macro(idt);
+                nestskip = nestif;
+            }
+        } else if (consume("ifndef")) {
+            nestif++;
+            if (!skip) {
+                Token *idt = consume_identpp();
+                skip = find_macro(idt);
+                nestskip = nestif;
             }
         } else if (consume("if")) {
             nestif++;
             if (!skip) {
                 if (!pp_if()) skip = true;
-                if (skip) nestskip = nestif;
+                nestskip = nestif;
             }
         } else if (consume("endif")) {
             if (nestskip == nestif) skip = false;
             nestif--;
         } else if (consume("else")) {
-            if (nestskip == nestif) skip = !skip;
+            if (!skip || nestskip == nestif) {
+                skip = !skip;
+                nestskip = nestif;
+            }
         } else if (consume("elif")) {
-            if (nestskip == nestif && skip)
-                if (pp_if()) skip = false;
+            if (!skip || nestskip == nestif) {
+                skip = !pp_if();
+                nestskip = nestif;
+            }
         } else if (skip) {
         } else if (consume("include")) {
             pp_include(filepath);

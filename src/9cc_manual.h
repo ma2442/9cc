@@ -16,7 +16,9 @@
 #undef __USE_XOPEN2K8
 #undef __USE_XOPEN2K
 #include <string.h>
-// #define NULL 0
+#undef NULL
+// #define NULL ((void *)0)
+#define NULL 0
 // size_t strlen(char *__s);
 // int strncmp(char *__s1, char *__s2, size_t __n);
 // char *strncpy(char *__dest, char *__src, size_t __n);
@@ -42,12 +44,19 @@
 // int isdigit(int);
 // int isalpha(int);
 
+#define float int ****************************************
+#define double int ****************************************
+#define __ino_t_defined
+#define __off_t_defined
+#define __flags_
+#define static
+#define __inline
+#define __extension__
+#define __LOCK_ALIGNMENT
+// #include <stdlib.h>
+
+// #include <stdio.h>
 typedef void FILE;
-
-int printf(char *, ...);
-int sprintf(char *__s, char *__format, ...);
-int fprintf(FILE *__stream, char *__fmt, ...);
-
 /* Standard streams.  */
 extern FILE *stdin;  /* Standard input stream.  */
 extern FILE *stdout; /* Standard output stream.  */
@@ -56,6 +65,14 @@ extern FILE *stderr; /* Standard error output stream.  */
 #define stdin stdin
 #define stdout stdout
 #define stderr stderr
+int printf(char *, ...);
+int sprintf(char *__s, char *__format, ...);
+int fprintf(FILE *__stream, char *__fmt, ...);
+long int ftell(FILE *__stream);
+int fseek(FILE *__stream, long int __off, int __whence);
+FILE *fopen(char *__filename, char *__modes);
+size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
+int fclose(FILE *__stream);
 
 long long int strtoll(char *__nptr, char **__endptr, int __base);
 void *calloc(size_t __nmemb, size_t __size);
@@ -65,12 +82,8 @@ void free(void *__ptr);
 #define SEEK_SET 0 /* Seek from beginning of file.  */
 #define SEEK_CUR 1 /* Seek from current position.  */
 #define SEEK_END 2 /* Seek from end of file.  */
-long int ftell(FILE *__stream);
-int fseek(FILE *__stream, long int __off, int __whence);
+
 char *strerror(int __errnum);
-FILE *fopen(char *__filename, char *__modes);
-size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
-int fclose(FILE *__stream);
 
 void exit(int __status);
 

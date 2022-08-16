@@ -112,6 +112,30 @@ int main_t4() {
     return 0;
 }
 
+#define __x86_64__
+
+int main_t5a() {
+    int x = 1;
+#ifdef __x86_64__
+    x *= 2;
+#else
+    return 3;
+#endif
+    if (x != 2) return 4;
+    return 0;
+}
+
+int main_t5b() {
+    int x = 1;
+#ifdef __x86_64__
+    x *= 2;
+#elif 0
+    return 3;
+#endif
+    if (x != 2) return 4;
+    return 0;
+}
+
 int main_t5() {
     int x = 0;
 #if defined A_t4 && A_t4(1) < 100
@@ -220,7 +244,7 @@ int main_t14() {
 }
 
 #undef m1
-#define m1(x,y) f2(x)(m##x##1(y))(10)
+#define m1(x, y) f2(x)(m##x##1(y))(10)
 #define f2(x) n##x
 #define m41(x) x
 #define n4(x) m##x
@@ -228,7 +252,7 @@ int main_t14() {
 #define n10 100
 
 int main_t15() {
-    if (m1(4,2) != 100) return 1;
+    if (m1(4, 2) != 100) return 1;
     return 0;
 }
 
@@ -249,8 +273,8 @@ int main_t16() {
     return 0;
 }
 
-//define マクロ展開内 再帰ロック確認
-int main_t17(){
+// define マクロ展開内 再帰ロック確認
+int main_t17() {
 #define lock_recur lock_recur
     int lock_recur = 40;
     if (lock_recur != 40) return 1;
@@ -266,6 +290,8 @@ int main() {
     if (main_t2()) return 2;
     if (main_t3()) return 3;
     if (main_t4()) return 4;
+    if (main_t5a()) return 51;
+    if (main_t5b()) return 52;
     if (main_t5()) return 5;
     if (main_t6()) return 6;
     if (MULTIPLE_LINES != 3) return 7;

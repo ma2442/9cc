@@ -31,6 +31,27 @@
 
 ### Issue
 
+-   [ ] #include <string.h> の #define NULL ((void \*) 0) を読み込むと
+        セルフホストはできるがテストが動かない (#define NULL 0 は OK)
+-   [ ] #include <stdlib.h> すると union が必要になってくる
+-   [ ] #include <stdio.h> すると union が必要になってくる
+-   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
+        おそらくポインタとして扱っているトークンが後に書き換えられたときに、
+        それ以前の同一箇所も（ポインタなので）一緒に置き換わっている（？）
+-   [ ] #include <ctype.h> するときに 入れ子型の定義がある
+        回避するために 現状 #define \*\*NO_CTYPE が必要
+
+```c:/usr/include/ctype.h
+extern const unsigned short int **__ctype_b_loc (void);
+# define __isctype(c, type) \
+  ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) type)
+# define	__exctype(name)	extern int name (int) __THROW
+__exctype (isalnum);
+    //= extern int isalnum (int);
+ # define isalnum(c) **isctype((c), \_ISalnum)
+    // = ((\*\_\_ctype_b_loc ())[(int) (c)] & (unsigned short int) \_ISalnum)
+```
+
 -   [ ] 二次元配列の初期化式を実装して、codegen.c の arg_storage を元に戻す
 -   [ ] #include ".." の include ディレクトリへの探索
 -   [ ] goto に対応する label が存在するかどうか関数内で判定

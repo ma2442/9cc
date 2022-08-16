@@ -168,7 +168,7 @@ void typing(Node *node) {
         case ND_SUB:
             lcan = can_deref(node->lhs->type);
             rcan = can_deref(node->rhs->type);
-            if (lcan && rcan) { // ptr - ptr -> int
+            if (lcan && rcan) {  // ptr - ptr -> int
                 node->type = new_type(INT);
             } else if (lcan) {
                 node->type = new_type(PTR);
@@ -307,12 +307,25 @@ Type *type_struct() {
 }
 
 // 列挙子定義計算用
-int val(Node *node) {
+long long val(Node *node) {
     if (node->kind == ND_NUM) return node->val;
     if (node->kind == ND_IF_ELSE)
         return val(node->judge) ? val(node->lhs) : val(node->rhs);
-    if (node->kind == ND_BIT_NOT) return ~val(node->lhs);
+
     int l = val(node->lhs);
+    if (node->kind == ND_BIT_NOT) return ~l;
+    if (node->kind == ND_CAST) {
+        if (node->type->ty == ULL) return (unsigned long long)l;
+        if (node->type->ty == LL) return (long long)l;
+        if (node->type->ty == UINT) return (unsigned int)l;
+        if (node->type->ty == INT) return (int)l;
+        if (node->type->ty == USHORT) return (unsigned short)l;
+        if (node->type->ty == SHORT) return (short)l;
+        if (node->type->ty == UCHAR) return (unsigned char)l;
+        if (node->type->ty == CHAR) return (char)l;
+        return (unsigned long long)l;  // ptr
+    }
+
     int r = val(node->rhs);
     switch (node->kind) {
         case ND_EQUAL:
@@ -529,7 +542,7 @@ Type *type_array(Type *typ) {
     while (consume("[")) {
         last->ptr_to = calloc(1, sizeof(Type));
         last = last->ptr_to;
-        last->array_size = expect_numeric();
+        last->array_size = val(expr());
         last->ty = ARRAY;
         expect("]");
     }

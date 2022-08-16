@@ -348,7 +348,7 @@ void gen(Node *node);
 
 // type.c
 void init_sizes();
-int val(Node *node);  // 定数計算
+long long val(Node *node); // 定数計算
 int size(Type *typ);
 bool can_deref(Type *typ);
 bool eqtype(Type *typ1, Type *typ2);
