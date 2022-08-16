@@ -29,6 +29,9 @@
 // #define true 1
 // #define false 0
 
+#define  __builtin_va_list int****************************************
+#include <stdarg.h>
+
 typedef void FILE;
 
 int printf(char *, ...);
