@@ -699,7 +699,7 @@ Token *pp_tiny(Token *tok) {
         Token *mtok = pp_macro();
         if (mtok) {
             token = mtok;
-        } else {
+        } else if (token) {
             cur->next = token;
             cur = cur->next;
             token = token->next;

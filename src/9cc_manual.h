@@ -29,8 +29,18 @@
 // #define true 1
 // #define false 0
 
-#define  __builtin_va_list int****************************************
+#define __builtin_va_list int ****************************************
 #include <stdarg.h>
+
+#undef __THROW
+#define __THROW
+#undef __attribute__
+#define __attribute__(x)
+#define __NO_CTYPE  // 入れ子型の定義回避用
+#include <ctype.h>
+// int isspace(int);
+// int isdigit(int);
+// int isalpha(int);
 
 typedef void FILE;
 
@@ -63,9 +73,6 @@ size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
 int fclose(FILE *__stream);
 
 void exit(int __status);
-int isspace(int);
-int isdigit(int);
-int isalpha(int);
 
 #include "9cc.h"
 #endif  // HEADER_H
