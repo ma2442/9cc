@@ -31,7 +31,6 @@
 
 ### Issue
 
--   [ ] #define マクロの自分自身への再帰展開はしないようにする
 -   [ ] 二次元配列の初期化式を実装して、codegen.c の arg_storage を元に戻す
 -   [ ] #include ".." の include ディレクトリへの探索
 -   [ ] goto に対応する label が存在するかどうか関数内で判定
@@ -44,6 +43,7 @@
 
 ### Completed
 
+-   [x] #define マクロの自分自身への再帰展開はしないようにする
 -   [x] #define マクロの展開を再帰的にする
 -   [x] #include <..>
 -   [x] #if, #elif, defined マクロキーワード
