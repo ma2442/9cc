@@ -27,16 +27,18 @@ $(ASEMS_SELF): 9cc src/9cc_manual.h src/9cc.h
 $(ASEMS_SELF2): 9cc_self src/9cc_manual.h src/9cc.h
 
 asm/%_self.s: src/%.c 9cc
-	./"9cc" $< > $@; if [ $$? -ne 0 ]; then rm $@; fi
-	./support/shortenasm $@ > asm/_self.s
-	mv asm/_self.s $@
+	./"9cc" $< > $@
+	@if [ $$? -ne 0 ]; then rm $@; fi
+	@./support/shortenasm $@ > asm/_self.s
+	@mv asm/_self.s $@
 
 asm/%_self2.s: src/%.c 9cc_self
-	./"9cc_self" $< > $@; if [ $$? -ne 0 ]; then rm $@; fi
-	./support/shortenasm $@ > asm/_self2.s
-	cmp asm/_self2.s asm/$*_self.s
-	mv asm/_self2.s $@
-	rm asm/$*_self.s
+	@./"9cc_self" $< > $@
+	@if [ $$? -ne 0 ]; then rm $@; fi
+	@./support/shortenasm $@ > asm/_self2.s 
+	@cmp asm/_self2.s asm/$*_self.s
+	@mv asm/_self2.s $@
+	@rm asm/$*_self.s
 
 asm/%.s: src/%.c
 	cc $(CFLAGS) -S $< -o $@  -masm=intel 

@@ -189,10 +189,8 @@ int main(int argc, char **argv) {
         // push rsi
         // pop rcx
         // pop rax <-- delete
-        if ((ln[3] && is_push_and_pop(w[0], w[3])) &&
-            (match(w[1], "push") || match(w[1], "pop")) &&
-            (match(w[2], "push") || match(w[2], "pop")) &&
-            (!same(w[0]->next, w[1]->next)) &&
+        if ((ln[3] && is_push_and_pop(w[0], w[3])) && (match(w[1], "push")) &&
+            (match(w[2], "pop")) && (!same(w[0]->next, w[1]->next)) &&
             (!same(w[0]->next, w[2]->next))) {
             write_lines(ln[0]->next,
                         ln[3]);  // コメント行~3行目手前まで書き込み

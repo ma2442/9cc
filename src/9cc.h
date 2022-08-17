@@ -1,4 +1,4 @@
-#define __DEBUG__READ__FILE__
+// #define __DEBUG__READ__FILE__
 #define BLOCK_LEN 1280
 #define CASE_LEN 128
 #define CODE_LEN 1280
@@ -348,7 +348,7 @@ void gen(Node *node);
 
 // type.c
 void init_sizes();
-long long val(Node *node); // 定数計算
+long long val(Node *node);  // 定数計算
 int size(Type *typ);
 bool can_deref(Type *typ);
 bool eqtype(Type *typ1, Type *typ2);

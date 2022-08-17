@@ -31,8 +31,6 @@
 
 ### Issue
 
--   [ ] #include <string.h> の #define NULL ((void \*) 0) を読み込むと
-        セルフホストはできるがテストが動かない (#define NULL 0 は OK)
 -   [ ] #include <stdlib.h> すると union が必要になってくる
 -   [ ] #include <stdio.h> すると union が必要になってくる
 -   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
@@ -64,6 +62,9 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] #include <string.h> の #define NULL ((void \*) 0) を読み込むと
+        セルフホストはできるがテストが動かない (#define NULL 0 は OK)
+        -> コード短縮プログラムのバグだった 修正済み
 -   [x] #define マクロの自分自身への再帰展開はしないようにする
 -   [x] #define マクロの展開を再帰的にする
 -   [x] #include <..>
