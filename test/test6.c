@@ -1,5 +1,10 @@
 #include "test.h"
 
+void show(int x){
+    printf("%d\n", x);
+    return;
+}
+
 int main_t1() {
     int x = 0;
 #ifdef TEST1
@@ -12,13 +17,13 @@ int main_t1() {
     x = 1;
 #endif
     if (x != 1) return 3;
-    printf("%d\n", x);
+    show(x);
 
 #ifndef TEST1
     x = 2;
 #endif
     if (x != 2) return 4;
-    printf("%d\n", x);
+    show(x);
 
 #ifndef TEST1
     x = 3;
@@ -26,14 +31,14 @@ int main_t1() {
     return 5;
 #endif
     if (x != 3) return 7;
-    printf("%d\n", x);
+    show(x);
 
 #define TEST1
 #ifdef TEST1
     x = 4;
 #endif
     if (x != 4) return 8;
-    printf("%d\n", x);
+    show(x);
 
 #ifdef TEST1
     x = 5;
@@ -41,7 +46,7 @@ int main_t1() {
     return 6;
 #endif
     if (x != 5) return 9;
-    printf("%d\n", x);
+    show(x);
 
 #ifndef TEST1
     return 10;
@@ -53,7 +58,7 @@ int main_t1() {
     x = 6;
 #endif
     if (x != 6) return 12;
-    printf("%d\n", x);
+    show(x);
 
     return 0;
 }
