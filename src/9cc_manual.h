@@ -16,9 +16,7 @@
 #undef __USE_XOPEN2K8
 #undef __USE_XOPEN2K
 #include <string.h>
-#undef NULL
 // #define NULL ((void *)0)
-#define NULL 0
 // size_t strlen(char *__s);
 // int strncmp(char *__s1, char *__s2, size_t __n);
 // char *strncpy(char *__dest, char *__src, size_t __n);
