@@ -255,6 +255,18 @@ void typing_defdtype(Token *tag, TypeKind kind, Def *dtyped) {
     }
 }
 
+// struct/union 内の タグも変数名もないstruct/union のメンバ（孫メンバ）を
+// 直メンバに登録するために使う関数
+// 親のオフセットと孫メンバを受け取って直メンバに登録する。
+// (直メンバはdef[nest]->dvarsに入っていると仮定する)
+void defvar_members(Def *dmem, int offset0) {
+    for (; dmem; dmem = dmem->next) {
+        if (!dmem->next) break;
+        defvar(dmem->var->type, dmem->tok);
+        def[nest]->dvars->var->offset = dmem->var->offset + offset0;
+    }
+}
+
 // 構造体定義
 Type *def_struct(Token *tag) {
     if (!consume("{")) return NULL;
@@ -281,6 +293,13 @@ Type *def_struct(Token *tag) {
         expect(";");
         int sz = size(def[nest]->dvars->var->type);
         ofst = set_offset(def[nest]->dvars->var, ofst) + sz;
+        if (!tok && typ->ty == STRUCT &&
+            strncmp(typ->dstc->tok->str, "__autogen__tag__", 16) == MATCH) {
+            // タグも変数名もないstruct/union の場合は孫メンバを直のメンバにする
+            // 逆順でも問題ないのでそのまま入れる
+            defvar_members(typ->dstc->stc->dmems,
+                           def[nest]->dvars->var->offset);
+        }
     }
 
     dstc->stc->dmems = def[nest]->dvars;
@@ -303,6 +322,65 @@ Type *type_struct() {
     if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(STRUCT);
     typ->dstc = fit_def(tag, DK_STRUCT);
+    return typ;
+}
+
+// 共用体定義
+Type *def_union(Token *tag) {
+    if (!consume("{")) return NULL;
+    tag = make_tag(tag);
+    if (!tag) return NULL;
+    Def *dnew = calloc_def(DK_UNION);
+    dnew->tok = tag;
+    // メンバに同じ共用体型を持てるように共用体リストに先行登録
+    dnew->next = def[stcidx()]->dunis;
+    def[stcidx()]->dunis = dnew;
+    Def *duni = def[stcidx()]->dunis;
+
+    //メンバ初期化
+    member_in();
+
+    int member_max_size = 0;
+    while (!consume("}")) {
+        Token *tok_void = token;
+        Type *typ = base_type();
+        voidcheck(typ, tok_void->str);
+        Token *tok = consume_ident();
+        // メンバ作成（メンバのノードは不要なので放置）
+        defvar(type_array(typ), tok);
+        expect(";");
+        def[nest]->dvars->var->offset = 0;
+        int sz = size(def[nest]->dvars->var->type);
+        if (member_max_size < sz) member_max_size = sz;
+        if (!tok && typ->ty == STRUCT &&
+            strncmp(typ->dstc->tok->str, "__autogen__tag__", 16) == MATCH) {
+            // タグも変数名もないstruct/union の場合は孫メンバを直のメンバにする
+            // 逆順でも問題ないのでそのまま入れる
+            defvar_members(typ->dstc->stc->dmems,
+                           def[nest]->dvars->var->offset);
+        }
+    }
+
+    duni->stc->dmems = def[nest]->dvars;
+    member_out();
+    // 共用体のアラインメント計算、サイズをアラインメントの倍数に切り上げ
+    Type *typ = new_type(STRUCT);
+    typ->dstc = duni;
+    duni->stc->size = member_max_size;
+    duni->stc->align = calc_align(typ);
+    typing_defdtype(tag, STRUCT, duni);
+    return typ;
+}
+
+Type *type_union() {
+    Token *tag = consume_ident();
+    // union型を新規定義して返す
+    Type *typ = def_union(tag);
+    if (typ) return typ;
+    // 既存union型を返す
+    if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
+    typ = new_type(STRUCT);
+    typ->dstc = fit_def(tag, DK_UNION);
     return typ;
 }
 
@@ -432,6 +510,12 @@ Node *typdef() {
         goto GET_IDENT;
     }
     token = save;
+    tag = consume_tag_without_def(TK_UNION);
+    if (tag && !fit_def_noerr(tag, DK_UNION)) {  // 未定義の共用体タグ
+        typ = type_pointer(new_type(STRUCT));
+        goto GET_IDENT;
+    }
+    token = save;
     tag = consume_tag_without_def(TK_ENUM);
     if (tag && !fit_def_noerr(tag, DK_ENUM)) {  // 未定義の列挙体タグ
         typ = type_pointer(new_type(ENUM));
@@ -501,9 +585,10 @@ Type *base_type() {
     typ = calloc(1, sizeof(Type));
     if (!qsign && !lenspc && !core) return NULL;
 
-    // (struct|enum) (tag)? {..} | void | _Bool
+    // (struct|union|enum) (tag)? {..} | void | _Bool
     if (!qsign && !lenspc) {
         if (core->kind == TK_STRUCT) return type_pointer(type_struct());
+        if (core->kind == TK_UNION) return type_pointer(type_union());
         if (core->kind == TK_ENUM) return type_pointer(type_enum());
         if (eqtokstr(core, STR_VOID)) {
             typ->ty = VOID;
@@ -533,6 +618,7 @@ Type *base_type() {
 }
 
 void voidcheck(Type *typ, char *pos) {
+    if (!typ) error_at(pos, ERRNO_PARSE_TYPE);
     if (typ->ty == VOID) error_at(pos, ERRNO_VOID);
 }
 

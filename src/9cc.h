@@ -44,6 +44,7 @@ typedef enum {
     TK_STR,   // 文字列リテラルを表すトークン
     TK_DEFAULT_PATH,  // <..> include path
     TK_STRUCT,
+    TK_UNION,
     TK_ENUM
 } TokenKind;
 
@@ -116,6 +117,7 @@ typedef enum {
     UINT,
     ULL,
     STRUCT,
+    UNION = STRUCT,
     PTR,
     ARRAY,
     VOID,
@@ -162,6 +164,7 @@ struct StrLit {
     char *label;  // 名前(ラベル)
 };
 
+// struct or union
 struct Struct {
     Def *dmems;
     int size;
@@ -185,6 +188,7 @@ struct Defs {
     Def *dvars_last;  // ブロック内で最初に定義された変数
     Def *denms;
     Def *dstcs;
+    Def *dunis;
     Def *dtypdefs;
 };
 
@@ -193,6 +197,7 @@ typedef enum {
     DK_VAR,
     DK_FUNC,
     DK_STRUCT,
+    DK_UNION,
     DK_ENUM,
     DK_ENUMCONST,
     DK_STRLIT,
@@ -253,8 +258,10 @@ typedef enum {
     ERRNO_PARSE_TYPEQ,
     ERRNO_PARSE_TYPE,
     ERRNO_PARSE_TYPEDEF,
+    ERRNO_PARSE_MEMBER_HOLDER,
     ERRNO_FIT_VAR,
     ERRNO_FIT_STRUCT,
+    ERRNO_FIT_UNION,
     ERRNO_FIT_ENUM,
     ERRNO_FIT_CONSTANT,
     ERRNO_FIT_FUNC,

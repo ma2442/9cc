@@ -17,8 +17,10 @@ void init_errmsg() {
     errmsg[ERRNO_PARSE_TYPE] = "型ではありません";
     errmsg[ERRNO_PARSE_TYPEQ] = "型修飾子が不正です";
     errmsg[ERRNO_PARSE_TYPEDEF] = "typedefが不正です";
+    errmsg[ERRNO_PARSE_MEMBER_HOLDER] = "メンバを持たない型です";
     errmsg[ERRNO_FIT_VAR] = "undefined valiable";
     errmsg[ERRNO_FIT_STRUCT] = "undefined struct";
+    errmsg[ERRNO_FIT_UNION] = "undefined union";
     errmsg[ERRNO_FIT_ENUM] = "undefined enum";
     errmsg[ERRNO_FIT_CONSTANT] = "undefined constant";
     errmsg[ERRNO_FIT_FUNC] = "undefined function";
@@ -44,7 +46,7 @@ void error_at2(char *loc, ErrNo no, char *op) {
     fprintf(stderr, "error : ");
     fprintf(stderr, errmsg[no], op);
     fprintf(stderr, "\n");
-    
+
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;

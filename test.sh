@@ -6,6 +6,9 @@ assertf(){
     print="$3"
     "$compiler" test/"$input" > tmp.s
     res="$?"
+    if [ "$res" -ne 0 ]; then rm tmp.s; fi
+    ./support/shortenasm tmp.s > tmptmp.s
+    mv tmptmp.s tmp.s
     if [ "$res" -ne 0 ]; then exit "$res"; fi
     cc -o tmp tmp.s test/testfuncs.o
 

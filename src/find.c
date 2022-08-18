@@ -1,10 +1,12 @@
 #include "9cc_manual.h"
 
 void error_undef(Token *tok, DefKind kind) {
-    if (kind == DK_VAR) {
+    if (kind == DK_VAR)
         error_at(tok->str, ERRNO_FIT_VAR);
-    } else if (kind == DK_STRUCT)
+    else if (kind == DK_STRUCT)
         error_at(tok->str, ERRNO_FIT_STRUCT);
+    else if (kind == DK_UNION)
+        error_at(tok->str, ERRNO_FIT_UNION);
     else if (kind == DK_ENUM)
         error_at(tok->str, ERRNO_FIT_ENUM);
     // else if (kind == DK_ENUMCONST)
@@ -24,11 +26,13 @@ Def *find_def(Token *tok, DefKind kind) {
         d = def[nest]->dfns;
     else if (kind == DK_STRUCT)
         d = def[nest]->dstcs;
+    else if (kind == DK_UNION)
+        d = def[nest]->dunis;
     else if (kind == DK_ENUM)
         d = def[nest]->denms;
     else if (kind == DK_TYPE)
         d = def[nest]->dtypdefs;
-    for (; d && d->tok; d = d->next) {
+    for (; d && d->next; d = d->next) {
         if (sametok(d->tok, tok)) return d;
     }
     return NULL;
@@ -37,9 +41,8 @@ Def *find_def(Token *tok, DefKind kind) {
 // 列挙子を名前で検索する。 見つからなかった場合はNULLを返す。
 Def *find_enumconst(Token *tok) {
     for (Def *denm = def[nest]->denms; denm; denm = denm->next) {
-        for (Def *dcst = denm->enm->dconsts; dcst;
-             dcst = dcst->next) {
-            if(!dcst->tok) continue;
+        for (Def *dcst = denm->enm->dconsts; dcst; dcst = dcst->next) {
+            if (!dcst->tok) continue;
             if (sametok(dcst->tok, tok)) return dcst;
         }
     }
@@ -78,9 +81,11 @@ bool can_def_symbol(Token *sym) {
     return false;
 }
 
-// 構造体、列挙体のタグが定義可能か
+// 構造体、共用体、列挙体のタグが定義可能か
 bool can_def_tag(Token *tag) {
-    if (!find_def(tag, DK_ENUM) && !find_def(tag, DK_STRUCT)) return true;
+    if (!find_def(tag, DK_ENUM) && !find_def(tag, DK_STRUCT) &&
+        !find_def(tag, DK_UNION))
+        return true;
     error_at(tag->str, ERRNO_DEF_TAG);
     return false;
 }

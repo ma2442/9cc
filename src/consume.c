@@ -60,9 +60,11 @@ Token *consume_typeq() {
 Token *consume_typecore() {
     Token *tok = consume_if_kind_is(TK_STRUCT);
     if (tok) return tok;
-    tok = consume_if_kind_is(TK_TYPE);
+    tok = consume_if_kind_is(TK_UNION);
     if (tok) return tok;
-    return consume_if_kind_is(TK_ENUM);
+    tok = consume_if_kind_is(TK_ENUM);
+    if (tok) return tok;
+    return consume_if_kind_is(TK_TYPE);
 }
 Token *consume_ident() { return consume_if_kind_is(TK_IDENT); }
 Token *consume_numsuffix() { return consume_if_kind_is(TK_NUMSUFFIX); }

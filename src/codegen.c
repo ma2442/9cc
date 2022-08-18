@@ -87,9 +87,13 @@ void gen_lval(Node* node) {
                        node->def->tok->str);
             break;
         case ND_MEMBER:  // struct member
+            printf("# lval member %.*s\n", node->def->tok->len,
+                   node->def->tok->str);
             gen_lval(node->lhs);
             printf("  pop rax\n");
             printf("  add rax, %d\n", node->def->var->offset);
+            printf("# end lval member %.*s\n", node->def->tok->len,
+                   node->def->tok->str);
             break;
         case ND_DEREF:  // *p = ..
             gen(node->lhs);
@@ -121,11 +125,15 @@ void gen_load(Type* typ) {
 }
 
 void gen_store(Type* type) {
+    printf("# store\n");
     printf("  pop rcx\n");
     printf("  pop rax\n");
     int dst_size = size(type);  // 書き込み先のサイズ
     if (type->ty == STRUCT) {
-        for (int i = 0; i < dst_size; i += type->dstc->stc->align) {
+        int align = type->dstc->stc->align;
+        Token* tok = type->dstc->tok;
+        printf("# store member %.*s\n", tok->len, tok->str);
+        for (int i = 0; i < dst_size; i += align) {
             printf("  mov rdi, [rcx+%d]\n", i);
             // 8バイト境界から8バイト先までコピーの必要があるなら
             // QWORD コピーが望ましい
@@ -134,16 +142,18 @@ void gen_store(Type* type) {
                 continue;
             }
             // QWORD未満のコピーはアラインサイズごとにする
-            printf("  mov %s[rax+%d], %s\n",
-                   cnvword(QWORD_PTR, type->dstc->stc->align), i,
-                   cnvword(RDI, type->dstc->stc->align));
+            printf("  mov %s[rax+%d], %s\n", cnvword(QWORD_PTR, align), i,
+                   cnvword(RDI, align));
         }
+        printf("# end store member %.*s\n", tok->len, tok->str);
+        printf("# end store\n");
         return;
     }
 
     if (type->ty == BOOL) gen_cmp(RCX, "0", "setne", RCX);
     printf("  mov %s[rax], %s\n", cnvword(QWORD_PTR, dst_size),
            cnvword(RCX, dst_size));
+    printf("# end store\n");
 }
 
 void gen_tochar() {

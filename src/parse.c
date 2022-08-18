@@ -14,7 +14,7 @@ Def *calloc_def(DefKind kind) {
         d->var = calloc(1, sizeof(Var));
     else if (kind == DK_FUNC)
         d->fn = calloc(1, sizeof(Func));
-    else if (kind == DK_STRUCT)
+    else if (kind == DK_STRUCT || kind == DK_UNION)
         d->stc = calloc(1, sizeof(Struct));
     else if (kind == DK_ENUM)
         d->enm = calloc(1, sizeof(Enum));
@@ -88,16 +88,18 @@ Node *new_node_var(Token *tok) {
 }
 
 // メンバ変数として識別
-Node *new_node_mem(Node *nd_stc, Token *tok) {
+Node *new_node_mem(Node *memholder, Token *tok) {
     member_in();
-    def[nest]->dvars = nd_stc->type->dstc->stc->dmems;
+    if (memholder->type->ty != STRUCT)
+        error_at(tok->str, ERRNO_PARSE_MEMBER_HOLDER);
+    def[nest]->dvars = memholder->type->dstc->stc->dmems;
     Def *dvar = find_def(tok, DK_VAR);
     member_out();
     if (!dvar) {
         error_at(tok->str, ERRNO_FIT_MEMBER);
         return NULL;
     }
-    Node *node = new_node(ND_MEMBER, nd_stc, NULL);
+    Node *node = new_node(ND_MEMBER, memholder, NULL);
     node->def = dvar;
     node->type = dvar->var->type;
     return node;

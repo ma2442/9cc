@@ -347,6 +347,265 @@ int main_t11c() {
     return 0;
 }
 
+union uni0 {
+    char c;
+    int x;
+};
+
+// union test
+int main_t12() {
+    union uni0 u1;
+    u1.x = 'a';
+    if (u1.x != 'a') return 1;
+    if (u1.c != 'a') return 2;
+    u1.c++;
+    if (u1.c != 'b') return 3;
+    if (u1.x != 'b') return 4;
+    return 0;
+}
+
+union uni1 {
+    char c;
+    int x;
+} gu1;
+
+union {
+    char no;
+} gu_notag;
+
+union uni1 gu1a;
+
+int main_t13() {
+    gu1.x = 'a';
+    gu1.c++;
+    gu1a.x = 'b';
+    gu1a.c++;
+    gu_notag.no = 1;
+    if (gu1.c != 'b') return 1;
+    if (gu1.x != 'b') return 2;
+    if (gu1a.c != 'c') return 3;
+    if (gu1a.x != 'c') return 4;
+    if (gu_notag.no != 1) return 5;
+    union uni1 {
+        char d;
+        int y;
+    } gu1;
+    union uni1 gu1a;
+    gu1.y = 'd';
+    gu1.d++;
+    gu1a.y = 'f';
+    gu1a.d++;
+    if (gu1.d != 'e') return 6;
+    if (gu1.y != 'e') return 7;
+    if (gu1a.d != 'g') return 8;
+    if (gu1a.y != 'g') return 9;
+    return 0;
+}
+
+typedef union uni2 uni2;
+union uni2 {
+    int x2;
+};
+uni2 gu2;
+typedef union uni2 uni2a;
+uni2a gu2a;
+
+int main_t14() {
+    gu2.x2 = 'a';
+    gu2a.x2 = 'c';
+    if (gu2.x2 != 'a') return 1;
+    if (gu2a.x2 != 'c') return 2;
+    typedef union uni2 uni2;
+    union uni2 {
+        int y;
+    };
+    uni2 gu2;
+    typedef union uni2 uni2a;
+    uni2a gu2a;
+    gu2.x2 = 'a';
+    gu2a.y = 'c';
+    if (gu2.x2 != 'a') return 3;
+    if (gu2a.y != 'c') return 4;
+    return 0;
+}
+
+typedef union {
+    int x3;
+} uni3;
+uni3 gu3;
+
+int main_t15() {
+    gu3.x3 = 3;
+    if (gu3.x3 != 3) return 1;
+    typedef union {
+        int x3a;
+    } uni3;
+    uni3 gu3;
+    gu3.x3a = 4;
+    if (gu3.x3a != 4) return 2;
+    return 0;
+}
+
+union {
+    int a[3];
+    struct {
+        int a0;
+        int a1;
+        int a2;
+    } st;
+} gu16;
+
+int main_t16() {
+    gu16.st.a0 = 10;
+    gu16.st.a1 = 11;
+    gu16.st.a2 = 12;
+    if (gu16.a[0] != 10) return 1;
+    if (gu16.a[1] != 11) return 2;
+    if (gu16.a[2] != 12) return 3;
+
+    return 0;
+}
+
+int main_t17() {
+    union uni17 {
+        int a[3];
+    };
+    typedef union uni17 uni17;
+    uni17 u17a;
+    uni17 u17b;
+    u17a.a[0] = 10;
+    u17a.a[2] = 12;
+    u17b = u17a;
+    if (u17b.a[0] != 10) return 1;
+    if (u17b.a[2] != 12) return 2;
+    return 0;
+}
+
+typedef struct stc18 stc18;
+struct stc18 {
+    union {
+        int x;
+        int y;
+    };
+};
+
+int main_t18() {
+    stc18 s;
+    s.x = 1;
+    if (s.y != 1) return 1;
+    return 0;
+}
+
+typedef union uni19 uni19;
+union uni19 {
+    union {
+        int x;
+        int y;
+    };
+};
+
+int main_t19() {
+    uni19 u;
+    u.x = 1;
+    if (u.y != 1) return 1;
+    return 0;
+}
+
+typedef union uni20 uni20;
+union uni20 {
+    struct {
+        int x;
+        int y;
+    };
+    struct {
+        int a;
+        int b;
+    };
+};
+
+int main_t20() {
+    uni20 u;
+    u.x = 10;
+    u.y = 11;
+    if (u.x != 10) return 1;
+    if (u.y != 11) return 2;
+    if (u.a != 10) return 3;
+    if (u.b != 11) return 4;
+    return 0;
+}
+
+typedef struct stc21 stc21;
+struct stc21 {
+    union {
+        int x;
+        int y;
+    };
+    union {
+        int a;
+        int b;
+    };
+};
+
+int main_t21() {
+    stc21 s;
+    s.x = 10;
+    s.b = 11;
+    if (s.x != 10) return 1;
+    if (s.y != 10) return 2;
+    if (s.a != 11) return 3;
+    if (s.b != 11) return 4;
+    return 0;
+}
+
+typedef union uni22 uni22;
+union uni22 {
+    union {
+        int x;
+        int y;
+    };
+    union {
+        int a;
+        int b;
+    };
+};
+
+int main_t22() {
+    uni22 u;
+    u.x = 10;
+    u.b = 11;
+    if (u.x != 11) return 1;
+    if (u.y != 11) return 2;
+    if (u.a != 11) return 3;
+    if (u.b != 11) return 4;
+    return 0;
+}
+
+typedef struct stc23 stc23;
+struct stc23 {
+    struct {
+        int x;
+        int y;
+    };
+    struct {
+        int a;
+        int b;
+    };
+};
+
+int main_t23() {
+    stc23 s;
+    s.x = 10;
+    s.y = 11;
+    s.a = 12;
+    s.b = 13;
+    if (s.x != 10) return 1;
+    if (s.y != 11) return 2;
+    if (s.a != 12) return 3;
+    if (s.b != 13) return 4;
+    return 0;
+}
+
+
 int main() {
     if (main_t0()) return 0;
     if (main_t1()) return 1;
@@ -363,5 +622,17 @@ int main() {
     if (main_t11()) return 11;
     if (main_t11b()) return 112;
     if (main_t11c()) return 113;
+    if (main_t12()) return 12;
+    if (main_t13()) return 13;
+    if (main_t14()) return 14;
+    if (main_t15()) return 15;
+    if (main_t16()) return 16;
+    if (main_t17()) return 17;
+    if (main_t18()) return 18;
+    if (main_t19()) return 19;
+    if (main_t20()) return 20;
+    if (main_t21()) return 21;
+    if (main_t22()) return 22;
+    if (main_t23()) return 23;
     return 255;
 }

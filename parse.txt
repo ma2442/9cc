@@ -18,12 +18,13 @@ stmt
 decla_and_assign = declaration ("=" assign)? | expr
 assign  = cond ("=" assign)?
 declaration = type symbol ("[" num "]")*
-type = (tint | tchar | void | stc | enm ) "*"*
+type = (tint | tchar | void | stc | uni | enm ) "*"*
 tint
     = ("signed" | "unsigned" | "long" | "short")* "int"
     = ("signed" | "unsigned" | "long" | "short")+
 tchar = ("signed" | "unsigned")? "char"
 stc = "struct" (tag)? "{" ( declaration ";" )* "}"
+uni = "union" (tag)? "{" ( declaration ";" )* "}"
 enm = "enum" (tag)? "{" ( symbol ("," symbol)* )? "}"
 expr    = compo_assign 
 compo_assign 

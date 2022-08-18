@@ -336,6 +336,8 @@ bool read_controls(char **pp, Token **tokp, int len) {
     kdwds[klen++].word = STR_SHORT;
     kdwds[klen].tokenkind = TK_STRUCT;
     kdwds[klen++].word = "struct";
+    kdwds[klen].tokenkind = TK_UNION;
+    kdwds[klen++].word = "union";
     kdwds[klen].tokenkind = TK_ENUM;
     kdwds[klen++].word = "enum";
 

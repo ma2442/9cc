@@ -17,6 +17,7 @@ void scope_in() {
     def[nest]->dvars = calloc_def(DK_VAR);
     def[nest]->dvars_last = def[nest]->dvars;
     def[nest]->dstcs = calloc_def(DK_STRUCT);
+    def[nest]->dunis = calloc_def(DK_UNION);
     def[nest]->dtypdefs = calloc_def(DK_TYPE);
 }
 
