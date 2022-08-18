@@ -57,24 +57,24 @@
 #define __nonnull(x)
 // #include <stdlib.h>
 
-// #include <stdio.h>
-typedef void FILE;
-/* Standard streams.  */
-extern FILE *stdin;  /* Standard input stream.  */
-extern FILE *stdout; /* Standard output stream.  */
-extern FILE *stderr; /* Standard error output stream.  */
-/* C89/C99 say they're macros.  Make them happy.  */
-#define stdin stdin
-#define stdout stdout
-#define stderr stderr
-int printf(char *, ...);
-int sprintf(char *__s, char *__format, ...);
-int fprintf(FILE *__stream, char *__fmt, ...);
-long int ftell(FILE *__stream);
-int fseek(FILE *__stream, long int __off, int __whence);
-FILE *fopen(char *__filename, char *__modes);
-size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
-int fclose(FILE *__stream);
+#include <stdio.h>
+// typedef void FILE;
+// /* Standard streams.  */
+// extern FILE *stdin;  /* Standard input stream.  */
+// extern FILE *stdout; /* Standard output stream.  */
+// extern FILE *stderr; /* Standard error output stream.  */
+// /* C89/C99 say they're macros.  Make them happy.  */
+// #define stdin stdin
+// #define stdout stdout
+// #define stderr stderr
+// int printf(char *, ...);
+// int sprintf(char *__s, char *__format, ...);
+// int fprintf(FILE *__stream, char *__fmt, ...);
+// long int ftell(FILE *__stream);
+// int fseek(FILE *__stream, long int __off, int __whence);
+// FILE *fopen(char *__filename, char *__modes);
+// size_t fread(void *__ptr, size_t __size, size_t __n, FILE *__stream);
+// int fclose(FILE *__stream);
 
 long long int strtoll(char *__nptr, char **__endptr, int __base);
 void *calloc(size_t __nmemb, size_t __size);

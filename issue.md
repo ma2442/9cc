@@ -1,6 +1,5 @@
 ### To Do
 
--   [ ] #include <stdio.h> すると struct \_IO_FILE; のところで undefined struct となる。
 -   [ ] 文字列化演算子 #
 -   [ ] デバッグ情報出力機能実装
 
@@ -19,7 +18,7 @@
 
 ### Optional To Do 未使用
 
--   [ ] \_\_builtin_va_list
+-   [ ] `__builtin_va_list`
 -   [ ] static
 -   [ ] const
 -   [ ] restrict
@@ -27,19 +26,18 @@
 -   [ ] エスケープシーケンス ¥xhh 16 進数の文字コードを持つ文字
 -   [ ] ,
 -   [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
--   [ ] (int\* p)[10] のような入れ子になっている型定義
+-   [ ] `(int* p)[10]` のような入れ子になっている型定義
 
 ### Issue
 
--   [ ] #include <stdlib.h> すると void (\*\_\_func) (void) のような関数の絡んだ入れ子型を読む必要がある
--   [ ] #include <stdlib.h> すると union が必要になってくる
--   [ ] #include <stdio.h> すると struct \_IO_FILE; のところで undefined struct となる。
--   [ ] #include <stdio.h> すると union が必要になってくる
+-   [ ] #include <stdlib.h> すると `void (*__func) (void)` のような関数の絡んだ入れ子型を読む必要がある
+-   [ ] #include <stdio.h> すると `__isoc99_fscanf(FILE \* __stream, char *__format, ...);` の定義確認のところで FILE\_ の指す STRUCT が空になっている (とりあえず無視すれば動きはする)
+
 -   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
         おそらくポインタとして扱っているトークンが後に書き換えられたときに、
         それ以前の同一箇所も（ポインタなので）一緒に置き換わっている（？）
 -   [ ] #include <ctype.h> するときに 入れ子型の定義がある
-        回避するために 現状 #define \*\*NO_CTYPE が必要
+        回避するために 現状 `#define __NO_CTYPE` が必要
 
 ```c:/usr/include/ctype.h
 extern const unsigned short int **__ctype_b_loc (void);
@@ -64,8 +62,11 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] #include <stdlib.h> すると union が必要になってくる
+-   [x] #include <stdio.h> すると union が必要になってくる
+-   [x] #include <stdio.h> すると struct `_IO_FILE;` のところで undefined struct となる。
 -   [x] 共用体
--   [x] #include <string.h> の #define NULL ((void \*) 0) を読み込むと
+-   [x] #include <string.h> の `#define NULL ((void *) 0)` を読み込むと
         セルフホストはできるがテストが動かない (#define NULL 0 は OK)
         -> コード短縮プログラムのバグだった 修正済み
 -   [x] #define マクロの自分自身への再帰展開はしないようにする
@@ -75,7 +76,7 @@ __exctype (isalnum);
 -   [x] 引数を取る #define 実装
 -   [x] #ifdef, #else #endif, #ifndef
 -   [x] isspace 組み込み関数の include
--   [x] sizeof(int), sizeof((int\*)[10]) のような sizeof の直接型指定
+-   [x] sizeof(int), `sizeof((int*)[10])` のような sizeof の直接型指定
 -   [x] find.c のみのセルフコンパイルだと定義前変数への代入エラーが表示されず落ちる
 -   [x] find.c のみのセルフコンパイルだと int i=0; のような初期化が動かない(0 が push されない)
 -   [x] #define (但し引数を取らない)
@@ -120,14 +121,14 @@ __exctype (isalnum);
         メンバのアラインメントの最大値に合わせる。
         8 バイトの例: long long がメンバにる。
         4 バイトの例: アラインメントが 4 の struct がメンバにいて、それが最大。
-        1 バイトの例: \_Bool や char、及びそれらからなる struct や array のみがメンバ。
+        1 バイトの例: `_Bool` や char、及びそれらからなる struct や array のみがメンバ。
 -   [x] 構造体メンバアクセス演算子 .
 -   [x] アロー演算子 ->
 -   [x] 否定 !
 -   [x] && ||
--   [x] \_Bool
+-   [x] `_Bool`
 -   [x] 剰余演算子 %, %=
--   [x] +=, -=, \*=, /=
+-   [x] +=, -=, `*=`, /=
 -   [x] インクリメント ++, デクリメント --
 -   [x] ローカル変数分のスタック確保を 26 個分固定から可変に変更
 -   [x] 多次元配列の実装

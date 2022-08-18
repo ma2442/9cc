@@ -38,6 +38,7 @@ bool can_deref(Type *typ) {
 bool eqtype(Type *typ1, Type *typ2) {
     if (!typ1 || !typ2) return false;
     if (typ1->ty != typ2->ty) return false;
+    if (typ1->ty == STRUCT && !typ1->dstc && !typ2->dstc) return true;
     if (typ1->ty == STRUCT && typ1->dstc->stc != typ2->dstc->stc) return false;
     if (typ1->ty == ARRAY && typ1->array_size != typ2->array_size) return false;
     if (can_deref(typ1)) return eqtype(typ1->ptr_to, typ2->ptr_to);
