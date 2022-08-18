@@ -51,6 +51,10 @@
 #define __inline
 #define __extension__
 #define __LOCK_ALIGNMENT
+#undef __USE_MISC
+#undef __USE_XOPEN
+#undef __nonnull
+#define __nonnull(x)
 // #include <stdlib.h>
 
 // #include <stdio.h>

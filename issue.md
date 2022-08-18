@@ -1,6 +1,6 @@
 ### To Do
 
--   [ ] 共用体
+-   [ ] #include <stdio.h> すると struct \_IO_FILE; のところで undefined struct となる。
 -   [ ] 文字列化演算子 #
 -   [ ] デバッグ情報出力機能実装
 
@@ -31,7 +31,9 @@
 
 ### Issue
 
+-   [ ] #include <stdlib.h> すると void (\*\_\_func) (void) のような関数の絡んだ入れ子型を読む必要がある
 -   [ ] #include <stdlib.h> すると union が必要になってくる
+-   [ ] #include <stdio.h> すると struct \_IO_FILE; のところで undefined struct となる。
 -   [ ] #include <stdio.h> すると union が必要になってくる
 -   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
         おそらくポインタとして扱っているトークンが後に書き換えられたときに、
@@ -62,6 +64,7 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] 共用体
 -   [x] #include <string.h> の #define NULL ((void \*) 0) を読み込むと
         セルフホストはできるがテストが動かない (#define NULL 0 は OK)
         -> コード短縮プログラムのバグだった 修正済み
