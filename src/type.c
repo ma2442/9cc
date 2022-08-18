@@ -321,7 +321,7 @@ Type *type_struct() {
     // 既存struct型を返す
     if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(STRUCT);
-    typ->dstc = fit_def(tag, DK_STRUCT);
+    typ->dstc = fit_def_noerr(tag, DK_STRUCT);
     return typ;
 }
 
@@ -380,7 +380,7 @@ Type *type_union() {
     // 既存union型を返す
     if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(STRUCT);
-    typ->dstc = fit_def(tag, DK_UNION);
+    typ->dstc = fit_def_noerr(tag, DK_UNION);
     return typ;
 }
 
@@ -485,7 +485,7 @@ Type *type_enum() {
     // 既存enum型を返す
     if (!tag) error_at(token->str, ERRNO_PARSE_TAG);
     typ = new_type(ENUM);
-    typ->denm = fit_def(tag, DK_ENUM);
+    typ->denm = fit_def_noerr(tag, DK_ENUM);
     return typ;
 }
 

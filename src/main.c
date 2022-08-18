@@ -43,12 +43,32 @@ char *read_file(char *path) {
     return buf;
 }
 
+bool need_escape(int x) {
+    if (x < 32) return true;
+    if (x == '\'') return true;
+    if (x == '\\') return true;
+    return false;
+}
+
+char re_escape(int x) {
+    if (x == 0) return '0';   // NULL
+    if (x == 7) return 'a';   // BEL
+    if (x == 8) return 'b';   // BS (Back Space)
+    if (x == 9) return 't';   // HT (Horizontal Tab)
+    if (x == 10) return 'n';  // LF
+    if (x == 11) return 'v';  // VT (Vertical Tab)
+    if (x == 12) return 'f';  // FF (Form Field)
+    if (x == 13) return 'r';  // CR
+    return x;
+}
+
 int main(int argc, char **argv) {
-    if (argc != 2) {
+    if (argc != 2 && argc != 3) {
         error("引数の個数が正しくありません");
         return 1;
     }
     filename = argv[1];
+    _Bool output_preproc = (argc == 3 && strncmp(argv[2], "-E", 2) == MATCH);
 
     filedir = cpy_dirname(filename);
     user_input = read_file(filename);
@@ -58,6 +78,24 @@ int main(int argc, char **argv) {
     // トークナイズする
     token = tokenize(user_input);
     token = preproc(token, filename);
+
+    // 第三引数に -E があればプリプロセッサ処理後のトークンを出力して終了
+    if (output_preproc) {
+        while (token && token->kind != TK_EOF) {
+            if (token->kind == TK_NUM)
+                printf("%d ", (int)token->val);
+            else if (token->kind == TK_CHAR) {
+                if (need_escape(token->val))
+                    printf("'\\%c' ", (char)re_escape(token->val));
+                else
+                    printf("'%c' ", (char)token->val);
+            } else
+                printf("%.*s ", token->len, token->str);
+            token = token->next;
+            if (token && token->is_linehead) printf("\n");
+        }
+        return 0;
+    }
 
     program();
 
