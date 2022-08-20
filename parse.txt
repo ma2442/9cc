@@ -1,6 +1,6 @@
 program = ( (decla_func | func | decla_and_assign | "typedef" type ident) ";" )*
-decla_func = "extern"? declaration "(" ((declaration|type|"...") ("," (declaration|type|"..."))* )? ")"
-func = declaration "(" (declaration ("," declaration)* )? ")" "{" labeled* "}"
+decla_func = "extern"? type_head ident decla_args
+func = type_head ident def_args "{" labeled* "}"
 localtop = "typedef" type ident ";" | labeled
 labeled = label ":" labeled | stmt
 stmt
@@ -17,8 +17,17 @@ stmt
     | ...
 decla_and_assign = declaration ("=" assign)? | expr
 assign  = cond ("=" assign)?
-declaration = type symbol ("[" num "]")*
-type = (tint | tchar | void | stc | uni | enm ) "*"*
+declaration = type_head decla_body
+type = type_head type_body
+type_head = (tint | tchar | void | stc | uni | enm )
+type_body = "*"* ( epsilon | "(" type_body ")" ) (decla_args|array)*
+decla_body = "*"* ( ident | "(" type_body ")" ) (decla_args|array)*
+array = ("[" const_expr "]")+
+decla_or_type = declaration | type
+decla_arg = declaration | type | ...
+def_arg = declaration | ...
+decla_args = "("( decla_arg ("," decla_arg)* )? ")"
+def_args = "("( def_arg ("," def_arg)* )? ")"
 tint
     = ("signed" | "unsigned" | "long" | "short")* "int"
     = ("signed" | "unsigned" | "long" | "short")+

@@ -1,5 +1,10 @@
 #include "9cc_manual.h"
 
+Type *type_array(Type *typ);
+Type *set_tip(Type *head, Type *tip);
+Type *type_head();
+Type *type_body(Token **idtp);
+
 int sizes[LEN_TYPE_KIND];
 
 void init_sizes() {
@@ -285,12 +290,11 @@ Type *def_struct(Token *tag) {
 
     int ofst = 0;
     while (!consume("}")) {
-        Token *tok_void = token;
-        Type *typ = base_type();
-        voidcheck(typ, tok_void->str);
-        Token *tok = consume_ident();
+        Token *tok = NULL;
+        Type *typ = type_full(&tok);
+        voidcheck(typ, token->str);
         // メンバ作成（メンバのノードは不要なので放置）
-        defvar(type_array(typ), tok);
+        defvar(typ, tok);
         expect(";");
         int sz = size(def[nest]->dvars->var->type);
         ofst = set_offset(def[nest]->dvars->var, ofst) + sz;
@@ -343,12 +347,11 @@ Type *def_union(Token *tag) {
 
     int member_max_size = 0;
     while (!consume("}")) {
-        Token *tok_void = token;
-        Type *typ = base_type();
-        voidcheck(typ, tok_void->str);
-        Token *tok = consume_ident();
+        Token *tok = NULL;
+        Type *typ = type_full(&tok);
+        voidcheck(typ, token->str);
         // メンバ作成（メンバのノードは不要なので放置）
-        defvar(type_array(typ), tok);
+        defvar(typ, tok);
         expect(";");
         def[nest]->dvars->var->offset = 0;
         int sz = size(def[nest]->dvars->var->type);
@@ -504,30 +507,32 @@ Node *typdef() {
     if (!consume("typedef")) return NULL;
     Token *save = token;
     Token *idt = NULL;
-    Type *typ = NULL;
+    Type *thead = NULL;
+    Type *tbody = NULL;
     Token *tag = consume_tag_without_def(TK_STRUCT);
     if (tag && !fit_def_noerr(tag, DK_STRUCT)) {  // 未定義の構造体タグ
-        typ = type_pointer(new_type(STRUCT));
-        goto GET_IDENT;
+        thead = new_type(STRUCT);
+        goto GET_TYPE_BODY;
     }
     token = save;
     tag = consume_tag_without_def(TK_UNION);
     if (tag && !fit_def_noerr(tag, DK_UNION)) {  // 未定義の共用体タグ
-        typ = type_pointer(new_type(STRUCT));
-        goto GET_IDENT;
+        thead = new_type(STRUCT);
+        goto GET_TYPE_BODY;
     }
     token = save;
     tag = consume_tag_without_def(TK_ENUM);
     if (tag && !fit_def_noerr(tag, DK_ENUM)) {  // 未定義の列挙体タグ
-        typ = type_pointer(new_type(ENUM));
-        goto GET_IDENT;
+        thead = new_type(ENUM);
+        goto GET_TYPE_BODY;
     }
     token = save;
-    typ = base_type();  // 定義済み or 同時定義の型
-GET_IDENT:
-    idt = consume_ident();
+    thead = type_head();  // 定義済み or 同時定義の型
+GET_TYPE_BODY:
+    tbody = type_body(&idt);
+    Type *typ = set_tip(tbody, thead);
     if (!typ || !idt) error_at(save->str, ERRNO_PARSE_TYPEDEF);
-    deftype(type_array(typ), idt);
+    deftype(typ, idt);
     expect(";");
     return new_node(ND_NO_EVAL, NULL, NULL);
 }
@@ -554,6 +559,7 @@ TypeKind attach_qsign(TypeKind kind, Token *qsign) {
     return kind & ~SIGNED;
 }
 
+// typedefされた型を返す
 Type *defdtype() {
     Token *idt = consume_ident();
     if (!idt) return NULL;
@@ -563,10 +569,13 @@ Type *defdtype() {
     return NULL;
 }
 
-// ( void, int, char, _Bool, struct or enum (tag and/or {}) ) **..
-Type *base_type() {
+// ( void, int, char, _Bool, struct or enum (tag and/or {}) )
+// 引数NULL : 変数定義なし, 引数!NULL : 変数定義もやる
+Type *type_head() {
+    // typedefされた型ならそれを返す
     Type *typ = defdtype();
-    if (typ) return type_pointer(typ);
+    if (typ) return typ;
+
     Token *qsign = NULL;
     Token *qlen = NULL;
     Token *qlen2 = NULL;
@@ -588,22 +597,22 @@ Type *base_type() {
 
     // (struct|union|enum) (tag)? {..} | void | _Bool
     if (!qsign && !lenspc) {
-        if (core->kind == TK_STRUCT) return type_pointer(type_struct());
-        if (core->kind == TK_UNION) return type_pointer(type_union());
-        if (core->kind == TK_ENUM) return type_pointer(type_enum());
+        if (core->kind == TK_STRUCT) return type_struct();
+        if (core->kind == TK_UNION) return type_union();
+        if (core->kind == TK_ENUM) return type_enum();
         if (eqtokstr(core, STR_VOID)) {
             typ->ty = VOID;
-            return type_pointer(typ);
+            return typ;
         } else if (eqtokstr(core, STR_BOOL)) {
             typ->ty = BOOL;
-            return type_pointer(typ);
+            return typ;
         }
     }
 
     // (signed|unsigned)? char
     if (!lenspc && eqtokstr(core, STR_CHAR)) {
         typ->ty = attach_qsign(CHAR, qsign);
-        return type_pointer(typ);
+        return typ;
     }
 
     // (signed|unsigned|long|short)* int
@@ -615,7 +624,100 @@ Type *base_type() {
     } else {
         typ->ty = attach_qsign(INT, qsign);
     }
-    return type_pointer(typ);
+    return typ;
+}
+
+// リターンタイプを受け取って名前のない関数型を返す
+// ここでは関数の宣言や定義は行わない
+Type *type_args(Type *ret) {
+    if (!consume("(")) return NULL;
+    Type *tfn = new_type(FUNC);
+    tfn->dfn = calloc_def(DK_FUNC);
+    tfn->dfn->fn->ret = ret;
+    tfn->dfn->fn->can_define = true;
+
+    args_in();
+    tfn->dfn->fn->darg0 = def[nest]->dvars_last;
+
+    // 仮引数処理
+    if (!consume(")")) {
+        do {
+            Token *idt = NULL;
+            Type *typ = NULL;
+            if (consume("...")) {
+                typ = new_type(VARIABLE);
+            } else {
+                Token *tok_void = token;
+                typ = type_full(&idt);
+                // 一つでも名前のない引数が出てきたら定義不可にする
+                if (!idt) tfn->dfn->fn->can_define = false;
+                if (!typ) error_at(tok_void->str, ERRNO_PARSE_TYPE);
+                if (typ->ty == VOID) break;
+            }
+            Def *dvar = calloc_def(DK_VAR);
+            dvar->next = def[nest]->dvars;
+            dvar->var->type = typ;
+            dvar->tok = idt;
+            if (def[nest]->dvars) def[nest]->dvars->prev = dvar;
+            def[nest]->dvars = dvar;
+        } while (consume(","));
+        expect(")");
+    }
+    // 仮引数情報更新
+    tfn->dfn->fn->dargs = def[nest]->dvars;
+    args_out();
+    return tfn;
+}
+
+Type *set_tip(Type *head, Type *tip) {
+    if (!head) return tip;
+    switch (head->ty) {
+        case FUNC:
+            if (head->dfn->fn->ret)
+                set_tip(head->dfn->fn->ret, tip);
+            else
+                head->dfn->fn->ret = tip;
+            return head;
+        case PTR:
+        case ARRAY:
+            if (head->ptr_to)
+                set_tip(head->ptr_to, tip);
+            else
+                head->ptr_to = tip;
+            return head;
+    }
+}
+
+// coreless x = ptr* ( x | "(" coreless x ")" ) (args|array)*
+Type *type_body(Token **idtp) {
+    Type *ptr = type_pointer(NULL);
+    Type *inner = NULL;
+    if (idtp) *idtp = consume_ident();
+    if ((!idtp || !*idtp) && consume("(")) {
+        inner = type_body(idtp);
+        expect(")");
+    }
+
+    Type *suffix = NULL;
+    for (;;) {
+        Type *sfx = type_args(NULL);
+        if (!sfx) sfx = type_array(NULL);
+        if (!sfx) break;
+        suffix = set_tip(suffix, sfx);
+    }
+
+    Type *typ = NULL;
+    if (ptr) typ = ptr;
+    if (suffix) typ = set_tip(suffix, typ);
+    if (inner) typ = set_tip(inner, typ);
+    return typ;
+}
+
+Type *type_full(Token **idtp) {
+    Type *head = type_head();
+    if (!head) return NULL;
+    Type *body = type_body(idtp);
+    return set_tip(body, head);
 }
 
 void voidcheck(Type *typ, char *pos) {

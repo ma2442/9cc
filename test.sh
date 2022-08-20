@@ -49,6 +49,7 @@ assertf 255 test_quick.c testprint
 assertf 255 test4.c
 assertf 255 test5.c
 assertf 255 test6.c noprint
+assertf 255 test7.c
 
 echo "[ OK ]" "$compiler"
 echo

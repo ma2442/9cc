@@ -33,6 +33,18 @@ void scope_out() {
     nest--;
 }
 
+// 引数ネストに入る
+void args_in(){
+    scope_in();
+}
+
+// 引数ネストから出る
+void args_out() {
+    free(def[nest]);
+    def[nest] = NULL;
+    nest--;
+}
+
 // 構造体メンバのスコープに入る
 void member_in() {
     stcnest++;  // struct enum tag定義用ネスト

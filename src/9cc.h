@@ -120,6 +120,7 @@ typedef enum {
     UNION = STRUCT,
     PTR,
     ARRAY,
+    FUNC,
     VOID,
     BOOL,
     SIGNED = 16,
@@ -137,6 +138,7 @@ struct Type {
     TypeKind ty;
     Type *ptr_to;
     int array_size;
+    Def *dfn;
     Def *dstc;
     Def *denm;
 };
@@ -151,12 +153,14 @@ struct Var {
 
 // 関数名と引数情報
 struct Func {
-    Def *darg0;      // 第一引数の手前
-    Def *dargs;      // 引数情報
-    Def *dvars;      // 変数情報(引数含む)
-    int stack_size;  // 変数分の確保領域
-    Type *type;
-    bool is_defined;  //定義済みか、宣言のみか
+    Def *darg0;       // 第一引数の手前
+    Def *dargs;       // 引数情報
+    Def *dvars;       // 変数情報(引数含む)
+    int stack_size;   // 変数分の確保領域
+    Type *ret;        // 返却型
+    bool is_defined;  // 定義済みか、宣言のみか
+    bool can_define;  // 型として見た場合に定義可能か
+                      // (全ての引数に名前が設定されているか)
 };
 
 // 文字列リテラル
@@ -199,9 +203,9 @@ typedef enum {
     DK_STRUCT,
     DK_UNION,
     DK_ENUM,
-    DK_ENUMCONST,
-    DK_STRLIT,
-    DK_TYPE,
+    DK_ENUMCONST,  // 列挙子
+    DK_STRLIT,     // 文字列リテラル
+    DK_TYPE,       // typedef された型
     DK_LEN
 } DefKind;
 
@@ -270,6 +274,7 @@ typedef enum {
     ERRNO_DEF_TAG,
     ERRNO_DECLA_VAR,
     ERRNO_DECLA_FUNC,
+    ERRNO_DEF_FUNC,
     ERRNO_SIGNATURE,
     ERRNO_TYPE,
     ERRNO_VOID,
@@ -369,12 +374,11 @@ bool is_signed(Type *typ);
 void typing(Node *node);
 Node *typdef();
 Type *defdtype();
-Type *base_type();
 void voidcheck(Type *typ, char *pos);
 Type *implicit_type(Type *lt, Type *rt);
 Type *promote_integer(Type *typ);
 int priority(Type *typ);
-Type *type_array(Type *typ);
+Type *type_full(Token **idtp);
 
 // consume.c
 Token *consume_identpp();
@@ -406,6 +410,8 @@ bool can_def_tag(Token *tag);
 // scope.c
 void scope_in();
 void scope_out();
+void args_in();
+void args_out();
 void member_in();
 void member_out();
 void loop_in();

@@ -29,6 +29,7 @@ void init_errmsg() {
     errmsg[ERRNO_DEF_TAG] = "tag has already used";
     errmsg[ERRNO_DECLA_VAR] = "定義済みの変数です";
     errmsg[ERRNO_DECLA_FUNC] = "定義済みの関数です";
+    errmsg[ERRNO_DEF_FUNC] = "引数名がありません";
     errmsg[ERRNO_SIGNATURE] = "関数シグネチャが宣言と一致しません";
     errmsg[ERRNO_TYPE] = "宣言時の型と一致しません";
     errmsg[ERRNO_VOID] = "void型は評価できません";

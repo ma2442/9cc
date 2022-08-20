@@ -1,5 +1,6 @@
 ### To Do
 
+-   [ ] `(int* p)[10]` のような入れ子になっている型定義のテスト
 -   [ ] 文字列化演算子 #
 -   [ ] デバッグ情報出力機能実装
 
@@ -26,7 +27,6 @@
 -   [ ] エスケープシーケンス ¥xhh 16 進数の文字コードを持つ文字
 -   [ ] ,
 -   [ ] "abc" "def" => "abcdef" のような文字列リテラルの分割記法の実装
--   [ ] `(int* p)[10]` のような入れ子になっている型定義
 
 ### Issue
 
@@ -62,6 +62,7 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] `(int* p)[10]` のような入れ子になっている型定義
 -   [x] #include <stdlib.h> すると union が必要になってくる
 -   [x] #include <stdio.h> すると union が必要になってくる
 -   [x] #include <stdio.h> すると struct `_IO_FILE;` のところで undefined struct となる。
