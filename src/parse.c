@@ -1,4 +1,4 @@
-#include "9cc_manual.h"
+#include "9cc.h"
 
 Def *dfunc;
 Def *dstrlits;

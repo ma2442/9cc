@@ -1,4 +1,4 @@
-#include "9cc_manual.h"
+#include "9cc.h"
 
 // プリプロセッサ用 for,while, int, signed などもひっくるめて識別子と認識
 Token *consume_identpp() {

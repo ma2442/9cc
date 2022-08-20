@@ -1,4 +1,4 @@
-#include "9cc_manual.h"
+#include "9cc.h"
 
 typedef enum AsmWord AsmWord;
 enum AsmWord { RAX, RDI, RCX, RDX, QWORD_PTR, MOVS, MOVZ, SIZE_SEGMENT };

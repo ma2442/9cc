@@ -1,4 +1,6 @@
-extern int printf(char* __format, ...);
+#include "preinc.h"
+#include <stdbool.h>
+#include <stdio.h>
 
 int ngRaw[100];
 int ngCol[100];
@@ -9,34 +11,33 @@ int cnt;
 int n_max;  // 1辺のマス数最大
 int n;      // 1辺のマス数
 
-int put(int r, int c, int b) {
+void put(int r, int c, int b) {
     ngRaw[r] = ngCol[c] = b;
     ngDown[(n - 1) - r + c] = b;
     ngUp[2 * (n - 1) - r - c] = b;
-    return 0;
 }
-_Bool isNg(int r, int c) {
-    if (ngRaw[r] || ngCol[c]) return 1;
-    if (ngDown[(n - 1) - r + c]) return 1;
-    if (ngUp[2 * (n - 1) - r - c]) return 1;
-    return 0;
+bool isNg(int r, int c) {
+    if (ngRaw[r] || ngCol[c]) return true;
+    if (ngDown[(n - 1) - r + c]) return true;
+    if (ngUp[2 * (n - 1) - r - c]) return true;
+    return false;
 }
-int solve(int r, int c) {
+bool solve(int r, int c) {
     if (isNg(r, c)) return 0;
     if (c == n - 1) {
         grid[r][c] = 'Q';
         cnt = cnt + 1;
-        return 0;
+        return false;
     }
     put(r, c, 1);
     for (int i = 0; i < n; i++) {
         if (solve(i, c + 1)) {
             grid[r][c] = 'Q';
-            return 1;
+            return true;
         }
     }
     put(r, c, 0);
-    return 0;
+    return false;
 }
 int main() {
     n_max = 11;

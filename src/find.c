@@ -1,4 +1,4 @@
-#include "9cc_manual.h"
+#include "9cc.h"
 
 void error_undef(Token *tok, DefKind kind) {
     if (kind == DK_VAR)

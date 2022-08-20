@@ -1,3 +1,15 @@
+#ifndef HEADER_H
+#define HEADER_H
+
+#include "preinc.h"
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 // #define __DEBUG__READ__FILE__
 #define BLOCK_LEN 1280
 #define CASE_LEN 128
@@ -420,3 +432,4 @@ void loop_in();
 void loop_out();
 void switch_in();
 void switch_out();
+#endif  // HEADER_H

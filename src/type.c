@@ -1,4 +1,4 @@
-#include "9cc_manual.h"
+#include "9cc.h"
 
 Type *type_array(Type *typ);
 Type *set_tip(Type *head, Type *tip);

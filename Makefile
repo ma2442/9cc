@@ -4,27 +4,25 @@
 CFLAGS=-std=c11 -g -static
 SRCS=$(wildcard src/*.c)
 FILES=$(notdir $(SRCS))
-OBJS=
 ASEMS=$(addprefix asm/, $(FILES:.c=.s))
 ASEMS_SELF=$(ASEMS:.s=_self.s)
 ASEMS_SELF2=$(ASEMS:.s=_self2.s)
 
-9cc: $(ASEMS) $(OBJS)
-	$(CC) -o $@ $(ASEMS) $(OBJS) $(LDFLAGS)
+9cc: $(ASEMS)
+	$(CC) -o $@ $(ASEMS) $(LDFLAGS)
 
 9cc_self: $(ASEMS_SELF) 9cc
-	$(CC) -o $@ $(ASEMS_SELF) $(OBJS) $(LDFLAGS)
+	$(CC) -o $@ $(ASEMS_SELF) $(LDFLAGS)
 
 9cc_self2: $(ASEMS_SELF2) 9cc_self
-	$(CC) -o $@ $(ASEMS_SELF2) $(OBJS) $(LDFLAGS)
+	$(CC) -o $@ $(ASEMS_SELF2) $(LDFLAGS)
 
 all:
 	@echo $(ASEMS_SELF2)
 	
-$(OBJS): src/9cc_auto.h src/9cc.h
-$(ASEMS): src/9cc_manual.h src/9cc.h
-$(ASEMS_SELF): 9cc src/9cc_manual.h src/9cc.h
-$(ASEMS_SELF2): 9cc_self src/9cc_manual.h src/9cc.h
+$(ASEMS): src/preinc.h src/9cc.h
+$(ASEMS_SELF): 9cc src/preinc.h src/9cc.h
+$(ASEMS_SELF2): 9cc_self src/preinc.h src/9cc.h
 
 asm/%_self.s: src/%.c 9cc
 	./"9cc" $< > $@
