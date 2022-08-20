@@ -434,7 +434,10 @@ Token *pp_include(char *dir) {
     Token *cur = &head;
     cur = new_token(TK_RESERVED, cur, "\n", 1);
     cur->next = preproc(tokenize(included), abs);
-    while (cur->next && cur->next->kind != TK_EOF) cur = cur->next;
+    while (cur->next && cur->next->kind != TK_EOF) {
+        cur = cur->next;
+        cur->forbid_expand = true;
+    }
     cur->next = token;
     token = head.next;
 #ifdef __DEBUG__READ__FILE__

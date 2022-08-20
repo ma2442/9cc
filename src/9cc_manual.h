@@ -10,8 +10,6 @@
 
 #define __builtin_va_list int ****************************************
 #include <stdarg.h>
-
-#define __NO_CTYPE  // マクロ展開バグ回避用
 #include <ctype.h>
 
 #define volatile

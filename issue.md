@@ -32,11 +32,6 @@
 ### Issue
 
 -   [ ] #include <stdio.h> すると `__isoc99_fscanf(FILE \* __stream, char *__format, ...);` の定義確認のところで FILE\_ の指す STRUCT が空になっている (とりあえず無視すれば動きはする)
--   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
-        おそらくポインタとして扱っているトークンが後に書き換えられたときに、
-        それ以前の同一箇所も（ポインタなので）一緒に置き換わっている（？）
--   [ ] #include <ctype.h> するときに 入れ子型の定義がある
-        回避するために 現状 `#define __NO_CTYPE` が必要
 
 ```c:/usr/include/ctype.h
 extern const unsigned short int **__ctype_b_loc (void);
@@ -61,6 +56,10 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
+        #include 内部がプリプロセッサ処理が行われた後に token が#include 結果の頭を指すようになっており、余分にプリプロセッサ処理が行われていたことが原因だった
+-   [x] #include <ctype.h> するときに 入れ子型の定義がある
+        回避するために 現状 `#define __NO_CTYPE` が必要
 -   [x] 変数･関数宣言時の配列の添字省略記法[] 実装(とりあえず適当な値を入れて読む)
 -   [x] restrict <- 特別な対処の必要はなかった。
 -   [x] #include <stdlib.h> すると `void (*__func) (void)` のような関数の絡んだ入れ子型を読む必要がある
