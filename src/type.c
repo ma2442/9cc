@@ -731,8 +731,11 @@ Type *type_array(Type *typ) {
     while (consume("[")) {
         last->ptr_to = calloc(1, sizeof(Type));
         last = last->ptr_to;
-        last->array_size = val(expr());
         last->ty = ARRAY;
+        // [] の場合はとりあえずサイズを0にしておく。
+        last->array_size = 0;
+        if (consume("]")) continue;
+        last->array_size = val(expr());
         expect("]");
     }
     last->ptr_to = typ;

@@ -149,6 +149,7 @@ struct Var {
     Type *type;       // 型
     bool islocal;     // ローカル変数かどうか
     bool is_defined;  // 定義済みか、宣言のみか
+    bool is_static;   // staticかどうか (グローバル変数のみ)
 };
 
 // 関数名と引数情報
@@ -161,6 +162,7 @@ struct Func {
     bool is_defined;  // 定義済みか、宣言のみか
     bool can_define;  // 型として見た場合に定義可能か
                       // (全ての引数に名前が設定されているか)
+    bool is_static;   // staticかどうか
 };
 
 // 文字列リテラル

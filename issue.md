@@ -1,6 +1,8 @@
 ### To Do
 
 -   [ ] `(int* p)[10]` のような入れ子になっている型定義のテスト
+-   [ ] static func , static global var テスト
+-   [ ] 変数･関数宣言時の配列の添字省略記法[] テスト
 -   [ ] 文字列化演算子 #
 -   [ ] デバッグ情報出力機能実装
 
@@ -20,9 +22,8 @@
 ### Optional To Do 未使用
 
 -   [ ] `__builtin_va_list`
--   [ ] static
+-   [ ] static local var
 -   [ ] const
--   [ ] restrict
 -   [ ] エスケープシーケンス ¥ooo 8 進数の文字コードを持つ文字
 -   [ ] エスケープシーケンス ¥xhh 16 進数の文字コードを持つ文字
 -   [ ] ,
@@ -30,9 +31,7 @@
 
 ### Issue
 
--   [ ] #include <stdlib.h> すると `void (*__func) (void)` のような関数の絡んだ入れ子型を読む必要がある
 -   [ ] #include <stdio.h> すると `__isoc99_fscanf(FILE \* __stream, char *__format, ...);` の定義確認のところで FILE\_ の指す STRUCT が空になっている (とりあえず無視すれば動きはする)
-
 -   [ ] #include <ctype.h> するときに まだ #define されていないマクロが展開されてしまう
         おそらくポインタとして扱っているトークンが後に書き換えられたときに、
         それ以前の同一箇所も（ポインタなので）一緒に置き換わっている（？）
@@ -62,6 +61,10 @@ __exctype (isalnum);
 
 ### Completed
 
+-   [x] 変数･関数宣言時の配列の添字省略記法[] 実装(とりあえず適当な値を入れて読む)
+-   [x] restrict <- 特別な対処の必要はなかった。
+-   [x] #include <stdlib.h> すると `void (*__func) (void)` のような関数の絡んだ入れ子型を読む必要がある
+-   [x] static func, static global var
 -   [x] `(int* p)[10]` のような入れ子になっている型定義
 -   [x] #include <stdlib.h> すると union が必要になってくる
 -   [x] #include <stdio.h> すると union が必要になってくる

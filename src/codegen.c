@@ -346,7 +346,9 @@ bool gen_func(Node* node) {
         case ND_FUNC_DEFINE:
             // 関数名ラベル
             printf(".text\n");
-            printf(".globl %.*s\n", node->def->tok->len, node->def->tok->str);
+            if (!node->def->fn->is_static)
+                printf(".globl %.*s\n", node->def->tok->len,
+                       node->def->tok->str);
             printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             // プロローグ
             // 変数分の領域を確保する
@@ -408,7 +410,9 @@ bool gen_assign(Node* node) {
             printf("# assign post incdec end\n");
             return true;
         case ND_DEFGLOBAL:
-            printf(".globl %.*s\n", node->def->tok->len, node->def->tok->str);
+            if (!node->def->var->is_static)
+                printf(".globl %.*s\n", node->def->tok->len,
+                       node->def->tok->str);
             printf("%.*s:\n", node->def->tok->len, node->def->tok->str);
             if (node->val)
                 printf("  %s %lld\n",
@@ -438,7 +442,7 @@ bool gen_unary(Node* node) {
                 printf("  movabs rax, %lld\n", node->val);
                 printf("  push rax\n");
             } else {
-                printf("  push %lld\n", node->val);
+                printf("  push %d\n", (int)node->val);
             }
             return true;
         case ND_ADDR:

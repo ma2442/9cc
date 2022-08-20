@@ -314,6 +314,8 @@ bool read_controls(char **pp, Token **tokp, int len) {
     kdwds[klen++].word = "typedef";
     kdwds[klen].tokenkind = TK_CTRL;
     kdwds[klen++].word = "extern";
+    kdwds[klen].tokenkind = TK_CTRL;
+    kdwds[klen++].word = "static";
     kdwds[klen].tokenkind = TK_RETURN;
     kdwds[klen++].word = "return";
     kdwds[klen].tokenkind = TK_SIZEOF;

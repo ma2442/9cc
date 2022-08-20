@@ -2,9 +2,9 @@
 # -g デバッグ情報出力
 # -static スタティックリンクする
 CFLAGS=-std=c11 -g -static
-SRCS=$(filter-out src/incld.c, $(wildcard src/*.c))
+SRCS=$(wildcard src/*.c)
 FILES=$(notdir $(SRCS))
-OBJS=incld.o
+OBJS=
 ASEMS=$(addprefix asm/, $(FILES:.c=.s))
 ASEMS_SELF=$(ASEMS:.s=_self.s)
 ASEMS_SELF2=$(ASEMS:.s=_self2.s)
@@ -36,8 +36,8 @@ asm/%_self2.s: src/%.c 9cc_self
 	@./"9cc_self" $< > $@
 	@if [ $$? -ne 0 ]; then rm $@; fi
 	@./support/shortenasm $@ > asm/_self2.s 
-	@cmp asm/_self2.s asm/$*_self.s
 	@mv asm/_self2.s $@
+	cmp asm/$*_self2.s asm/$*_self.s
 	@rm asm/$*_self.s
 
 asm/%.s: src/%.c
@@ -55,6 +55,7 @@ testself: 9cc_self test/testfuncs.o
 	./test.sh ./9cc_self
 
 testself2: 9cc_self2
+	strip 9cc_self2 9cc_self
 	cmp 9cc_self2 9cc_self
 
 testp: testp9cc testpself
@@ -66,7 +67,7 @@ testpself: 9cc_self test/testfuncs.o
 	./test_practical.sh ./9cc_self
 
 clean:
-	rm -f 9cc 9cc_self *.o *~ tmp* $(ASEMS) $(ASEMS_SELF) $(ASEMS_SELF2)
+	rm -f 9cc 9cc_self 9cc_self2 *.o *~ tmp* $(ASEMS) $(ASEMS_SELF) $(ASEMS_SELF2)
 
 .PHONY: test testp test9cc testp9cc testself testself2 testpself clean
 

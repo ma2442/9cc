@@ -772,6 +772,7 @@ void program() {
     while (!at_eof()) {
         if (typdef()) continue;
         bool is_decla = consume("extern");
+        bool is_static = consume("static");
         Token *idt = NULL;
         Type *typ = type_full(&idt);
         Node *node = NULL;
@@ -781,6 +782,7 @@ void program() {
         } else if (idt && typ->ty == FUNC) {
             // 関数宣言･定義
             typ->dfn->tok = idt;
+            typ->dfn->fn->is_static = is_static;
             // extern があった場合は関数定義不可にしておく
             if (is_decla) typ->dfn->fn->can_define = false;
             node = func(typ);
