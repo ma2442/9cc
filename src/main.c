@@ -69,14 +69,22 @@ int main(int argc, char **argv) {
     }
     filename = argv[1];
     _Bool output_preproc = (argc == 3 && strncmp(argv[2], "-E", 2) == MATCH);
-
-    filedir = cpy_dirname(filename);
-    user_input = read_file(filename);
     init_sizes();
     init_errmsg();
 
-    // トークナイズする
+    // config読み込み、トークナイズ
+    char *ccdir = cpy_dirname(argv[0]);
+    char *config_path = strcat(ccdir, "9cc_config.h");
+    char *config = read_file(config_path);
+    Token *tok_cfg = tokenize(config);
+
+    // 引数で渡された本体ファイル読み込み、トークナイズ
+    filedir = cpy_dirname(filename);
+    user_input = read_file(filename);
     token = tokenize(user_input);
+
+    // configトークン列を本体の頭につけてプリプロセッサ処理
+    token = concat_tokens(tok_cfg, token);
     token = preproc(token, filename);
 
     // 第三引数に -E があればプリプロセッサ処理後のトークンを出力して終了

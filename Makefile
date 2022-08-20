@@ -20,9 +20,9 @@ ASEMS_SELF2=$(ASEMS:.s=_self2.s)
 all:
 	@echo $(ASEMS_SELF2)
 	
-$(ASEMS): src/preinc.h src/9cc.h
-$(ASEMS_SELF): 9cc src/preinc.h src/9cc.h
-$(ASEMS_SELF2): 9cc_self src/preinc.h src/9cc.h
+$(ASEMS): src/9cc.h
+$(ASEMS_SELF): 9cc 9cc_config.h src/9cc.h
+$(ASEMS_SELF2): 9cc_self 9cc_config.h src/9cc.h
 
 asm/%_self.s: src/%.c 9cc
 	./"9cc" $< > $@

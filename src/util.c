@@ -14,3 +14,16 @@ bool eqtokstr(Token *tok, char *str) {
     if (strncmp(tok->str, str, tok->len) != MATCH) return false;
     return true;
 }
+
+// トークン列t1の後ろにt2を連結する
+// t1にEOFが含まれていればそれを消してt2につなげる
+Token *concat_tokens(Token *t1, Token *t2) {
+    Token head;
+    Token *cur = &head;
+    cur->next = t1;
+    while (cur->next && cur->next->kind != TK_EOF) {
+        cur = cur->next;
+    }
+    cur->next = t2;
+    return head.next;
+}

@@ -389,7 +389,10 @@ Token *pp_include(char *dir) {
     path[pathlen] = '\0';
     char *abs;
     if (token->kind == TK_STR) {
-        abs = strcat(cpy_dirname(dir), path);
+        if (path[0] == '/')  // 絶対パス表記
+            abs = path;
+        else  // 相対パス表記
+            abs = strcat(cpy_dirname(dir), path);
     } else {
         abs = strcat(cpy_dirname("/usr/include/"), path);
         if (!fopen(abs, "r"))
@@ -397,32 +400,6 @@ Token *pp_include(char *dir) {
         if (!fopen(abs, "r"))
             abs = strcat(
                 cpy_dirname("/usr/lib/gcc/x86_64-linux-gnu/9/include/"), path);
-    }
-    int len = strlen(abs);
-    char *rev = calloc(len + 2, sizeof(char));
-    int ir = 0;
-    int skip_cnt = 0;
-    int i = len;
-    while (i >= 0) {
-        int ichk = i - 3;
-        if (ichk >= 0 && strncmp(abs + ichk, "/../", 4) == MATCH) {
-            skip_cnt++;
-            i = ichk;
-            continue;
-        }
-        if (skip_cnt) {
-            i--;
-            while (i >= 0 && abs[i] != '/') i--;
-            skip_cnt--;
-            continue;
-        }
-        rev[ir] = abs[i];
-        ir++;
-        i--;
-    }
-    for (; ir >= 0; ir--) {
-        abs[i] = rev[ir];
-        i++;
     }
     newline();
 #ifdef __DEBUG__READ__FILE__

@@ -1,7 +1,5 @@
 #ifndef HEADER_H
 #define HEADER_H
-
-#include "preinc.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -333,6 +331,7 @@ extern int fncnt;                // 関数通し番号(goto label 用)
 // util.c
 bool sametok(Token *tok1, Token *tok2);
 bool eqtokstr(Token *tok, char *str);
+Token *concat_tokens(Token *t1, Token *t2);
 
 char *read_file(char *path);
 char *cpy_dirname(char *path);
