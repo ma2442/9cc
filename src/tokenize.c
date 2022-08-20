@@ -285,7 +285,7 @@ bool read_num(char **pp, Token **tokp) {
 }
 
 // 制御構文if else while for等 判定
-bool read_controls(char **pp, Token **tokp, int len) {
+bool read_controls(char **pp, Token **tokp, Token *idt) {
     int klen = 0;
     KindWordPair kdwds[100];
     kdwds[klen].tokenkind = TK_CTRL;
@@ -344,10 +344,9 @@ bool read_controls(char **pp, Token **tokp, int len) {
     kdwds[klen++].word = "enum";
 
     for (int i = 0; i < klen; i++) {
-        if (len == strlen(kdwds[i].word) &&
-            strncmp(*pp, kdwds[i].word, len) == MATCH) {
-            *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, len);
-            *pp += len;
+        if (eqtokstr(idt, kdwds[i].word)) {
+            *tokp = new_token(kdwds[i].tokenkind, *tokp, *pp, idt->len);
+            *pp += idt->len;
             return true;
         }
     }
@@ -795,6 +794,27 @@ Token *preproc(Token *tok, char *filepath) {
     return head.next;
 }
 
+// 未実装の型を処理する関数
+bool read_unimplemented(char **pp, Token **curp, Token *idt) {
+    // volatile , const は読み飛ばす
+    if (eqtokstr(idt, "volatile") || eqtokstr(idt, "const")) {
+        *pp += idt->len;
+        return true;
+    }
+    // float, double, __builtin_va_list
+    // は宣言を読むのに支障のない型に置き換える
+    // (デバッグを考慮して目立つ型にする)
+    if (eqtokstr(idt, "float") || eqtokstr(idt, "double") ||
+        eqtokstr(idt, "__builtin_va_list")) {
+        *curp = new_token(TK_TYPE, *curp, "int", 3);
+        for (int i = 0; i < 10; i++)
+            *curp = new_token(TK_RESERVED, *curp, "*", 1);
+        *pp += idt->len;
+        return true;
+    }
+    return false;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
     Token head;
@@ -825,8 +845,8 @@ Token *tokenize(char *p) {
         //先頭から変数として読める部分の長さを取得
         int idtlen = read_ident(p);
         Token *idt = new_tok(TK_IDENT, p, idtlen);
-        if (read_controls(&p, &cur, idtlen)) continue;
-
+        if (read_controls(&p, &cur, idt)) continue;
+        if (read_unimplemented(&p, &cur, idt)) continue;
         // 変数名 判定
         if (idtlen > 0) {
             cur = new_token(TK_IDENT, cur, p, idtlen);
