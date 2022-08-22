@@ -1,11 +1,71 @@
 #include "9cc.h"
 
-Type *type_array(Type *typ);
-Type *set_tip(Type *head, Type *tip);
 Type *type_head();
 Type *type_body(Token **idtp);
 
 int sizes[LEN_TYPE_KIND];
+int tag_cnt = 0;
+
+Type *new_type(TypeKind kind) {
+    Type *typ = calloc(1, sizeof(Type));
+    typ->ty = kind;
+    return typ;
+}
+
+// 定数式計算用インタプリタ
+long long val(Node *node) {
+    if (node->kind == ND_NUM) return node->val;
+    if (node->kind == ND_IF_ELSE)
+        return val(node->judge) ? val(node->lhs) : val(node->rhs);
+
+    int l = val(node->lhs);
+    if (node->kind == ND_BIT_NOT) return ~l;
+    if (node->kind == ND_CAST) {
+        if (node->type->ty == ULL) return (unsigned long long)l;
+        if (node->type->ty == LL) return (long long)l;
+        if (node->type->ty == UINT) return (unsigned int)l;
+        if (node->type->ty == INT) return (int)l;
+        if (node->type->ty == USHORT) return (unsigned short)l;
+        if (node->type->ty == SHORT) return (short)l;
+        if (node->type->ty == UCHAR) return (unsigned char)l;
+        if (node->type->ty == CHAR) return (char)l;
+        return (unsigned long long)l;  // ptr
+    }
+
+    int r = val(node->rhs);
+    switch (node->kind) {
+        case ND_EQUAL:
+            return l == r;
+        case ND_NOT_EQUAL:
+            return l != r;
+        case ND_LESS_THAN:
+            return l < r;
+        case ND_LESS_OR_EQUAL:
+            return l <= r;
+        case ND_BIT_OR:
+            return l | r;
+        case ND_BIT_XOR:
+            return l ^ r;
+        case ND_BIT_AND:
+            return l & r;
+        case ND_BIT_SHIFT_L:
+            return l << r;
+        case ND_BIT_SHIFT_R:
+            return l >> r;
+        case ND_ADD:
+            return l + r;
+        case ND_SUB:
+            return l - r;
+        case ND_MUL:
+            return l * r;
+        case ND_DIV:
+            return l / r;
+        case ND_MOD:
+            return l % r;
+        default:
+            error("定数ではありません");
+    }
+}
 
 void init_sizes() {
     sizes[CHAR] = 1;
@@ -32,13 +92,6 @@ int size(Type *typ) {
     return sizes[typ->ty];
 }
 
-// デリファレンス可能な型を判別(ARRAY, PTR)
-bool can_deref(Type *typ) {
-    if (typ == NULL) return false;
-    if (typ->ptr_to == NULL) return false;
-    return true;
-}
-
 // タイプ一致するか
 bool eqtype(Type *typ1, Type *typ2) {
     if (!typ1 || !typ2) return false;
@@ -57,6 +110,13 @@ bool is_basic_numeric(Type *typ) {
         ty == USHORT || ty == INT || ty == UINT || ty == LL || ty == ULL)
         return true;
     return false;
+}
+
+// デリファレンス可能な型を判別(ARRAY, PTR)
+bool can_deref(Type *typ) {
+    if (typ == NULL) return false;
+    if (typ->ptr_to == NULL) return false;
+    return true;
 }
 
 // キャスト先がポインタか？ その場合にキャスト可能か？
@@ -82,44 +142,7 @@ bool can_cast(Type *to, Type *from) {
     return eqtype(to, from);
 }
 
-// アラインメント(alnの倍数)に揃える
-int align(int x, int aln) {
-    if (aln == 0) return 1;
-    // return (x + aln - 1) & ~(aln - 1);
-    return ((x + aln - 1) / aln) * aln;
-}
-
-// アラインメントを計算
-int calc_align(Type *type) {
-    if (type->ty == ARRAY) return calc_align(type->ptr_to);
-    if (type->ty == STRUCT) {
-        // メンバのアラインメントの最小公倍数がアラインメント境界
-        // (0,)1,2,4,8のいずれかなので単に最大値でよい
-        int lcm = 0;
-        for (Def *dmem = type->dstc->stc->dmems; dmem && dmem->next;
-             dmem = dmem->next) {
-            int mem_align = calc_align(dmem->var->type);
-            if (lcm < mem_align) lcm = mem_align;
-        }
-        return lcm;
-    }
-    return (size(type));  // if basic type
-}
-
-// オフセットを計算･設定
-int set_offset(Var *var, int base) {
-    int aln = calc_align(var->type);
-    // アラインする 例えばintなら4バイト境界に揃える
-    var->offset = align(base, aln);
-    return var->offset;
-}
-
-Type *new_type(TypeKind kind) {
-    Type *typ = calloc(1, sizeof(Type));
-    typ->ty = kind;
-    return typ;
-}
-
+// 符号拡張が必要な型(char, short, int, long long)か？
 bool is_signed(Type *typ) { return typ->ty & SIGNED; }
 
 // 計算の型優先度 二項演算で優先度の高い方の型にあわせる
@@ -214,17 +237,66 @@ void typing(Node *node) {
     }
 }
 
-// 型の後方にある **... を読んでポインタ型にして返す
-Type *type_pointer(Type *typ) {
-    while (consume("*")) {
-        Type *ptr = new_type(PTR);
-        ptr->ptr_to = typ;
-        typ = ptr;
-    }
-    return typ;
+void voidcheck(Type *typ, char *pos) {
+    if (!typ) error_at(pos, ERRNO_PARSE_TYPE);
+    if (typ->ty == VOID) error_at(pos, ERRNO_VOID);
 }
 
-int tag_cnt = 0;
+// アラインメント(alnの倍数)に揃える
+int align(int x, int aln) {
+    if (aln == 0) return 1;
+    // return (x + aln - 1) & ~(aln - 1);
+    return ((x + aln - 1) / aln) * aln;
+}
+
+// アラインメントを計算
+int calc_align(Type *type) {
+    if (type->ty == ARRAY) return calc_align(type->ptr_to);
+    if (type->ty == STRUCT) {
+        // メンバのアラインメントの最小公倍数がアラインメント境界
+        // (0,)1,2,4,8のいずれかなので単に最大値でよい
+        int lcm = 0;
+        for (Def *dmem = type->dstc->stc->dmems; dmem && dmem->next;
+             dmem = dmem->next) {
+            int mem_align = calc_align(dmem->var->type);
+            if (lcm < mem_align) lcm = mem_align;
+        }
+        return lcm;
+    }
+    return (size(type));  // if basic type
+}
+
+// オフセットを計算･設定
+int set_offset(Var *var, int base) {
+    int aln = calc_align(var->type);
+    // アラインする 例えばintなら4バイト境界に揃える
+    var->offset = align(base, aln);
+    return var->offset;
+}
+
+// headの先端にtipをつなげる
+// 先端とは、PTR, ARRAY ならそれが指す型, FUNCならリターン型のこと
+Type *set_tip(Type *head, Type *tip) {
+    if (!head) return tip;
+    switch (head->ty) {
+        case FUNC:
+            if (head->dfn->fn->ret)
+                set_tip(head->dfn->fn->ret, tip);
+            else
+                head->dfn->fn->ret = tip;
+            return head;
+        case PTR:
+        case ARRAY:
+            if (head->ptr_to)
+                set_tip(head->ptr_to, tip);
+            else
+                head->ptr_to = tip;
+            return head;
+    }
+}
+
+// struct/union 用ネストから該当する定義リストの添字を計算
+int stcidx() { return nest - (stcnest + 1); }
 
 // 構造体か列挙体のtagを生成･チェック
 Token *make_tag(Token *tag) {
@@ -237,8 +309,6 @@ Token *make_tag(Token *tag) {
     if (!can_def_tag(tag)) return NULL;
     return tag;
 }
-
-int stcidx() { return nest - (stcnest + 1); }
 
 // 型割当てが行われていないtypedefを探して割当て
 void typing_defdtype(Token *tag, TypeKind kind, Def *dtyped) {
@@ -388,61 +458,6 @@ Type *type_union() {
     return typ;
 }
 
-// 列挙子定義計算用
-long long val(Node *node) {
-    if (node->kind == ND_NUM) return node->val;
-    if (node->kind == ND_IF_ELSE)
-        return val(node->judge) ? val(node->lhs) : val(node->rhs);
-
-    int l = val(node->lhs);
-    if (node->kind == ND_BIT_NOT) return ~l;
-    if (node->kind == ND_CAST) {
-        if (node->type->ty == ULL) return (unsigned long long)l;
-        if (node->type->ty == LL) return (long long)l;
-        if (node->type->ty == UINT) return (unsigned int)l;
-        if (node->type->ty == INT) return (int)l;
-        if (node->type->ty == USHORT) return (unsigned short)l;
-        if (node->type->ty == SHORT) return (short)l;
-        if (node->type->ty == UCHAR) return (unsigned char)l;
-        if (node->type->ty == CHAR) return (char)l;
-        return (unsigned long long)l;  // ptr
-    }
-
-    int r = val(node->rhs);
-    switch (node->kind) {
-        case ND_EQUAL:
-            return l == r;
-        case ND_NOT_EQUAL:
-            return l != r;
-        case ND_LESS_THAN:
-            return l < r;
-        case ND_LESS_OR_EQUAL:
-            return l <= r;
-        case ND_BIT_OR:
-            return l | r;
-        case ND_BIT_XOR:
-            return l ^ r;
-        case ND_BIT_AND:
-            return l & r;
-        case ND_BIT_SHIFT_L:
-            return l << r;
-        case ND_BIT_SHIFT_R:
-            return l >> r;
-        case ND_ADD:
-            return l + r;
-        case ND_SUB:
-            return l - r;
-        case ND_MUL:
-            return l * r;
-        case ND_DIV:
-            return l / r;
-        case ND_MOD:
-            return l % r;
-        default:
-            error("定数ではありません");
-    }
-}
-
 // 列挙体定義
 Type *def_enum(Token *tag) {
     if (!consume("{")) return NULL;
@@ -537,6 +552,17 @@ GET_TYPE_BODY:
     return new_node(ND_NO_EVAL, NULL, NULL);
 }
 
+// typedefされた型を返す
+Type *defdtype() {
+    Token *idt = consume_ident();
+    if (!idt) return NULL;
+    Def *dtyp = fit_def(idt, DK_TYPE);
+    if (dtyp) return dtyp->defdtype;
+    token = idt;
+    return NULL;
+}
+
+// short, long, long long を表す列挙体
 typedef enum {
     LENSPEC_NONE = 0,
     LENSPEC_SHORT,
@@ -544,6 +570,8 @@ typedef enum {
     LENSPEC_LL
 } LenSpec;
 
+// Tokenを2つ受け取り, short, long, long longを読み分けて
+// 対応する列挙子を返す
 LenSpec lenspec(Token *qlen, Token *qlen2) {
     if (!qlen) return LENSPEC_NONE;
     if (eqtokstr(qlen, STR_LONG) && eqtokstr(qlen2, STR_LONG))
@@ -554,19 +582,10 @@ LenSpec lenspec(Token *qlen, Token *qlen2) {
     error_at(qlen->str, ERRNO_PARSE_TYPEQ);
 }
 
+// 受け取ったTokenからsigned, unsigned を読み分けて型の種類kindに付与して返す
 TypeKind attach_qsign(TypeKind kind, Token *qsign) {
     if (!eqtokstr(qsign, STR_UNSIGNED)) return kind;
     return kind & ~SIGNED;
-}
-
-// typedefされた型を返す
-Type *defdtype() {
-    Token *idt = consume_ident();
-    if (!idt) return NULL;
-    Def *dtyp = fit_def(idt, DK_TYPE);
-    if (dtyp) return dtyp->defdtype;
-    token = idt;
-    return NULL;
 }
 
 // ( void, int, char, _Bool, struct or enum (tag and/or {}) )
@@ -627,6 +646,34 @@ Type *type_head() {
     return typ;
 }
 
+// **... を読んで引数をポインタ型に包んで返す
+Type *type_pointer(Type *typ) {
+    while (consume("*")) {
+        Type *ptr = new_type(PTR);
+        ptr->ptr_to = typ;
+        typ = ptr;
+    }
+    return typ;
+}
+
+// [][]... を読んで引数を配列型に包んで返す
+Type *type_array(Type *typ) {
+    Type head;
+    Type *last = &head;
+    while (consume("[")) {
+        last->ptr_to = calloc(1, sizeof(Type));
+        last = last->ptr_to;
+        last->ty = ARRAY;
+        // [] の場合はとりあえずサイズを0にしておく。
+        last->array_size = 0;
+        if (consume("]")) continue;
+        last->array_size = val(expr());
+        expect("]");
+    }
+    last->ptr_to = typ;
+    return head.ptr_to;
+}
+
 // リターンタイプを受け取って名前のない関数型を返す
 // ここでは関数の宣言や定義は行わない
 Type *type_args(Type *ret) {
@@ -669,25 +716,6 @@ Type *type_args(Type *ret) {
     return tfn;
 }
 
-Type *set_tip(Type *head, Type *tip) {
-    if (!head) return tip;
-    switch (head->ty) {
-        case FUNC:
-            if (head->dfn->fn->ret)
-                set_tip(head->dfn->fn->ret, tip);
-            else
-                head->dfn->fn->ret = tip;
-            return head;
-        case PTR:
-        case ARRAY:
-            if (head->ptr_to)
-                set_tip(head->ptr_to, tip);
-            else
-                head->ptr_to = tip;
-            return head;
-    }
-}
-
 // coreless x = ptr* ( x | "(" coreless x ")" ) (args|array)*
 Type *type_body(Token **idtp) {
     Type *ptr = type_pointer(NULL);
@@ -718,26 +746,4 @@ Type *type_full(Token **idtp) {
     if (!head) return NULL;
     Type *body = type_body(idtp);
     return set_tip(body, head);
-}
-
-void voidcheck(Type *typ, char *pos) {
-    if (!typ) error_at(pos, ERRNO_PARSE_TYPE);
-    if (typ->ty == VOID) error_at(pos, ERRNO_VOID);
-}
-
-Type *type_array(Type *typ) {
-    Type head;
-    Type *last = &head;
-    while (consume("[")) {
-        last->ptr_to = calloc(1, sizeof(Type));
-        last = last->ptr_to;
-        last->ty = ARRAY;
-        // [] の場合はとりあえずサイズを0にしておく。
-        last->array_size = 0;
-        if (consume("]")) continue;
-        last->array_size = val(expr());
-        expect("]");
-    }
-    last->ptr_to = typ;
-    return head.ptr_to;
 }

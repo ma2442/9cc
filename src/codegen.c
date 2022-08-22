@@ -49,8 +49,27 @@ char* cnvword(AsmWord word, int byte) {
     }
 }
 
+// レジスタや命令の名前をそのまま文字列に変換
 char* just(AsmWord word) { return cnvword(word, 8); }
 
+// スタックの一番目をコピーしてスタックに積む
+void copy_top() {
+    printf("  pop rax\n");
+    printf("  push rax\n");
+    printf("  push rax\n");
+}
+
+// スタックの1番目と2番目を入れ替え
+void swap_top() {
+    printf("  pop rax\n");
+    printf("  pop rcx\n");
+    printf("  push rax\n");
+    printf("  push rcx\n");
+}
+
+// srcの内容とcmpvalを比較して比較結果をdestに格納
+// 比較命令はcmptype
+// _Bool型に変換する際などに使用
 void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
     char* src1byte = cnvword(src, 1);
     printf("  cmp %s, %s\n", cnvword(src, 8), cmpval);
@@ -58,6 +77,8 @@ void gen_cmp(AsmWord src, char* cmpval, char* cmptype, AsmWord dest) {
     printf("  movzx %s, %s\n", cnvword(dest, 8), src1byte);
 }
 
+// 与えられたregの値をTypeの型とみなして8byteに符号拡張/ゼロ拡張
+// _Bool型なら0か1に変換
 void expand_size(AsmWord reg, Type* typ) {
     if (can_deref(typ)) return;
     int sz = size(typ);
@@ -74,6 +95,7 @@ void expand_size(AsmWord reg, Type* typ) {
         printf("  %s %s, %s\n", cnvword(mov, sz), just(reg), cnvword(reg, sz));
 }
 
+// 左辺値コード生成
 void gen_lval(Node* node) {
     switch (node->kind) {
         case ND_LVAR:  // local var
@@ -111,6 +133,8 @@ void gen_lval(Node* node) {
     printf("  push rax\n");
 }
 
+// スタックトップをアドレス値とみなしメモリ内容を読んで置き換え
+// raxを使用
 void gen_load(Type* typ) {
     if (typ->ty == ARRAY || typ->ty == STRUCT) return;
     printf("  pop rax\n");
@@ -124,6 +148,9 @@ void gen_load(Type* typ) {
     printf("  push rax\n");
 }
 
+// スタックの一番目の値を二番目のアドレスに格納
+// ただしstruct同士のコピーの場合は両方をアドレスとみなして内容をコピーする
+// rax, rcx, rdi を使用
 void gen_store(Type* type) {
     printf("# store\n");
     printf("  pop rcx\n");
@@ -156,31 +183,14 @@ void gen_store(Type* type) {
     printf("# end store\n");
 }
 
-void gen_tochar() {
-    printf("  pop rax\n");
-    printf("  movsx rax, al\n");
-    printf("  push rax\n");
-}
-
-void copy_top() {
-    printf("  pop rax\n");
-    printf("  push rax\n");
-    printf("  push rax\n");
-}
-
-void swap_top() {
-    printf("  pop rax\n");
-    printf("  pop rcx\n");
-    printf("  push rax\n");
-    printf("  push rcx\n");
-}
-
+// 繰り返し文の継続条件部のコードを生成
 void loop_judge_result(int num) {
     printf("  pop rax\n");
     printf("  cmp rax, 0\n");
     printf("  je .Lend%d\n", num);
 }
 
+// 制御構文に関わるコード生成
 bool gen_ctrl(Node* node) {
     switch (node->kind) {
         case ND_RETURN:
@@ -297,6 +307,7 @@ bool gen_ctrl(Node* node) {
     }
 }
 
+// 関数定義･コールに関わるコード生成
 bool gen_func(Node* node) {
     char* arg_storage[6];
     arg_storage[0] = "rdi";
@@ -380,6 +391,7 @@ bool gen_func(Node* node) {
     }
 }
 
+// 代入に関するコード生成
 bool gen_assign(Node* node) {
     switch (node->kind) {
         case ND_ASSIGN:
@@ -429,6 +441,7 @@ bool gen_assign(Node* node) {
     }
 }
 
+// 単項演算に関わるコード生成
 bool gen_unary(Node* node) {
     switch (node->kind) {
         case ND_LVAR:

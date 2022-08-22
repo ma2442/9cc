@@ -1,6 +1,8 @@
 #include "9cc.h"
 
 Token *pp_macro();
+Token *pp_tiny(Token *tok);
+
 typedef struct Macro Macro;
 // #define macro
 struct Macro {
@@ -353,6 +355,27 @@ bool read_controls(char **pp, Token **tokp, Token *idt) {
     return false;
 }
 
+// 未実装の型を処理する関数
+bool read_unimplemented(char **pp, Token **curp, Token *idt) {
+    // volatile , const は読み飛ばす
+    if (eqtokstr(idt, "volatile") || eqtokstr(idt, "const")) {
+        *pp += idt->len;
+        return true;
+    }
+    // float, double, __builtin_va_list
+    // は宣言を読むのに支障のない型に置き換える
+    // (デバッグを考慮して目立つ型にする)
+    if (eqtokstr(idt, "float") || eqtokstr(idt, "double") ||
+        eqtokstr(idt, "__builtin_va_list")) {
+        *curp = new_token(TK_TYPE, *curp, "int", 3);
+        for (int i = 0; i < 10; i++)
+            *curp = new_token(TK_RESERVED, *curp, "*", 1);
+        *pp += idt->len;
+        return true;
+    }
+    return false;
+}
+
 bool skip_nontoken_except(char **pp, char excpt) {
     for (bool done = false;; done = true) {
         if (**pp == '\\') {
@@ -371,7 +394,6 @@ bool skip_nontoken_except(char **pp, char excpt) {
     }
 }
 
-bool skip_nontoken(char **pp) { return skip_nontoken_except(pp, '\0'); }
 bool skip_nontoken_notLF(char **pp) { return skip_nontoken_except(pp, '\n'); }
 
 void newline() {
@@ -504,6 +526,96 @@ Token *make_token_from_macro(Macro *mcr) {
     return head.next;
 }
 
+// マクロのパラメータ部分を読む
+Token *pp_param() {
+    Token head;
+    Token *cur = &head;
+    int inner = 0;
+    while (inner || !current_is(",") && !current_is(")")) {
+        if (current_is("(")) {
+            inner++;
+        } else if (inner && current_is(")")) {
+            inner--;
+        }
+        cur->next = calloc(1, sizeof(Token));
+        *cur->next = *token;
+        cur = cur->next;
+        token = token->next;
+    }
+    cur->next = calloc(1, sizeof(Token));
+    cur = cur->next;
+    cur->str = "";
+    cur->len = 0;
+    return head.next;
+}
+
+// マクロ再帰展開に使用
+Token *pp_tiny(Token *tok) {
+    Token *token0 = token;
+    token = tok;
+    Token head;
+    Token *cur = &head;
+    while (token) {
+        Token *mtok = pp_macro();
+        if (mtok) {
+            token = mtok;
+        } else if (token) {
+            cur->next = token;
+            cur = cur->next;
+            token = token->next;
+        }
+        continue;
+    }
+    cur->next = token;
+    token = token0;
+    return head.next;
+}
+
+// 展開できるマクロを読む
+Token *pp_macro() {
+    Token *save = token;
+    Token *idt = consume_identpp();
+    if (!idt) return NULL;
+    if (idt->forbid_expand) return NULL_rewind(save);
+    Macro *mcr = find_macro(idt);
+    if (!mcr) return NULL_rewind(save);
+
+    Token **prms = mcr->params;
+    if (mcr->pcnt == -1) {  // パラメタを持たないマクロ
+    } else {
+        // マクロの識別子の後のパラメタ部分(..)を読む
+        if (!consume("(")) return NULL_rewind(save);
+        if (mcr->pcnt == 0) {
+            expect(")");
+        } else if (mcr->pcnt == 1 && consume(")")) {
+            // パラメタ1つ、何も入れないパターン
+            *prms[0] = *new_tok(TK_IDENT, "", 0);
+        } else {
+            for (int i = 0; i < mcr->pcnt; i++) {
+                *prms[i] = *pp_param();
+                if (i + 1 < mcr->pcnt) expect(",");
+            }
+            expect(")");
+        }
+    }
+    // マクロ展開禁止なら識別子トークンを展開する代わりにフラグを立てる
+    if (mcr->forbid_expand) {
+        idt->forbid_expand = true;
+        return NULL_rewind(save);
+    }
+    mcr->forbid_expand = true;  // 自分自身を再帰展開しないようにする
+    Token head;
+    Token *cur = &head;
+    cur->next = make_token_from_macro(mcr);
+    cur->next = merge_tokens(cur->next);
+    cur->next = pp_tiny(cur->next);
+    mcr->forbid_expand = false;
+    while (cur->next) cur = cur->next;
+    cur->next = token;
+    token = head.next;
+    return head.next;
+}
+
 // #define  ___ ________ のアンダーライン部分を読んでマクロ作成
 // パラメータのみアドレスコピー
 // それ以外は実態コピー
@@ -598,102 +710,6 @@ bool pp_if() {
     return ret;
 }
 
-Token *pp_param() {
-    Token head;
-    Token *cur = &head;
-    int inner = 0;
-    while (inner || !current_is(",") && !current_is(")")) {
-        if (current_is("(")) {
-            inner++;
-        } else if (inner && current_is(")")) {
-            inner--;
-        }
-        cur->next = calloc(1, sizeof(Token));
-        *cur->next = *token;
-        cur = cur->next;
-        token = token->next;
-    }
-    cur->next = calloc(1, sizeof(Token));
-    cur = cur->next;
-    cur->str = "";
-    cur->len = 0;
-    return head.next;
-}
-
-// tokenを引数の内容に戻してNULLを返す
-void *NULL_rewind(Token *rewind) {
-    token = rewind;
-    return NULL;
-}
-
-Token *pp_tiny(Token *tok);
-
-Token *pp_macro() {
-    Token *save = token;
-    Token *idt = consume_identpp();
-    if (!idt) return NULL;
-    if (idt->forbid_expand) return NULL_rewind(save);
-    Macro *mcr = find_macro(idt);
-    if (!mcr) return NULL_rewind(save);
-
-    Token **prms = mcr->params;
-    if (mcr->pcnt == -1) {  // パラメタを持たないマクロ
-    } else {
-        // マクロの識別子の後のパラメタ部分(..)を読む
-        if (!consume("(")) return NULL_rewind(save);
-        if (mcr->pcnt == 0) {
-            expect(")");
-        } else if (mcr->pcnt == 1 && consume(")")) {
-            // パラメタ1つ、何も入れないパターン
-            *prms[0] = *new_tok(TK_IDENT, "", 0);
-        } else {
-            for (int i = 0; i < mcr->pcnt; i++) {
-                *prms[i] = *pp_param();
-                if (i + 1 < mcr->pcnt) expect(",");
-            }
-            expect(")");
-        }
-    }
-    // マクロ展開禁止なら識別子トークンを展開する代わりにフラグを立てる
-    if (mcr->forbid_expand) {
-        idt->forbid_expand = true;
-        return NULL_rewind(save);
-    }
-    mcr->forbid_expand = true;  // 自分自身を再帰展開しないようにする
-    Token head;
-    Token *cur = &head;
-    cur->next = make_token_from_macro(mcr);
-    cur->next = merge_tokens(cur->next);
-    cur->next = pp_tiny(cur->next);
-    mcr->forbid_expand = false;
-    while (cur->next) cur = cur->next;
-    cur->next = token;
-    token = head.next;
-    return head.next;
-}
-
-// マクロ再帰展開に使用
-Token *pp_tiny(Token *tok) {
-    Token *token0 = token;
-    token = tok;
-    Token head;
-    Token *cur = &head;
-    while (token) {
-        Token *mtok = pp_macro();
-        if (mtok) {
-            token = mtok;
-        } else if (token) {
-            cur->next = token;
-            cur = cur->next;
-            token = token->next;
-        }
-        continue;
-    }
-    cur->next = token;
-    token = token0;
-    return head.next;
-}
-
 Token *preproc(Token *tok, char *filepath) {
     Token *token0 = token;
     token = tok;
@@ -769,27 +785,6 @@ Token *preproc(Token *tok, char *filepath) {
     cur->next = token;
     token = token0;
     return head.next;
-}
-
-// 未実装の型を処理する関数
-bool read_unimplemented(char **pp, Token **curp, Token *idt) {
-    // volatile , const は読み飛ばす
-    if (eqtokstr(idt, "volatile") || eqtokstr(idt, "const")) {
-        *pp += idt->len;
-        return true;
-    }
-    // float, double, __builtin_va_list
-    // は宣言を読むのに支障のない型に置き換える
-    // (デバッグを考慮して目立つ型にする)
-    if (eqtokstr(idt, "float") || eqtokstr(idt, "double") ||
-        eqtokstr(idt, "__builtin_va_list")) {
-        *curp = new_token(TK_TYPE, *curp, "int", 3);
-        for (int i = 0; i < 10; i++)
-            *curp = new_token(TK_RESERVED, *curp, "*", 1);
-        *pp += idt->len;
-        return true;
-    }
-    return false;
 }
 
 // 入力文字列pをトークナイズしてそれを返す

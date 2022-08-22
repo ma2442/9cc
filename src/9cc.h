@@ -37,6 +37,42 @@ typedef struct Var Var;
 typedef struct Defs Defs;
 typedef struct Def Def;
 
+typedef enum {
+    ERRNO_ERRDEFAULT = 1,
+    ERRNO_PREPROC_DEF,
+    ERRNO_PREPROC_PARAMCNT,
+    ERRNO_TOKENIZE,
+    ERRNO_TOKENIZE_NUMSUFFIX,
+    ERRNO_TOKENIZE_COMMENT,
+    ERRNO_TOKENIZE_CONST,
+    ERRNO_EXPECT,
+    ERRNO_PARSE_NUM,
+    ERRNO_PARSE_TAG,
+    ERRNO_PARSE_TYPEQ,
+    ERRNO_PARSE_TYPE,
+    ERRNO_PARSE_TYPEDEF,
+    ERRNO_PARSE_MEMBER_HOLDER,
+    ERRNO_FIT_VAR,
+    ERRNO_FIT_STRUCT,
+    ERRNO_FIT_UNION,
+    ERRNO_FIT_ENUM,
+    ERRNO_FIT_CONSTANT,
+    ERRNO_FIT_FUNC,
+    ERRNO_FIT_MEMBER,
+    ERRNO_DEF_SYMBOL,
+    ERRNO_DEF_TAG,
+    ERRNO_DECLA_VAR,
+    ERRNO_DECLA_FUNC,
+    ERRNO_DEF_FUNC,
+    ERRNO_SIGNATURE,
+    ERRNO_TYPE,
+    ERRNO_VOID,
+    ERRNO_RETURN,
+    ERRNO_BREAK,
+    ERRNO_CONTINUE,
+    LEN_ERRNO
+} ErrNo;
+
 // トークンの種類
 typedef enum {
     TK_RESERVED,      // 記号
@@ -71,55 +107,7 @@ struct Token {
     bool forbid_expand;  //マクロ展開可能か
 };
 
-// 抽象構文木のノードの種類
-typedef enum {
-    ND_NO_EVAL,  // 評価不要なノード
-    ND_RETURN,   // return
-    ND_IF_ELSE,  // if (judge) lhs else rhs
-    ND_COND_EMPTY,  // a?(empty):b 三項演算子コロン前が空のとき、aを返す
-    ND_SWITCH,              // switch (judge) lhs
-    ND_CASE,                // case _:
-    ND_DEFAULT,             // default:
-    ND_GOTO,                // jmp
-    ND_LABEL,               // label(goto):
-    ND_WHILE,               // while (judge) lhs
-    ND_DO,                  // do lhs while (judge)
-    ND_FOR,                 // for (init; judge; inc) lhs
-    ND_BLOCK,               // block { }
-    ND_FUNC_CALL,           // 関数呼び出し
-    ND_FUNC_CALL_ARG,       // 関数の実引数
-    ND_FUNC_DEFINE,         // 関数定義
-    ND_FUNC_DEFINE_ARG,     // 関数の仮引数
-    ND_ASSIGN,              // =
-    ND_ASSIGN_COMPOSITE,    // += -= *= /= %=
-    ND_ASSIGN_POST_INCDEC,  // x=x+1 x=x-1 of x++ x--
-    ND_DEFLOCAL,            // local variable definition
-    ND_DEFGLOBAL,           // global variable definition
-    ND_ADDR,                // pointer &
-    ND_DEREF,               // pointer *
-    ND_BIT_NOT,             // ~
-    ND_CAST,                // (int *) など
-    ND_LVAR,                // local variable, evaluation of x++ x--
-    ND_GVAR,                // global variable, or x++, x--
-    ND_MEMBER,              // 構造体メンバへのアクセス
-    ND_NUM,                 // 整数
-    ND_OMITTED_TERM,   // x++,--x,複合代入等により省略された項
-    ND_BIT_OR,         // |
-    ND_BIT_XOR,        // ^
-    ND_BIT_AND,        // &
-    ND_EQUAL,          // ==
-    ND_NOT_EQUAL,      // !=
-    ND_LESS_THAN,      // <
-    ND_LESS_OR_EQUAL,  // <=
-    ND_BIT_SHIFT_L,    // <<
-    ND_BIT_SHIFT_R,    // >>
-    ND_ADD,            // +
-    ND_SUB,            // -
-    ND_MUL,            // *
-    ND_DIV,            // /
-    ND_MOD,            // %
-} NodeKind;
-
+// 型の種類
 typedef enum {
     VARIABLE,  // printfのような可変個数の引数
     UCHAR,
@@ -197,17 +185,6 @@ struct EnumConst {
     Def *denm;  // 属している列挙体
 };
 
-// 定義をまとめたもの(関数 変数, enum, struct)
-struct Defs {
-    Def *dfns;
-    Def *dvars;
-    Def *dvars_last;  // ブロック内で最初に定義された変数
-    Def *denms;
-    Def *dstcs;
-    Def *dunis;
-    Def *dtypdefs;
-};
-
 // 定義の種類
 typedef enum {
     DK_VAR,
@@ -236,6 +213,66 @@ struct Def {
     Type *defdtype;
 };
 
+// 定義をまとめたもの(関数 変数, enum, struct)
+struct Defs {
+    Def *dfns;
+    Def *dvars;
+    Def *dvars_last;  // ブロック内で最初に定義された変数
+    Def *denms;
+    Def *dstcs;
+    Def *dunis;
+    Def *dtypdefs;
+};
+
+// 抽象構文木のノードの種類
+typedef enum {
+    ND_NO_EVAL,  // 評価不要なノード
+    ND_RETURN,   // return
+    ND_IF_ELSE,  // if (judge) lhs else rhs
+    ND_COND_EMPTY,  // a?(empty):b 三項演算子コロン前が空のとき、aを返す
+    ND_SWITCH,              // switch (judge) lhs
+    ND_CASE,                // case _:
+    ND_DEFAULT,             // default:
+    ND_GOTO,                // jmp
+    ND_LABEL,               // label(goto):
+    ND_WHILE,               // while (judge) lhs
+    ND_DO,                  // do lhs while (judge)
+    ND_FOR,                 // for (init; judge; inc) lhs
+    ND_BLOCK,               // block { }
+    ND_FUNC_CALL,           // 関数呼び出し
+    ND_FUNC_CALL_ARG,       // 関数の実引数
+    ND_FUNC_DEFINE,         // 関数定義
+    ND_FUNC_DEFINE_ARG,     // 関数の仮引数
+    ND_ASSIGN,              // =
+    ND_ASSIGN_COMPOSITE,    // += -= *= /= %=
+    ND_ASSIGN_POST_INCDEC,  // x=x+1 x=x-1 of x++ x--
+    ND_DEFLOCAL,            // local variable definition
+    ND_DEFGLOBAL,           // global variable definition
+    ND_ADDR,                // pointer &
+    ND_DEREF,               // pointer *
+    ND_BIT_NOT,             // ~
+    ND_CAST,                // (int *) など
+    ND_LVAR,                // local variable, evaluation of x++ x--
+    ND_GVAR,                // global variable, or x++, x--
+    ND_MEMBER,              // 構造体メンバへのアクセス
+    ND_NUM,                 // 整数
+    ND_OMITTED_TERM,   // x++,--x,複合代入等により省略された項
+    ND_BIT_OR,         // |
+    ND_BIT_XOR,        // ^
+    ND_BIT_AND,        // &
+    ND_EQUAL,          // ==
+    ND_NOT_EQUAL,      // !=
+    ND_LESS_THAN,      // <
+    ND_LESS_OR_EQUAL,  // <=
+    ND_BIT_SHIFT_L,    // <<
+    ND_BIT_SHIFT_R,    // >>
+    ND_ADD,            // +
+    ND_SUB,            // -
+    ND_MUL,            // *
+    ND_DIV,            // /
+    ND_MOD,            // %
+} NodeKind;
+
 // 抽象構文木のノード
 struct Node {
     NodeKind kind;   // ノードの種類
@@ -260,45 +297,8 @@ struct Node {
     int case_cnt;   // switch内のcaseの数
 };
 
-typedef enum {
-    ERRNO_ERRDEFAULT = 1,
-    ERRNO_PREPROC_DEF,
-    ERRNO_PREPROC_PARAMCNT,
-    ERRNO_TOKENIZE,
-    ERRNO_TOKENIZE_NUMSUFFIX,
-    ERRNO_TOKENIZE_COMMENT,
-    ERRNO_TOKENIZE_CONST,
-    ERRNO_EXPECT,
-    ERRNO_PARSE_NUM,
-    ERRNO_PARSE_TAG,
-    ERRNO_PARSE_TYPEQ,
-    ERRNO_PARSE_TYPE,
-    ERRNO_PARSE_TYPEDEF,
-    ERRNO_PARSE_MEMBER_HOLDER,
-    ERRNO_FIT_VAR,
-    ERRNO_FIT_STRUCT,
-    ERRNO_FIT_UNION,
-    ERRNO_FIT_ENUM,
-    ERRNO_FIT_CONSTANT,
-    ERRNO_FIT_FUNC,
-    ERRNO_FIT_MEMBER,
-    ERRNO_DEF_SYMBOL,
-    ERRNO_DEF_TAG,
-    ERRNO_DECLA_VAR,
-    ERRNO_DECLA_FUNC,
-    ERRNO_DEF_FUNC,
-    ERRNO_SIGNATURE,
-    ERRNO_TYPE,
-    ERRNO_VOID,
-    ERRNO_RETURN,
-    ERRNO_BREAK,
-    ERRNO_CONTINUE,
-    LEN_ERRNO
-} ErrNo;
-
 extern char *errmsg[LEN_ERRNO];
 extern int sizes[LEN_TYPE_KIND];
-extern char *type_words[LEN_TYPE_KIND];
 
 extern char *filename;    // 入力ファイル名
 extern char *filedir;     // 入力ファイルのディレクトリ
@@ -329,9 +329,12 @@ extern int swnest;               // switchネスト数
 extern int fncnt;                // 関数通し番号(goto label 用)
 
 // util.c
+char *cpy_dirname(char *path);
+char *read_file(char *path);
 bool sametok(Token *tok1, Token *tok2);
 bool eqtokstr(Token *tok, char *str);
 Token *concat_tokens(Token *t1, Token *t2);
+void *NULL_rewind(Token *rewind);
 
 char *read_file(char *path);
 char *cpy_dirname(char *path);
@@ -349,6 +352,7 @@ Token *tokenize(char *p);
 Token *preproc(Token *tok, char *filepath);
 
 // parse.c
+Def *calloc_def(DefKind kind);
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
 Node *new_node_num(unsigned long long val);
 Node *regex();
@@ -372,25 +376,24 @@ void program();
 void gen(Node *node);
 
 // type.c
-void init_sizes();
-long long val(Node *node);  // 定数計算
-int size(Type *typ);
-bool can_deref(Type *typ);
-bool eqtype(Type *typ1, Type *typ2);
-bool can_cast(Type *to, Type *from);
 Type *new_type(TypeKind kind);
-Def *calloc_def(DefKind kind);
+long long val(Node *node);  // 定数式計算
+void init_sizes();
+int size(Type *typ);
+bool eqtype(Type *typ1, Type *typ2);
+bool can_deref(Type *typ);
+bool can_cast(Type *to, Type *from);
+bool is_signed(Type *typ);
+int priority(Type *typ);
+Type *promote_integer(Type *typ);
+Type *implicit_type(Type *lt, Type *rt);
+void typing(Node *node);
+void voidcheck(Type *typ, char *pos);
 int align(int x, int aln);
 int calc_align(Type *type);
 int set_offset(Var *var, int base);
-bool is_signed(Type *typ);
-void typing(Node *node);
 Node *typdef();
 Type *defdtype();
-void voidcheck(Type *typ, char *pos);
-Type *implicit_type(Type *lt, Type *rt);
-Type *promote_integer(Type *typ);
-int priority(Type *typ);
 Type *type_full(Token **idtp);
 
 // consume.c
